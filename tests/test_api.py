@@ -58,6 +58,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(first["activity"]["id"], "dev-trace-a")
         saved = self.service.submit_attempt(answer("dev-trace-a", "1"))
         self.assertEqual(saved["scoreStatus"], "correct")
+        self.assertEqual(saved["gradingMethod"], "development_fixture_exact_key")
         self.store.close()
         self.clock[0] += timedelta(hours=2)
         self.store = SQLiteStore(self.path)

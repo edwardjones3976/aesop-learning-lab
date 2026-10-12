@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Callable, Mapping
 from uuid import uuid4
@@ -164,6 +164,13 @@ class LearningService:
             result = assess(item.spec, body["firstAnswer"], hint)
         except AssessmentError as exc:
             raise ApiError(exc.code, str(exc)) from exc
+        if self.development_only and result.grading_method == "reviewed_exact_key":
+            result = replace(
+                result,
+                grading_method="development_fixture_exact_key",
+                reason=result.reason.replace("reviewed key", "development fixture key"),
+                scope="Development fixture key only; no human review or learner claim.",
+            )
         attempt = build_attempt(
             item.spec, result, attempt_id=str(uuid4()), occurred_at=self.now(),
             first_answer=body["firstAnswer"], selection_reason=reason,
