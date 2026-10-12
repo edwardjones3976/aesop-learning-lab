@@ -75,6 +75,7 @@ class SchedulerTests(unittest.TestCase):
                 decision = recommend(state(LESSON_TIME + timedelta(hours=25),
                                            (prior,)), 10, "pilot-v1")
                 self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+                self.assertIsNone(decision.next_check_at)
 
     def test_prelesson_attempt_does_not_open_delayed_check(self) -> None:
         prior = Attempt("pretest", PRACTICE_A.id, "v1", LESSON_TIME - timedelta(hours=1),
@@ -84,12 +85,14 @@ class SchedulerTests(unittest.TestCase):
                              10, "pilot-v1")
         self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
         self.assertIn("build evidence", decision.reason)
+        self.assertIsNone(decision.next_check_at)
 
     def test_held_out_check_is_not_reused_after_attempt(self) -> None:
         prior = (attempt("a1", PRACTICE_A), attempt("a2", CHECK))
         decision = recommend(state(LESSON_TIME + timedelta(hours=25), prior),
                              10, "pilot-v1")
         self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIsNone(decision.next_check_at)
 
     def test_familiar_family_is_not_called_independent(self) -> None:
         decision = recommend(state(LESSON_TIME + timedelta(hours=25),
@@ -97,6 +100,12 @@ class SchedulerTests(unittest.TestCase):
                                    encountered=frozenset({"family-c"})),
                              10, "pilot-v1")
         self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIsNone(decision.next_check_at)
+
+    def test_no_qualifying_evidence_has_no_promised_check_time(self) -> None:
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2)), 10, "pilot-v1")
+        self.assertIsNone(decision.next_check_at)
+        self.assertIn("also requires unassisted evidence", decision.reason)
 
     def test_exhausted_practice_rotates_instead_of_locking(self) -> None:
         prior = (attempt("a1", PRACTICE_A), attempt("a2", PRACTICE_B))

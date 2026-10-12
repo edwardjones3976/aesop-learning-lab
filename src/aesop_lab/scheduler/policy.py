@@ -71,9 +71,6 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         raise ValueError("mode must be recommended or practice")
     if available_time < 0:
         raise ValueError("available time cannot be negative")
-    if available_time < MINIMUM_MINUTES:
-        return ScheduleDecision(None, "Set aside at least five minutes for an activity.")
-
     attempts_by_item: dict[str, list[Attempt]] = {item.id: [] for item in state.activities}
     for attempt in state.attempts:
         attempts_by_item[attempt.activity_id].append(attempt)
@@ -86,14 +83,16 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
                   attempt.occurred_at >= state.lesson_completed_at]
     due_at = state.lesson_completed_at + DELAY
 
-    check_item: Activity | None = None
-    if qualifying and state.now >= due_at:
-        checks = [item for item in state.activities
-                  if item.held_out and item.evidence_kind in
-                  (EvidenceKind.APPLICATION, EvidenceKind.TRANSFER) and
-                  not attempts_by_item[item.id] and item.family_id not in seen_families]
-        if checks:
-            check_item = min(checks, key=lambda candidate: candidate.id)
+    checks = [item for item in state.activities
+              if qualifying and item.held_out and item.evidence_kind in
+              (EvidenceKind.APPLICATION, EvidenceKind.TRANSFER) and
+              not attempts_by_item[item.id] and item.family_id not in seen_families]
+    next_check_at = due_at if checks else None
+    check_item = min(checks, key=lambda candidate: candidate.id) if (
+        checks and state.now >= due_at) else None
+    if available_time < MINIMUM_MINUTES:
+        return ScheduleDecision(None, "Set aside at least five minutes for an activity.",
+                                next_check_at)
     if mode == "recommended" and check_item is not None:
         return _select(check_item, policy_version,
                        "A held-out independent application check is due.",
@@ -104,8 +103,10 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         # New items first; then rotate through the least practiced items.
         item = min(practice, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))
-        if state.now < due_at:
+        if state.now < due_at and qualifying:
             reason = "Continue practice now; the independent check opens after 24 hours."
+        elif state.now < due_at:
+            reason = "Continue practice now; a delayed check also requires unassisted evidence."
         elif not qualifying:
             reason = "Continue practice to build evidence before an independent check."
         elif mode == "practice" and check_item is not None:
@@ -114,13 +115,14 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
             reason = "Continue practice; no unused independent check is available."
         recommendation = Recommendation(item.id, policy_version, reason,
                                         tuple(attempt.id for attempt in state.attempts))
-        return ScheduleDecision(recommendation, reason,
-                                due_at if state.now < due_at or check_item is not None else None)
+        return ScheduleDecision(recommendation, reason, next_check_at)
 
     if state.now < due_at:
-        return ScheduleDecision(None, "No practice activity is available yet.", due_at)
+        return ScheduleDecision(None, "No practice activity is available yet.",
+                                next_check_at)
     if mode == "practice" and check_item is not None:
-        return ScheduleDecision(None, "No practice activity is available; an independent check is due.", due_at)
+        return ScheduleDecision(None, "No practice activity is available; an independent check is due.",
+                                next_check_at)
     return ScheduleDecision(None, "No practice or unused independent check is available.")
 
 
