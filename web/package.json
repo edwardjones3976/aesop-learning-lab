@@ -1,0 +1,8 @@
+{
+  "name": "aesop-learning-lab-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test ./test/practice-session.test.js"
+  }
+}
