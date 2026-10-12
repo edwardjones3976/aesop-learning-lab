@@ -55,15 +55,20 @@ class ScheduleDecision:
     next_check_at: datetime | None = None
 
 
-def recommend(state: LearnerState, available_time: int, policy_version: str) -> ScheduleDecision:
+def recommend(state: LearnerState, available_time: int, policy_version: str,
+              mode: str = "recommended") -> ScheduleDecision:
     """Choose a due independent check or continued practice, deterministically.
 
     Attempts and time are inputs, so replaying the same state returns the same
-    choice. A held-out item is used once and is never selected for routine
-    practice. Caller controls which reviewed activities enter this state.
+    choice. ``mode="practice"`` honors a learner request for more practice
+    even when an independent check is due. A held-out item is used once and
+    is never selected for routine practice. Caller controls which reviewed
+    activities enter this state.
     """
     if not policy_version:
         raise ValueError("policy version is required")
+    if mode not in ("recommended", "practice"):
+        raise ValueError("mode must be recommended or practice")
     if available_time < 0:
         raise ValueError("available time cannot be negative")
     if available_time < MINIMUM_MINUTES:
@@ -80,16 +85,18 @@ def recommend(state: LearnerState, available_time: int, policy_version: str) -> 
                   attempt.hint_level is HintLevel.NONE]
     due_at = state.lesson_completed_at + DELAY
 
+    check_item: Activity | None = None
     if qualifying and state.now >= due_at:
         checks = [item for item in state.activities
                   if item.held_out and item.evidence_kind in
                   (EvidenceKind.APPLICATION, EvidenceKind.TRANSFER) and
                   not attempts_by_item[item.id] and item.family_id not in seen_families]
         if checks:
-            item = min(checks, key=lambda candidate: candidate.id)
-            return _select(item, policy_version,
-                           "A held-out independent application check is due.",
-                           tuple(attempt.id for attempt in qualifying), due_at)
+            check_item = min(checks, key=lambda candidate: candidate.id)
+    if mode == "recommended" and check_item is not None:
+        return _select(check_item, policy_version,
+                       "A held-out independent application check is due.",
+                       tuple(attempt.id for attempt in qualifying), due_at)
 
     practice = [item for item in state.activities if not item.held_out]
     if practice:
@@ -100,14 +107,19 @@ def recommend(state: LearnerState, available_time: int, policy_version: str) -> 
             reason = "Continue practice now; the independent check opens after 24 hours."
         elif not qualifying:
             reason = "Continue practice to build evidence before an independent check."
+        elif mode == "practice" and check_item is not None:
+            reason = "Continue practice by choice; an independent check remains available."
         else:
             reason = "Continue practice; no unused independent check is available."
-        return _select(item, policy_version, reason,
-                       tuple(attempt.id for attempt in state.attempts),
-                       due_at if state.now < due_at else None)
+        recommendation = Recommendation(item.id, policy_version, reason,
+                                        tuple(attempt.id for attempt in state.attempts))
+        return ScheduleDecision(recommendation, reason,
+                                due_at if state.now < due_at or check_item is not None else None)
 
     if state.now < due_at:
         return ScheduleDecision(None, "No practice activity is available yet.", due_at)
+    if mode == "practice" and check_item is not None:
+        return ScheduleDecision(None, "No practice activity is available; an independent check is due.", due_at)
     return ScheduleDecision(None, "No practice or unused independent check is available.")
 
 

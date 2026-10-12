@@ -41,6 +41,7 @@ class SchedulerTests(unittest.TestCase):
                                    (attempt("a1", PRACTICE_A),)), 10, "pilot-v1")
         self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
         self.assertEqual(decision.next_check_at, LESSON_TIME + timedelta(hours=24))
+        self.assertIsNone(decision.recommendation.due_at)
         self.assertIn("Continue practice now", decision.reason)
 
     def test_due_check_uses_unseen_held_out_family(self) -> None:
@@ -48,6 +49,24 @@ class SchedulerTests(unittest.TestCase):
                                    (attempt("a1", PRACTICE_A),)), 10, "pilot-v1")
         self.assertEqual(decision.recommendation.activity_id, CHECK.id)
         self.assertEqual(decision.recommendation.evidence_attempt_ids, ("a1",))
+        self.assertEqual(decision.recommendation.due_at,
+                         LESSON_TIME + timedelta(hours=24))
+
+    def test_learner_can_choose_practice_when_check_is_due(self) -> None:
+        learner = state(LESSON_TIME + timedelta(hours=25),
+                        (attempt("a1", PRACTICE_A),))
+        decision = recommend(learner, 10, "pilot-v1", mode="practice")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIsNone(decision.recommendation.due_at)
+        self.assertEqual(decision.next_check_at, LESSON_TIME + timedelta(hours=24))
+        self.assertIn("by choice", decision.reason)
+        # Choosing practice does not consume the held-out item.
+        later = recommend(learner, 10, "pilot-v1")
+        self.assertEqual(later.recommendation.activity_id, CHECK.id)
+
+    def test_unknown_mode_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "mode"):
+            recommend(state(LESSON_TIME), 10, "pilot-v1", mode="quiz")
 
     def test_assisted_or_incorrect_answer_does_not_open_check(self) -> None:
         for prior in (attempt("a1", PRACTICE_A, hint=HintLevel.NUDGE),
