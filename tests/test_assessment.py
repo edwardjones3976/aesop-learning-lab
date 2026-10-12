@@ -11,6 +11,7 @@ from aesop_lab.assessment import (
     RubricCriterion,
     assess,
     build_attempt,
+    build_self_review,
 )
 from aesop_lab.assessment.engine import EXACT_KEY_METHOD, PENDING_REVIEW_METHOD
 from aesop_lab.domain.models import (
@@ -20,6 +21,8 @@ from aesop_lab.domain.models import (
     HintLevel,
     OutsideStudy,
     ScoreStatus,
+    CriterionReview,
+    ReviewRating,
 )
 
 NOW = datetime(2026, 10, 12, 9, 0, tzinfo=timezone.utc)
@@ -250,6 +253,28 @@ class AttemptRecordTests(unittest.TestCase):
     def test_scoring_is_deterministic(self) -> None:
         spec = trace_item()
         self.assertEqual(assess(spec, "2", HintLevel.NUDGE), assess(spec, "2", HintLevel.NUDGE))
+
+    def test_self_review_requires_complete_evidence_from_locked_answer(self) -> None:
+        spec = explanation_item()
+        attempt = build_attempt(spec, assess(spec, "n == 0 returns 1"), attempt_id="open-1",
+                                occurred_at=NOW, first_answer="n == 0 returns 1",
+                                selection_reason="practice")
+        judgments = (
+            CriterionReview("stopping", ReviewRating.SHOWN, "n == 0"),
+            CriterionReview("return", ReviewRating.PARTIAL, "returns 1"),
+        )
+        review = build_self_review(spec, attempt, review_id="review-1", occurred_at=NOW,
+                                   judgments=judgments, confidence=0.6)
+        self.assertEqual(review.rubric_version, "v1")
+        self.assertEqual(review.next_step, "targeted_retry")
+        self.assertIs(attempt.score_status, ScoreStatus.UNGRADED)
+        with self.assertRaisesRegex(ValueError, "first answer"):
+            build_self_review(spec, attempt, review_id="bad", occurred_at=NOW,
+                              judgments=(judgments[0], CriterionReview("return", ReviewRating.SHOWN,
+                                                                        "invented evidence")))
+        with self.assertRaisesRegex(ValueError, "every rubric"):
+            build_self_review(spec, attempt, review_id="bad", occurred_at=NOW,
+                              judgments=judgments[:1])
 
 
 if __name__ == "__main__":

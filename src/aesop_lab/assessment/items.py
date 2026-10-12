@@ -91,9 +91,12 @@ class HintLadder:
 class RubricCriterion:
     id: str
     description: str
+    shown_description: str = "Clearly demonstrates this criterion."
+    partial_description: str = "Addresses this criterion but leaves an important gap."
 
     def __post_init__(self) -> None:
-        if not self.id or not self.description.strip():
+        if not self.id or not all((self.description.strip(), self.shown_description.strip(),
+                                   self.partial_description.strip())):
             raise ValueError("rubric criteria need an id and a description")
 
 
@@ -103,9 +106,12 @@ class Rubric:
 
     id: str
     criteria: tuple[RubricCriterion, ...]
+    version: str = "v1"
+    annotated_example: str = ""
+    common_mistakes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.id or not self.criteria:
+        if not self.id or not self.version or not self.criteria:
             raise ValueError("a rubric needs an id and at least one criterion")
         ids = [criterion.id for criterion in self.criteria]
         if len(set(ids)) != len(ids):

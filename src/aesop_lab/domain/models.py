@@ -45,6 +45,13 @@ class OutsideStudy(StrEnum):
     UNKNOWN = "unknown"
 
 
+class ReviewRating(StrEnum):
+    SHOWN = "shown"
+    PARTIAL = "partial"
+    NOT_SHOWN = "not_shown"
+    UNSURE = "unsure"
+
+
 @dataclass(frozen=True, slots=True)
 class Concept:
     id: str
@@ -109,6 +116,63 @@ class Attempt:
     @property
     def unassisted(self) -> bool:
         return self.hint_level is HintLevel.NONE
+
+
+@dataclass(frozen=True, slots=True)
+class CriterionReview:
+    criterion_id: str
+    rating: ReviewRating
+    evidence: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.criterion_id:
+            raise ValueError("criterion id is required")
+        if not isinstance(self.rating, ReviewRating):
+            raise ValueError("review rating is not recognized")
+        if self.rating in (ReviewRating.SHOWN, ReviewRating.PARTIAL) and not self.evidence.strip():
+            raise ValueError("shown or partial ratings need evidence from the first answer")
+        if self.rating in (ReviewRating.NOT_SHOWN, ReviewRating.UNSURE) and self.evidence.strip():
+            raise ValueError("not shown or unsure ratings cannot claim evidence")
+
+
+@dataclass(frozen=True, slots=True)
+class SelfReview:
+    id: str
+    attempt_id: str
+    rubric_id: str
+    rubric_version: str
+    occurred_at: datetime
+    judgments: tuple[CriterionReview, ...]
+    confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        if not all((self.id, self.attempt_id, self.rubric_id, self.rubric_version)):
+            raise ValueError("review identity and rubric version are required")
+        if self.occurred_at.tzinfo is None or self.occurred_at.utcoffset() is None:
+            raise ValueError("review time must include a timezone")
+        if not self.judgments or len({item.criterion_id for item in self.judgments}) != len(self.judgments):
+            raise ValueError("review needs one judgment per distinct criterion")
+        if self.confidence is not None and not 0 <= self.confidence <= 1:
+            raise ValueError("review confidence must be between zero and one")
+
+    @property
+    def next_step(self) -> str:
+        return ("independent_check" if all(item.rating is ReviewRating.SHOWN
+                                           for item in self.judgments) else "targeted_retry")
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerRevision:
+    id: str
+    review_id: str
+    occurred_at: datetime
+    answer: str
+
+    def __post_init__(self) -> None:
+        if not self.id or not self.review_id or not self.answer.strip():
+            raise ValueError("revision identity and answer are required")
+        if self.occurred_at.tzinfo is None or self.occurred_at.utcoffset() is None:
+            raise ValueError("revision time must include a timezone")
 
 
 @dataclass(frozen=True, slots=True)
