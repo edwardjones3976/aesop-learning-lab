@@ -11,7 +11,7 @@ import {
 } from "../src/fixtures.js";
 import { practiceMarkup } from "../src/markup.js";
 import { createPracticeSession, nextHintLevel } from "../src/practice-session.js";
-import { formatActive } from "../src/render.js";
+import { formatActive, isImeComposingKeyEvent } from "../src/render.js";
 
 function manualClock(start = 0) {
   let time = start;
@@ -36,6 +36,12 @@ function watchAttempts(api) {
   };
   return bodies;
 }
+
+test("isImeComposingKeyEvent blocks Enter while IME is active", () => {
+  assert.equal(isImeComposingKeyEvent({ isComposing: true, keyCode: 0 }), true);
+  assert.equal(isImeComposingKeyEvent({ isComposing: false, keyCode: 229 }), true);
+  assert.equal(isImeComposingKeyEvent({ isComposing: false, keyCode: 13 }), false);
+});
 
 test("nextHintLevel walks the ladder and skips missing levels", () => {
   const activity = exampleNextSession.activity;

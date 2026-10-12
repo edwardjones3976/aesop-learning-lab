@@ -11,6 +11,11 @@ export function formatActive(seconds) {
   return `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
 
+/** True while an IME is composing; Enter must not commit a partial draft. */
+export function isImeComposingKeyEvent(event) {
+  return Boolean(event.isComposing || event.keyCode === 229);
+}
+
 function focusControl(root, control) {
   const node = root.querySelector(`[data-control="${control}"]`);
   if (!node) return false;
@@ -36,7 +41,7 @@ export function mountPracticeApp(root, session) {
             <input class="minutes" type="number" min="1" step="1" value="20" data-control="minutes" inputmode="numeric">
           </label>
           <p class="timer">Active time <span data-timer>0:00</span></p>
-          <button type="button" class="secondary" data-control="pause" aria-pressed="false">Pause</button>
+          <button type="button" class="secondary" data-control="pause">Pause</button>
         </div>
         <p class="meta">Available minutes are used the next time an activity is requested.</p>
         <p id="status" class="status" role="status" aria-atomic="true"></p>
@@ -64,14 +69,12 @@ export function mountPracticeApp(root, session) {
     errorEl.replaceChildren();
     if (!state.error) {
       errorEl.hidden = true;
-      main.removeAttribute("aria-describedby");
       return;
     }
     const code = document.createElement("strong");
     code.textContent = state.error.code;
     errorEl.append(code, document.createTextNode(` ${state.error.message}`));
     errorEl.hidden = false;
-    main.setAttribute("aria-describedby", "error");
   }
 
   function paint(state, meta) {
@@ -88,7 +91,6 @@ export function mountPracticeApp(root, session) {
     statusEl.textContent = state.status;
     paintError(state);
     pauseButton.textContent = state.phase === "paused" ? "Resume" : "Pause";
-    pauseButton.setAttribute("aria-pressed", state.phase === "paused" ? "true" : "false");
     pauseButton.disabled = state.phase !== "practicing" && state.phase !== "paused";
     timerEl.textContent = formatActive(session.activeSeconds());
     if (!meta || !SKIP_BODY.has(meta.reason)) {
@@ -127,11 +129,13 @@ export function mountPracticeApp(root, session) {
       || target instanceof HTMLTextAreaElement
       || target instanceof HTMLSelectElement;
     if (event.key === "Enter" && target instanceof HTMLInputElement && target.dataset.control === "draft") {
+      if (isImeComposingKeyEvent(event)) return;
       event.preventDefault();
       session.recordFirstAnswer();
       return;
     }
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && target instanceof HTMLTextAreaElement && target.dataset.control === "draft") {
+      if (isImeComposingKeyEvent(event)) return;
       event.preventDefault();
       session.recordFirstAnswer();
       return;
