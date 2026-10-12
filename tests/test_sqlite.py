@@ -1,16 +1,94 @@
 from datetime import datetime, timezone
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import sqlite3
 import unittest
 
 from aesop_lab.domain.models import (
-    Activity, ActivityType, Attempt, Concept, EvidenceKind,
-    ExperimentAssignment, HintLevel, OutsideStudy, ScoreStatus,
+    Activity, ActivityType, AnswerRevision, Attempt, Concept, CriterionReview, EvidenceKind,
+    ExperimentAssignment, HintLevel, OutsideStudy, ReviewRating, ScoreStatus, SelfReview,
 )
 from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class SQLiteStoreTests(unittest.TestCase):
+    def test_v1_database_adds_review_tables_without_losing_attempts(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "learning.db"
+            now = datetime.now(timezone.utc)
+            with SQLiteStore(path) as store:
+                store.add_concept(Concept("c1", "Concept", "v1"))
+                store.add_activity(Activity("a1", "c1", "v1", "family-a",
+                                            ActivityType.TRACE, EvidenceKind.APPLICATION))
+                store.append_attempt(Attempt("t1", "a1", "v1", now, "2", HintLevel.NONE,
+                                             ScoreStatus.CORRECT, "reviewed_exact_key", "assessment-v1",
+                                             "practice"))
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("DROP TABLE answer_revisions")
+                connection.execute("DROP TABLE self_reviews")
+                connection.execute("PRAGMA user_version = 1")
+                connection.commit()
+            with SQLiteStore(path) as store:
+                self.assertEqual(store.list_attempts("c1")[0].id, "t1")
+                self.assertEqual(store.export_all()["selfReviews"], [])
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+
+    def test_either_v2_branch_migrates_to_combined_schema(self) -> None:
+        for absent_tables in (("lesson_completions",),
+                              ("answer_revisions", "self_reviews")):
+            with self.subTest(absent_tables=absent_tables), TemporaryDirectory() as directory:
+                path = Path(directory) / "learning.db"
+                with SQLiteStore(path) as store:
+                    store.add_concept(Concept("c1", "Concept", "v1"))
+                with closing(sqlite3.connect(path)) as connection:
+                    for table in absent_tables:
+                        connection.execute(f"DROP TABLE {table}")
+                    connection.execute("PRAGMA user_version = 2")
+                    connection.commit()
+                with SQLiteStore(path) as store:
+                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+                    self.assertEqual(store.export_all()["selfReviews"], [])
+                    self.assertEqual(store.export_all()["lessonCompletions"], [])
+                    self.assertEqual(store.get_concept("c1", "v1").title, "Concept")
+
+    def test_reviews_and_revisions_are_append_only_exported_and_deleted(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "learning.db"
+            now = datetime.now(timezone.utc)
+            with SQLiteStore(path) as store:
+                store.add_concept(Concept("base-case", "Base case", "v1"))
+                store.add_activity(Activity("explain-1", "base-case", "v1", "family-a",
+                                            ActivityType.EXPLANATION, EvidenceKind.EXPLANATION))
+                store.append_attempt(Attempt("attempt-open", "explain-1", "v1", now,
+                                             "n == 0 returns 1", HintLevel.NONE, ScoreStatus.UNGRADED,
+                                             "ungraded_pending_review", "assessment-v1", "practice"))
+                review = SelfReview("review-1", "attempt-open", "rubric-1", "v1", now,
+                                    (CriterionReview("stopping", ReviewRating.SHOWN, "n == 0"),))
+                revision = AnswerRevision("revision-1", "review-1", now,
+                                          "The n == 0 branch returns 1 without another call.")
+                store.append_self_review(review)
+                store.append_revision(revision)
+                store.append_self_review(review)
+                store.append_revision(revision)
+                with self.assertRaisesRegex(ValueError, "immutable"):
+                    store.append_self_review(SelfReview("review-1", "attempt-open", "rubric-1", "v2", now,
+                                                        review.judgments))
+                with self.assertRaisesRegex(ValueError, "immutable"):
+                    store.append_revision(AnswerRevision("revision-1", "review-1", now, "Changed"))
+                self.assertEqual(store.list_self_reviews("attempt-open"), (review,))
+                self.assertEqual(store.list_revisions("review-1"), (revision,))
+                exported = store.export_all()
+                self.assertEqual(len(exported["selfReviews"]), 1)
+                self.assertEqual(len(exported["answerRevisions"]), 1)
+            with SQLiteStore(path) as store:
+                self.assertEqual(store.list_self_reviews("attempt-open"), (review,))
+                self.assertEqual(store.list_revisions("review-1"), (revision,))
+                self.assertIs(store.list_attempts("base-case")[0].score_status, ScoreStatus.UNGRADED)
+                store.delete_all()
+                self.assertEqual(store.export_all()["selfReviews"], [])
+                self.assertEqual(store.export_all()["answerRevisions"], [])
+
     def test_round_trip_export_and_delete_preserve_content(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "learning.db"

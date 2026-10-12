@@ -177,7 +177,7 @@ test("a revealed solution is not shown as correct", async () => {
   session.revealNextHint();
   await session.submit();
   const result = session.getState().result;
-  assert.equal(result.scoreStatus, "incorrect");
+  assert.equal(result.scoreStatus, "ungraded");
   assert.equal(result.assisted, true);
   assert.equal(result.nextReason, "A revealed solution cannot count as a correct attempt.");
 });
@@ -243,6 +243,79 @@ test("choice, explanation, and empty sessions keep their contract results", asyn
   assert.equal(session.getState().phase, "empty");
   assert.equal(session.getState().recommendation.reason, emptySession.recommendation.reason);
   assert.equal(practiceMarkup(session.getState()).includes("Nothing is due in the available time."), true);
+});
+
+test("open answer review requires evidence, reveals example later, and keeps revision separate", async () => {
+  const api = createFixtureApi();
+  const session = await readySession(api);
+  session.setDraft("2");
+  session.recordFirstAnswer();
+  await session.submit();
+  await session.load();
+  session.setChoice("guard");
+  session.recordFirstAnswer();
+  await session.submit();
+  await session.load();
+  const answer = "When n == 0, it returns 1 and makes no more calls.";
+  session.setDraft(answer);
+  session.recordFirstAnswer();
+  assert.equal(practiceMarkup(session.getState()).includes("Annotated example"), false);
+  await session.submit();
+  assert.equal(session.getState().phase, "review");
+  assert.equal(session.getState().result.scoreStatus, "ungraded");
+  assert.equal(session.getState().comparison, null);
+  assert.equal(Object.hasOwn(session.getState().rubric, "annotatedExample"), false);
+  assert.equal(practiceMarkup(session.getState()).includes("Annotated example"), false);
+  await session.submitReview();
+  assert.equal(session.getState().error.code, "validation_error");
+  session.setReviewRating("stopping", "shown");
+  session.setReviewEvidence("stopping", "n == 0");
+  session.setReviewRating("return", "partial");
+  session.setReviewEvidence("return", "not in my answer");
+  await session.submitReview();
+  assert.equal(session.getState().error.code, "validation_error");
+  session.setReviewEvidence("return", "returns 1");
+  session.setReviewConfidence("0.6");
+  await session.submitReview();
+  assert.equal(session.getState().phase, "comparison");
+  assert.equal(session.getState().review.nextStep, "targeted_retry");
+  assert.equal(practiceMarkup(session.getState()).includes("Annotated example"), true);
+  session.setRevisionDraft("A base case at n == 0 returns 1 without calling f again.");
+  await session.submitRevision();
+  assert.equal(session.getState().phase, "review_done");
+  assert.equal(session.getState().firstAnswer, answer);
+  assert.equal(session.getState().result.scoreStatus, "ungraded");
+  const events = api.reviewEvents();
+  assert.equal(events.reviews.length, 1);
+  assert.equal(events.revisions.length, 1);
+  assert.equal(events.reviews[0].rubricVersion, "v1");
+  assert.equal(events.reviews[0].confidence, 0.6);
+  assert.equal(events.revisions[0].reviewId, events.reviews[0].reviewId);
+});
+
+test("self-rating every criterion shown still needs an independent check", async () => {
+  const api = createFixtureApi();
+  const session = await readySession(api);
+  for (const answer of ["2", "if n == 0: return 1"]) {
+    if (session.getState().activity.type === "choice") session.setChoice("guard");
+    else session.setDraft(answer);
+    session.recordFirstAnswer();
+    await session.submit();
+    await session.load();
+  }
+  session.setDraft("n == 0 returns 1");
+  session.recordFirstAnswer();
+  await session.submit();
+  session.setReviewRating("stopping", "shown");
+  session.setReviewEvidence("stopping", "n == 0");
+  session.setReviewRating("return", "shown");
+  session.setReviewEvidence("return", "returns 1");
+  await session.submitReview();
+  assert.equal(session.getState().review.nextStep, "independent_check");
+  assert.equal(session.getState().result.scoreStatus, "ungraded");
+  session.finishWithoutRevision();
+  assert.equal(session.getState().phase, "review_done");
+  assert.match(practiceMarkup(session.getState()), /later unassisted check/);
 });
 
 test("markup escapes activity text and a missing reason is not invented", async () => {

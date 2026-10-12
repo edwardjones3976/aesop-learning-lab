@@ -1,5 +1,6 @@
 import { toError } from "./api-error.js";
 import { assertLearningApi } from "./learning-api.js";
+import { reviewNextStep, reviewProblem, validComparison, validRubric } from "./self-review.js";
 
 export const HINT_LADDER = ["nudge", "targeted", "worked_solution"];
 const ACTIVITY_TYPES = new Set(["choice", "trace", "explanation", "code_design"]);
@@ -108,6 +109,13 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     outsideStudyDetail: null,
     viewedHints: [],
     result: null,
+    rubric: null,
+    judgments: {},
+    reviewConfidence: null,
+    review: null,
+    comparison: null,
+    revisionDraft: "",
+    revisionId: null,
     error: null,
     status: "Loading the next activity.",
     sent: false,
@@ -148,6 +156,13 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       outsideStudyDetail: state.outsideStudyDetail,
       viewedHints: state.viewedHints.map((hint) => ({ ...hint })),
       result: state.result ? { ...state.result } : null,
+      rubric: state.rubric ? structuredClone(state.rubric) : null,
+      judgments: structuredClone(state.judgments),
+      reviewConfidence: state.reviewConfidence,
+      review: state.review ? { ...state.review } : null,
+      comparison: state.comparison ? structuredClone(state.comparison) : null,
+      revisionDraft: state.revisionDraft,
+      revisionId: state.revisionId,
       error: state.error ? { ...state.error } : null,
       status: state.status,
       sent: state.sent,
@@ -176,6 +191,13 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     state.outsideStudyDetail = null;
     state.viewedHints = [];
     state.result = null;
+    state.rubric = null;
+    state.judgments = {};
+    state.reviewConfidence = null;
+    state.review = null;
+    state.comparison = null;
+    state.revisionDraft = "";
+    state.revisionId = null;
     state.error = null;
     state.sent = false;
     accumulatedMs = 0;
@@ -462,6 +484,16 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       notify("error");
       return;
     }
+    const openEnded = state.activity.type === "explanation" || state.activity.type === "code_design";
+    if (openEnded
+        && (response.scoreStatus !== "ungraded" || !validRubric(response.rubric))) {
+      state.phase = "rejected";
+      state.result = null;
+      state.error = { code: "invalid_response", message: "The open-ended response needs an ungraded result and a complete rubric." };
+      state.status = "";
+      notify("error");
+      return;
+    }
     state.result = {
       attemptId: response.attemptId,
       scoreStatus: response.scoreStatus,
@@ -469,10 +501,122 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       assisted: response.assisted,
       nextReason: response.nextReason,
     };
-    state.phase = "result";
+    state.rubric = response.rubric ? structuredClone(response.rubric) : null;
+    state.phase = openEnded ? "review" : "result";
     state.error = null;
-    state.status = `Attempt recorded. Score status: ${response.scoreStatus}.`;
+    state.status = openEnded
+      ? "First answer recorded. Compare it with each rubric criterion."
+      : `Attempt recorded. Score status: ${response.scoreStatus}.`;
     notify("submit");
+  }
+
+  function setReviewRating(criterionId, rating) {
+    if (state.phase !== "review" || !state.rubric.criteria.some((item) => item.id === criterionId)) return;
+    state.judgments[criterionId] = { rating, evidence: "" };
+    state.error = null;
+    notify("review-rating");
+  }
+
+  function setReviewEvidence(criterionId, evidence) {
+    if (state.phase !== "review" || !state.rubric.criteria.some((item) => item.id === criterionId)) return;
+    state.judgments[criterionId] ??= { rating: "", evidence: "" };
+    state.judgments[criterionId].evidence = String(evidence);
+    notify("review-evidence");
+  }
+
+  function setReviewConfidence(raw) {
+    if (state.phase !== "review") return;
+    if (raw === "") state.reviewConfidence = null;
+    else {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0 || value > 1) {
+        fail("validation_error", "Review confidence must be between 0 and 1, or unanswered.");
+        return;
+      }
+      state.reviewConfidence = value;
+    }
+    notify("review-confidence");
+  }
+
+  async function submitReview() {
+    if (state.phase !== "review") return;
+    const judgments = state.rubric.criteria.map((criterion) => ({
+      criterionId: criterion.id,
+      rating: state.judgments[criterion.id]?.rating ?? "",
+      evidence: (state.judgments[criterion.id]?.evidence ?? "").trim(),
+    }));
+    const problem = reviewProblem(state.rubric, state.firstAnswer, judgments);
+    if (problem) { fail("validation_error", problem); return; }
+    if (typeof api.submitSelfReview !== "function") {
+      fail("unavailable", "This adapter cannot save self reviews.");
+      return;
+    }
+    state.phase = "review_submitting";
+    state.error = null;
+    state.status = "Saving self review.";
+    notify("review-submit-start");
+    try {
+      const response = await api.submitSelfReview({
+        attemptId: state.result.attemptId,
+        rubricId: state.rubric.id,
+        rubricVersion: state.rubric.version,
+        judgments,
+        confidence: state.reviewConfidence,
+      });
+      if (!response || typeof response.reviewId !== "string" || !response.reviewId
+          || response.nextStep !== reviewNextStep(judgments)
+          || !validComparison(response.comparison)) {
+        throw new Error("The saved review response was incomplete.");
+      }
+      state.review = { reviewId: response.reviewId, nextStep: response.nextStep };
+      state.comparison = structuredClone(response.comparison);
+      state.phase = "comparison";
+      state.status = "Review saved. Compare your answer with the example, then revise or finish.";
+      notify("review-saved");
+    } catch (error) {
+      state.phase = "review";
+      state.error = toError(error);
+      state.status = "";
+      notify("error");
+    }
+  }
+
+  function setRevisionDraft(text) {
+    if (state.phase !== "comparison") return;
+    state.revisionDraft = String(text);
+    notify("revision-draft");
+  }
+
+  async function submitRevision() {
+    if (state.phase !== "comparison") return;
+    if (!state.revisionDraft.trim()) { fail("validation_error", "Write a revision before saving it."); return; }
+    if (typeof api.submitRevision !== "function") { fail("unavailable", "This adapter cannot save revisions."); return; }
+    state.phase = "revision_submitting";
+    state.error = null;
+    state.status = "Saving revision.";
+    notify("revision-submit-start");
+    try {
+      const response = await api.submitRevision({ reviewId: state.review.reviewId, answer: state.revisionDraft });
+      if (!response || typeof response.revisionId !== "string" || !response.revisionId) {
+        throw new Error("The saved revision response was incomplete.");
+      }
+      state.revisionId = response.revisionId;
+      state.phase = "review_done";
+      state.status = "Revision saved separately from the first answer.";
+      notify("revision-saved");
+    } catch (error) {
+      state.phase = "comparison";
+      state.error = toError(error);
+      state.status = "";
+      notify("error");
+    }
+  }
+
+  function finishWithoutRevision() {
+    if (state.phase !== "comparison" || state.revisionDraft.trim()) return;
+    state.phase = "review_done";
+    state.status = "Self review saved. A later independent check is still needed.";
+    notify("review-finished");
   }
 
   return {
@@ -495,5 +639,12 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     resume,
     togglePause,
     submit,
+    setReviewRating,
+    setReviewEvidence,
+    setReviewConfidence,
+    submitReview,
+    setRevisionDraft,
+    submitRevision,
+    finishWithoutRevision,
   };
 }
