@@ -47,6 +47,27 @@ class SQLiteStoreTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "immutable"):
                 store.add_concept(Concept("c1", "Changed", "v1"))
 
+    def test_assignment_retry_is_idempotent_but_reassignment_is_rejected(self) -> None:
+        with TemporaryDirectory() as directory, SQLiteStore(Path(directory) / "db.sqlite3") as store:
+            store.add_concept(Concept("c1", "Original", "v1"))
+            now = datetime.now(timezone.utc)
+            assignment = ExperimentAssignment("p1", "v1", "c1", "family-a", "text", 42, now)
+            store.save_assignment(assignment)
+            store.save_assignment(assignment)
+            self.assertEqual(store.list_assignments("p1"), (assignment,))
+            with self.assertRaisesRegex(ValueError, "immutable"):
+                store.save_assignment(ExperimentAssignment(
+                    "p1", "v1", "c1", "family-a", "diagram", 42, now
+                ))
+
+    def test_assignment_rejects_unknown_concept(self) -> None:
+        with TemporaryDirectory() as directory, SQLiteStore(Path(directory) / "db.sqlite3") as store:
+            with self.assertRaisesRegex(ValueError, "known concept"):
+                store.save_assignment(ExperimentAssignment(
+                    "p1", "v1", "missing", "family-a", "text", 42,
+                    datetime.now(timezone.utc),
+                ))
+
 
 if __name__ == "__main__":
     unittest.main()

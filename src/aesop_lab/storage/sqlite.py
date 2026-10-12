@@ -176,13 +176,29 @@ class SQLiteStore:
         ) for row in rows)
 
     def save_assignment(self, assignment: ExperimentAssignment) -> None:
+        concept_exists = self.connection.execute(
+            "SELECT 1 FROM concepts WHERE id = ? LIMIT 1", (assignment.concept_id,)
+        ).fetchone()
+        if concept_exists is None:
+            raise ValueError("experiment assignment needs a known concept")
+        values = (assignment.protocol_id, assignment.protocol_version,
+                  assignment.concept_id, assignment.item_family_id,
+                  assignment.condition_id, assignment.seed,
+                  assignment.assigned_at.isoformat())
+        old = self.connection.execute(
+            "SELECT protocol_id, protocol_version, concept_id, item_family_id, "
+            "condition_id, seed, assigned_at FROM experiment_assignments "
+            "WHERE protocol_id = ? AND protocol_version = ? AND item_family_id = ?",
+            (assignment.protocol_id, assignment.protocol_version, assignment.item_family_id),
+        ).fetchone()
+        if old is not None:
+            if tuple(old) != values:
+                raise ValueError("experiment assignment is immutable")
+            return
         with self.connection:
             self.connection.execute(
                 "INSERT INTO experiment_assignments VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (assignment.protocol_id, assignment.protocol_version,
-                 assignment.concept_id, assignment.item_family_id,
-                 assignment.condition_id, assignment.seed,
-                 assignment.assigned_at.isoformat()),
+                values,
             )
 
     def list_assignments(self, protocol_id: str) -> tuple[ExperimentAssignment, ...]:
