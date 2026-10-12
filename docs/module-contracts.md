@@ -23,6 +23,7 @@ The dependency direction is `web -> api -> domain ports <- adapters`. The domain
 - The experiment protocol is immutable during a run; policy changes create a new protocol version.
 - API responses expose recommendation reasons and evidence scope. UI copy may explain them but may not invent unsupported conclusions.
 - Add contract fixtures before modules depend on each other. Breaking changes require a version bump and all affected owner reviews.
+- The browser boundary is specified in [API v1](api-v1.md). Cursor owns the UI adapter and fixtures; Codex owns the service and local transport that satisfy it.
 
 ## V1 decisions for independent implementation
 
