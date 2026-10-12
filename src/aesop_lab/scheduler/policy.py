@@ -82,7 +82,8 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
                          if attempts_by_item[item.id])
     qualifying = [attempt for attempt in state.attempts
                   if attempt.score_status is ScoreStatus.CORRECT and
-                  attempt.hint_level is HintLevel.NONE]
+                  attempt.hint_level is HintLevel.NONE and
+                  attempt.occurred_at >= state.lesson_completed_at]
     due_at = state.lesson_completed_at + DELAY
 
     check_item: Activity | None = None

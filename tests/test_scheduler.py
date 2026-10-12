@@ -76,6 +76,15 @@ class SchedulerTests(unittest.TestCase):
                                            (prior,)), 10, "pilot-v1")
                 self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
 
+    def test_prelesson_attempt_does_not_open_delayed_check(self) -> None:
+        prior = Attempt("pretest", PRACTICE_A.id, "v1", LESSON_TIME - timedelta(hours=1),
+                        "2", HintLevel.NONE, ScoreStatus.CORRECT,
+                        "reviewed_exact_key", "assessment-v1", "pretest")
+        decision = recommend(state(LESSON_TIME + timedelta(hours=25), (prior,)),
+                             10, "pilot-v1")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIn("build evidence", decision.reason)
+
     def test_held_out_check_is_not_reused_after_attempt(self) -> None:
         prior = (attempt("a1", PRACTICE_A), attempt("a2", CHECK))
         decision = recommend(state(LESSON_TIME + timedelta(hours=25), prior),

@@ -31,7 +31,8 @@ available. The UI can show a clock and the server's reason, but must not turn
 the time into a disabled practice state. When no activity is available,
 `activity` and `recommendation` are null and the response includes a `reason`.
 
-A qualifying attempt is correct and unassisted on the current content version.
+A qualifying attempt is correct, unassisted, and recorded after lesson
+completion on the current content version.
 The check is an unused, held-out application or transfer item from a family the
 learner has not encountered. Its 24-hour delay is measured from lesson
 completion. An answer made with hints or a self-review of an ungraded answer
