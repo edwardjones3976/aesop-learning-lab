@@ -159,6 +159,11 @@ class ValidatorRejectsBrokenPacksTests(unittest.TestCase):
         del raw_item(raw, "base-case-explain-01")["rubric"]
         self.assertIn("rubric_missing", codes(raw))
 
+    def test_rubric_requires_comparison_material(self) -> None:
+        raw = raw_pack()
+        del raw_item(raw, "recursion-explain-01")["rubric"]["annotated_example"]
+        self.assertIn("missing_field", codes(raw))
+
     def test_transfer_evidence_must_be_held_out(self) -> None:
         raw = raw_pack()
         raw_item(raw, "recursive-case-transfer-01")["held_out"] = False

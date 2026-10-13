@@ -63,6 +63,8 @@ class RubricSpec:
 
     id: str
     criteria: tuple[CriterionSpec, ...]
+    annotated_example: str
+    common_mistakes: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)

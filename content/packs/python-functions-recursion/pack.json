@@ -277,6 +277,8 @@
       "choices": [],
       "rubric": {
         "id": "recursion-explain-rubric",
+        "annotated_example": "A recursive function calls itself on a smaller version of the problem. A stopping condition returns without another self-call, so the chain can unwind.",
+        "common_mistakes": ["Saying only that the function repeats does not identify a self-call.", "Leaving out the stopping condition does not explain why calls finish."],
         "criteria": [
           {"id": "self-call", "description": "Says the function calls itself on a smaller or simpler version of the problem."},
           {"id": "stopping", "description": "Says some condition must stop the calls, or they never end."}
@@ -361,6 +363,8 @@
       "choices": [],
       "rubric": {
         "id": "base-case-explain-rubric",
+        "annotated_example": "Without a base case, each call makes another call without a stopping return. Python eventually raises RecursionError when the recursion depth limit is reached.",
+        "common_mistakes": ["A missing base case does not simply return None.", "RecursionError is an observed runtime limit, not a successful stopping rule."],
         "criteria": [
           {"id": "unbounded", "description": "States that without a base case the calls never reach a stopping point."},
           {"id": "error", "description": "Mentions that Python raises RecursionError once the recursion depth limit is exceeded."}
@@ -445,6 +449,8 @@
       "choices": [],
       "rubric": {
         "id": "recursive-design-rubric",
+        "annotated_example": "def sum_list(items):\n    if not items:\n        return 0\n    return items[0] + sum_list(items[1:])\nThe empty list stops recursion, and each call receives a shorter list.",
+        "common_mistakes": ["Recursing on the same list does not move toward the empty base case.", "A branch with no return value cannot supply the sum to its caller."],
         "criteria": [
           {"id": "base-case", "description": "Handles the empty list with a base case that returns a value without recursing."},
           {"id": "recursive-step", "description": "The recursive case combines the first item with a recursive call on the rest of the list."},

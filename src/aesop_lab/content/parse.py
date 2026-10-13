@@ -356,6 +356,8 @@ def _parse_rubric(raw: Mapping[str, Any], path: str, issues: list[Issue]) -> Rub
         issues.append(Issue(rubric_path, "wrong_type", "'rubric' must be an object"))
         return None
     rubric_id = _field(rubric_raw, "id", str, rubric_path, issues)
+    annotated_example = _field(rubric_raw, "annotated_example", str, rubric_path, issues)
+    common_mistakes = _str_list(rubric_raw, "common_mistakes", rubric_path, issues)
     criteria: list[CriterionSpec] = []
     for index, criterion_raw in enumerate(_field(rubric_raw, "criteria", list, rubric_path, issues) or []):
         criterion_path = f"{rubric_path}.criteria[{index}]"
@@ -366,14 +368,14 @@ def _parse_rubric(raw: Mapping[str, Any], path: str, issues: list[Issue]) -> Rub
         description = _field(criterion_raw, "description", str, criterion_path, issues)
         if criterion_id is not None and description is not None:
             criteria.append(CriterionSpec(criterion_id, description))
-    if rubric_id is None or not criteria:
+    if rubric_id is None or annotated_example is None or common_mistakes is None or not common_mistakes or not criteria:
         if rubric_id is not None:
             issues.append(Issue(rubric_path, "rubric_invalid", "a rubric needs at least one criterion"))
         return None
     if len({criterion.id for criterion in criteria}) != len(criteria):
         issues.append(Issue(rubric_path, "rubric_invalid", "criterion ids must be unique"))
         return None
-    return RubricSpec(rubric_id, tuple(criteria))
+    return RubricSpec(rubric_id, tuple(criteria), annotated_example, common_mistakes)
 
 
 def _parse_hints(raw: Mapping[str, Any], path: str, issues: list[Issue]) -> tuple[HintSpec, ...] | None:
