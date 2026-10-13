@@ -19,7 +19,16 @@ use `mode=practice` to choose routine practice while a delayed check is due.
 POST `/api/v1/attempts` uses the body in `api-v1.md` and records the first
 answer and highest hint level before the next scheduling decision.
 
-Only these two endpoints are implemented in this slice. Reviewed pack loading,
-the browser HTTP adapter, and open-ended review endpoints are integration work.
+The browser at `http://127.0.0.1:8765/` now uses this local API by default.
+Run `py -m http.server 8765` from `web/` in another terminal. Add
+`?scenario=default` to use the isolated in-memory fixture instead.
+
+The service also provides `POST /api/v1/self-reviews`,
+`POST /api/v1/answer-revisions`, `GET /api/v1/export`, and
+`DELETE /api/v1/data`. The development catalog includes an open-ended
+review item. Deleting learner data leaves the content catalog intact; restart
+the development server to start a new fixture lesson clock.
+
+Reviewed pack loading and five-concept progression remain integration work.
 The current service accepts a real lesson completion through
 `LearningService.complete_lesson()`; the CLI calls it for the fixture only.
