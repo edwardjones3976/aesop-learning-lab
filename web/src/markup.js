@@ -147,6 +147,7 @@ function resultPanel(state) {
       <dt>Next</dt><dd>${escapeHtml(result.nextReason)}</dd>
     </dl>
     <button type="button" data-control="continue">Continue</button>
+    <button type="button" class="secondary" data-control="practice">More practice</button>
   </article>`;
 }
 
@@ -216,7 +217,7 @@ function reviewDonePanel(state) {
   return `<article><h2 data-control="review-done" tabindex="-1">Review complete</h2>
     <p>Your first answer is still ungraded. ${escapeHtml(next)}</p>
     <p class="meta">Review ${escapeHtml(state.review.reviewId)}${state.revisionId ? ` · revision ${escapeHtml(state.revisionId)}` : ""}</p>
-    <button type="button" data-control="continue">Continue</button></article>`;
+    <button type="button" data-control="continue">Continue</button><button type="button" class="secondary" data-control="practice">More practice</button></article>`;
 }
 
 export function practiceMarkup(state) {
@@ -225,7 +226,7 @@ export function practiceMarkup(state) {
     return `<section><h2>The activity did not load</h2><button type="button" data-control="retry">Try again</button></section>`;
   }
   if (state.phase === "empty") {
-    return `<section><h2>No activity right now</h2><p>${escapeHtml(state.recommendation.reason)}</p><button type="button" data-control="check">Check again</button></section>`;
+    return `<section><h2>No activity right now</h2><p>${escapeHtml(state.recommendation.reason)}</p><button type="button" data-control="check">Check again</button><button type="button" class="secondary" data-control="practice">More practice</button></section>`;
   }
   if (state.phase === "rejected") {
     return `<section><h2>Score not shown</h2><p>This page did not accept the response, so it is not shown as recorded.</p><button type="button" data-control="continue">Continue</button></section>`;

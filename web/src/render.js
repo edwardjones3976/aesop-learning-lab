@@ -24,7 +24,7 @@ function focusControl(root, control) {
   return true;
 }
 
-export function mountPracticeApp(root, session) {
+export function mountPracticeApp(root, session, api) {
   root.innerHTML = `
     <a class="skip" href="#practice">Skip to practice</a>
     <div class="sheet">
@@ -33,6 +33,8 @@ export function mountPracticeApp(root, session) {
         <h1>Practice</h1>
         <p id="reason" class="reason"></p>
         <p id="policy" class="meta"></p>
+        <p id="check-time" class="meta"></p>
+        <p id="development" class="meta" hidden>Development fixture: answer keys have no human review receipts.</p>
         <div id="evidence-wrap" hidden>
           <p id="evidence-label" class="meta">Evidence attempts</p>
           <ul id="evidence" aria-labelledby="evidence-label"></ul>
@@ -47,6 +49,10 @@ export function mountPracticeApp(root, session) {
         <p class="meta">Available minutes are used the next time an activity is requested.</p>
         <p id="status" class="status" role="status" aria-atomic="true"></p>
         <div id="error" class="error" role="alert" aria-atomic="true" tabindex="-1" hidden></div>
+        <div class="tools">
+          <button type="button" class="secondary" data-control="export">Export learner data</button>
+          <button type="button" class="secondary" data-control="delete">Delete learner data</button>
+        </div>
       </header>
       <main id="practice"></main>
     </div>
@@ -54,6 +60,8 @@ export function mountPracticeApp(root, session) {
 
   const reasonEl = root.querySelector("#reason");
   const policyEl = root.querySelector("#policy");
+  const checkTimeEl = root.querySelector("#check-time");
+  const developmentEl = root.querySelector("#development");
   const evidenceWrap = root.querySelector("#evidence-wrap");
   const evidenceEl = root.querySelector("#evidence");
   const statusEl = root.querySelector("#status");
@@ -81,6 +89,8 @@ export function mountPracticeApp(root, session) {
   function paint(state, meta) {
     reasonEl.textContent = state.recommendation?.reason ?? "";
     policyEl.textContent = state.recommendation ? `Policy ${state.recommendation.policyVersion}` : "";
+    checkTimeEl.textContent = state.nextCheckAt ? `Next independent check: ${new Date(state.nextCheckAt).toLocaleString()}` : "";
+    developmentEl.hidden = !state.developmentOnly;
     const evidenceIds = state.recommendation?.evidenceAttemptIds ?? [];
     evidenceWrap.hidden = evidenceIds.length === 0;
     evidenceEl.replaceChildren();
@@ -105,6 +115,27 @@ export function mountPracticeApp(root, session) {
   root.addEventListener("submit", (event) => event.preventDefault());
   root.addEventListener("click", (event) => {
     const control = event.target.closest("[data-control]")?.dataset.control;
+    if (control === "export" && typeof api.exportData === "function") {
+      void api.exportData().then((data) => {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "aesop-learner-data.json";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }).catch((error) => { errorEl.textContent = error.message; errorEl.hidden = false; errorEl.focus(); });
+    }
+    if (control === "delete" && typeof api.deleteData === "function"
+        && window.confirm("Delete all local learner records? This cannot be undone.")) {
+      void api.deleteData().then(() => {
+        main.innerHTML = "<h2>Learner data deleted</h2><p>Restart the local service to begin a new development session.</p>";
+        reasonEl.textContent = "";
+        evidenceEl.replaceChildren();
+        evidenceWrap.hidden = true;
+        statusEl.textContent = "Learner records removed.";
+      })
+        .catch((error) => { errorEl.textContent = error.message; errorEl.hidden = false; errorEl.focus(); });
+    }
     if (control === "record") session.recordFirstAnswer();
     if (control === "hint") session.revealNextHint();
     if (control === "submit") session.submit();
@@ -113,6 +144,7 @@ export function mountPracticeApp(root, session) {
     if (control === "finish-review") session.finishWithoutRevision();
     if (control === "pause") session.togglePause();
     if (control === "continue" || control === "retry" || control === "check") session.load();
+    if (control === "practice") session.load("practice");
   });
   root.addEventListener("input", (event) => {
     const control = event.target.dataset.control;
@@ -197,7 +229,7 @@ export function mountPracticeApp(root, session) {
 export function startApp(root, api) {
   assertLearningApi(api);
   const session = createPracticeSession(api);
-  mountPracticeApp(root, session);
+  mountPracticeApp(root, session, api);
   void session.load();
   return session;
 }

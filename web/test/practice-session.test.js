@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { ApiError } from "../src/api-error.js";
 import { createFixtureApi } from "../src/fixture-api.js";
+import { createHttpApi } from "../src/http-api.js";
 import {
   emptySession,
   exampleAttemptRequest,
@@ -41,6 +42,20 @@ test("isImeComposingKeyEvent blocks Enter while IME is active", () => {
   assert.equal(isImeComposingKeyEvent({ isComposing: true, keyCode: 0 }), true);
   assert.equal(isImeComposingKeyEvent({ isComposing: false, keyCode: 229 }), true);
   assert.equal(isImeComposingKeyEvent({ isComposing: false, keyCode: 13 }), false);
+});
+
+test("HTTP adapter sends practice mode and reports service errors", async () => {
+  const calls = [];
+  const api = createHttpApi({ fetchImpl: async (url, options) => {
+    calls.push({ url, options });
+    if (url.includes("/attempts")) return { ok: false, status: 409,
+      json: async () => ({ code: "check_unavailable", message: "Check is not due." }) };
+    return { ok: true, json: async () => ({ activity: null, reason: "No item." }) };
+  } });
+  await api.nextSession({ availableMinutes: 15, mode: "practice" });
+  assert.match(calls[0].url, /availableMinutes=15&mode=practice$/);
+  await assert.rejects(api.submitAttempt({ activityId: "held-out" }),
+    (error) => error instanceof ApiError && error.code === "check_unavailable" && error.status === 409);
 });
 
 test("nextHintLevel walks the ladder and skips missing levels", () => {

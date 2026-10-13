@@ -261,6 +261,11 @@ class SQLiteStore:
                   for item in json.loads(row["judgments"])), row["confidence"],
         ) for row in rows)
 
+    def has_self_review(self, review_id: str) -> bool:
+        return self.connection.execute(
+            "SELECT 1 FROM self_reviews WHERE id = ?", (review_id,)
+        ).fetchone() is not None
+
     def append_revision(self, revision: AnswerRevision) -> None:
         review = self.connection.execute(
             "SELECT occurred_at FROM self_reviews WHERE id = ?", (revision.review_id,)

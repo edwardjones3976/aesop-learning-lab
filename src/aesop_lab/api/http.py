@@ -12,10 +12,21 @@ from .service import ApiError, LearningService
 
 def make_app(service: LearningService):
     def app(environ, start_response):
+        origin = environ.get("HTTP_ORIGIN", "")
+        cors = ([("Access-Control-Allow-Origin", origin), ("Vary", "Origin")]
+                if origin in ("http://127.0.0.1:8765", "http://localhost:8765") else [])
         try:
             method = environ["REQUEST_METHOD"]
             path = environ["PATH_INFO"]
-            if method == "GET" and path == "/api/v1/session/next":
+            if method == "OPTIONS" and path.startswith("/api/v1/"):
+                status, payload = "204 No Content", {}
+                cors += [("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"),
+                         ("Access-Control-Allow-Headers", "Content-Type")]
+            elif method == "GET" and path == "/api/v1/export":
+                payload, status = service.export_data(), "200 OK"
+            elif method == "DELETE" and path == "/api/v1/data":
+                payload, status = service.delete_data(), "200 OK"
+            elif method == "GET" and path == "/api/v1/session/next":
                 query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
                 if any(len(values) != 1 for values in query.values()):
                     raise ApiError("validation_error", "Query parameters must appear once.")
@@ -25,15 +36,21 @@ def make_app(service: LearningService):
                     raise ApiError("validation_error", "availableMinutes must be a whole number.") from None
                 payload = service.next_session(minutes, query.get("mode", ["recommended"])[0])
                 status = "200 OK"
-            elif method == "POST" and path == "/api/v1/attempts":
+            elif method == "POST" and path in (
+                    "/api/v1/attempts", "/api/v1/self-reviews", "/api/v1/answer-revisions"):
                 try:
                     length = int(environ.get("CONTENT_LENGTH") or "0")
                     if length < 1 or length > 65536:
                         raise ValueError
                     body = json.loads(environ["wsgi.input"].read(length))
                 except (ValueError, json.JSONDecodeError):
-                    raise ApiError("validation_error", "A JSON attempt body is required.") from None
-                payload = service.submit_attempt(body)
+                    raise ApiError("validation_error", "A JSON request body is required.") from None
+                if path == "/api/v1/attempts":
+                    payload = service.submit_attempt(body)
+                elif path == "/api/v1/self-reviews":
+                    payload = service.submit_self_review(body)
+                else:
+                    payload = service.submit_revision(body)
                 status = "201 Created"
             else:
                 raise ApiError("not_found", "Endpoint was not found.", 404)
@@ -49,7 +66,7 @@ def make_app(service: LearningService):
         data = json.dumps(payload).encode("utf-8")
         start_response(status, [("Content-Type", "application/json; charset=utf-8"),
                                 ("Content-Length", str(len(data))),
-                                ("Cache-Control", "no-store")])
+                                ("Cache-Control", "no-store"), *cors])
         return [data]
     return app
 
