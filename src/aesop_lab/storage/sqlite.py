@@ -286,7 +286,7 @@ class SQLiteStore:
 
     def hint_levels(self, draft_id: str) -> tuple[HintLevel, ...]:
         rows = self.connection.execute(
-            "SELECT level FROM practice_hint_events WHERE draft_id = ? ORDER BY viewed_at, rowid",
+            "SELECT level FROM practice_hint_events WHERE draft_id = ? ORDER BY rowid",
             (draft_id,),
         ).fetchall()
         return tuple(HintLevel(row[0]) for row in rows)
@@ -415,16 +415,15 @@ class SQLiteStore:
         ) for row in rows)
 
     def export_all(self) -> dict[str, object]:
-        attempts = self.connection.execute("SELECT * FROM attempts ORDER BY occurred_at, id").fetchall()
-        assignments = self.connection.execute(
-            "SELECT * FROM experiment_assignments ORDER BY assigned_at, item_family_id"
-        ).fetchall()
-        reviews = self.connection.execute(
-            "SELECT * FROM self_reviews ORDER BY occurred_at, id"
-        ).fetchall()
-        revisions = self.connection.execute(
-            "SELECT * FROM answer_revisions ORDER BY occurred_at, id"
-        ).fetchall()
+        def by_instant(query: str, timestamp: str, tie_break: str) -> list[sqlite3.Row]:
+            rows = self.connection.execute(query).fetchall()
+            rows.sort(key=lambda row: (datetime.fromisoformat(row[timestamp]), row[tie_break]))
+            return rows
+
+        attempts = by_instant("SELECT * FROM attempts", "occurred_at", "id")
+        assignments = by_instant("SELECT * FROM experiment_assignments", "assigned_at", "item_family_id")
+        reviews = by_instant("SELECT * FROM self_reviews", "occurred_at", "id")
+        revisions = by_instant("SELECT * FROM answer_revisions", "occurred_at", "id")
         return {
             "schemaVersion": SCHEMA_VERSION,
             "attempts": [dict(row) for row in attempts],
@@ -433,11 +432,11 @@ class SQLiteStore:
             "experimentAssignments": [dict(row) for row in assignments],
             "lessonCompletions": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
-            "practiceDrafts": [dict(row) for row in self.connection.execute(
+            "practiceDrafts": [dict(row) for row in by_instant(
                 "SELECT id, activity_id, content_version, first_answer, recorded_at, "
-                "submitted_attempt_id FROM practice_drafts ORDER BY recorded_at, id")],
-            "hintEvents": [dict(row) for row in self.connection.execute(
-                "SELECT * FROM practice_hint_events ORDER BY viewed_at, draft_id")],
+                "submitted_attempt_id FROM practice_drafts", "recorded_at", "id")],
+            "hintEvents": [dict(row) for row in by_instant(
+                "SELECT * FROM practice_hint_events", "viewed_at", "draft_id")],
         }
 
     def learner_content_versions(self) -> frozenset[str]:

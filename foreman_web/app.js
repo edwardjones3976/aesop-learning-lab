@@ -20,7 +20,7 @@ function requireString(value, path) {
 }
 
 function requireNumber(value, path) {
-  if (typeof value !== 'number' || Number.isNaN(value)) throw contractError(path, 'expected a number.');
+  if (!Number.isSafeInteger(value) || value < 0) throw contractError(path, 'expected a non-negative whole number.');
   return value;
 }
 
@@ -59,7 +59,11 @@ export function normalizeEvidence(evidence, path = 'evidence') {
     requireNumber(row.checkDelayDays, `${path}.delayedChecks[${index}].checkDelayDays`);
     requireString(row.evidenceKind, `${path}.delayedChecks[${index}].evidenceKind`);
     requireString(row.scoreStatus, `${path}.delayedChecks[${index}].scoreStatus`);
-    requireString(row.occurredAt, `${path}.delayedChecks[${index}].occurredAt`);
+    requireString(row.attemptId, `${path}.delayedChecks[${index}].attemptId`);
+    requireBoolean(row.assisted, `${path}.delayedChecks[${index}].assisted`);
+    requireString(row.familiarityStatus, `${path}.delayedChecks[${index}].familiarityStatus`);
+    const occurredAt = requireString(row.occurredAt, `${path}.delayedChecks[${index}].occurredAt`);
+    if (Number.isNaN(Date.parse(occurredAt))) throw contractError(`${path}.delayedChecks[${index}].occurredAt`, 'expected a valid timestamp.');
   });
   return {
     byKind,
@@ -142,12 +146,12 @@ function validateActivity(activity, path) {
   requireString(row.id, `${path}.id`);
   requireString(row.prompt, `${path}.prompt`);
   if (row.body != null && typeof row.body !== 'string') throw contractError(`${path}.body`, 'expected text or null.');
-  const choices = requireArray(row.choices ?? [], `${path}.choices`);
+  const choices = requireArray(row.choices, `${path}.choices`);
   choices.forEach((choice, index) => {
     if (typeof choice !== 'string' || !choice) throw contractError(`${path}.choices[${index}]`, 'expected a non-empty string.');
   });
   if (type === 'choice' && !choices.length) throw contractError(`${path}.choices`, 'choice activity requires options.');
-  const hints = requireArray(row.hints ?? [], `${path}.hints`);
+  const hints = requireArray(row.hints, `${path}.hints`);
   const seen = new Set();
   hints.forEach((hint, index) => {
     const h = requireRecord(hint, `${path}.hints[${index}]`);
@@ -167,7 +171,9 @@ function validateDraft(draft, path) {
   const hintLevels = requireArray(row.hintLevels, `${path}.hintLevels`);
   hintLevels.forEach((level, index) => {
     const value = requireString(level, `${path}.hintLevels[${index}]`);
-    if (!HINT_LEVELS.has(value)) throw contractError(`${path}.hintLevels[${index}]`, 'hint level is not recognized.');
+    if (value !== ['nudge', 'targeted', 'worked_solution'][index]) {
+      throw contractError(`${path}.hintLevels[${index}]`, 'hints must follow the published sequence.');
+    }
   });
   return {
     id: requireString(row.id, `${path}.id`),
@@ -185,14 +191,22 @@ export function validateSession(data) {
   }
   const activity = session.activity == null ? null : validateActivity(session.activity, 'session.activity');
   const draft = session.draft == null ? null : validateDraft(session.draft, 'session.draft');
-  if (activity && draft && session.draft) {
-    // draft is valid when activity exists
+  if (draft && !activity) throw contractError('session.draft', 'saved answer requires an activity.');
+  if (draft) {
+    for (const level of draft.hintLevels) {
+      const hint = activity.hints.find(item => item.level === level);
+      if (!hint || typeof hint.text !== 'string' || !hint.text.trim()) {
+        throw contractError(`session.activity.hints.${level}`, 'saved hint text is missing.');
+      }
+    }
   }
+  const recommendation = session.recommendation == null ? null : requireRecord(session.recommendation, 'session.recommendation');
+  if (activity) requireString(recommendation?.reason, 'session.recommendation.reason');
   return {
     lessonRequired: false,
     activity,
     draft,
-    recommendation: session.recommendation == null ? null : requireRecord(session.recommendation, 'session.recommendation'),
+    recommendation,
     reason: typeof session.reason === 'string' ? session.reason : null,
     nextCheckAt: session.nextCheckAt ?? null,
   };
@@ -201,7 +215,12 @@ export function validateSession(data) {
 export function validateAttemptResult(data) {
   const result = requireRecord(data, 'attempt');
   requireString(result.attemptId, 'attempt.attemptId');
-  requireString(result.scoreStatus, 'attempt.scoreStatus');
+  const status = requireString(result.scoreStatus, 'attempt.scoreStatus');
+  if (!['correct', 'incorrect', 'ungraded'].includes(status)) {
+    throw contractError('attempt.scoreStatus', 'score status is not recognized.');
+  }
+  requireString(result.gradingMethod, 'attempt.gradingMethod');
+  if (result.developmentOnly !== true) throw contractError('attempt.developmentOnly', 'draft status is required.');
   requireString(result.nextReason, 'attempt.nextReason');
   requireBoolean(result.assisted, 'attempt.assisted');
   if (result.rubric != null) {
@@ -275,7 +294,11 @@ async function api(path, body) {
 function showError(error) {
   document.querySelector('.error')?.remove();
   const el = document.createElement('div'); el.className = 'error'; el.role = 'alert'; el.textContent = error.message || String(error);
-  content.prepend(el);
+  const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'button secondary';
+  retry.textContent = 'Try loading again';
+  retry.onclick = async () => { try { if (state.conceptId) await refresh(); else await boot(); } catch (next) { showError(next); } };
+  el.append(retry);
+  content.replaceChildren(el);
 }
 function concepts() {
   const path = state.overview?.pathRecommendation;
@@ -294,9 +317,13 @@ async function refresh() {
     api('/api/v2/overview'), api(`/api/v2/lesson?conceptId=${cid}`),
     api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`)
   ]);
-  state.overview = validateOverview(overview);
-  state.lesson = validateLesson(lesson);
-  state.session = validateSession(session);
+  const validOverview = validateOverview(overview);
+  const validLesson = validateLesson(lesson);
+  const validSession = validateSession(session);
+  if (validLesson.conceptId !== state.conceptId) throw contractError('lesson.conceptId', 'does not match the selected concept.');
+  state.overview = validOverview;
+  state.lesson = validLesson;
+  state.session = validSession;
   document.querySelector('.notice').textContent = `Draft content · ${state.overview.packVersion} · Candidate answer keys; independent review remains required. Results are for development, not mastery claims.`;
   if (state.session.draft) state.answer = state.session.draft.firstAnswer;
   concepts(); render();
@@ -380,7 +407,7 @@ function drawAfterSave(a, draft) {
   area.innerHTML = `<div class="hint-panel"><h4>A little help, if you need it</h4><p>Hints open in order. The answer you saved stays the same.</p>${a.hints.filter(h=>viewed.has(h.level)).map(h=>`<div class="hint"><strong>${esc(h.level.replace('_',' '))}</strong><br>${esc(h.text)}</div>`).join('')}<div class="button-row">${viewed.size<a.hints.length?'<button id="hint" class="button secondary">Open next hint</button>':''}<button id="submit" class="button">Check saved answer →</button></div></div>`;
   const hint = document.querySelector('#hint');
   if (hint) hint.onclick = async () => { try { await api('/api/v2/hints',{draftId:draft.id}); await refresh(); } catch(error){showError(error)} };
-  document.querySelector('#submit').onclick = async () => { try { state.result = validateAttemptResult(await api('/api/v2/attempts',{draftId:draft.id,activeSeconds:Math.max(0,Math.floor((Date.now()-state.started)/1000))})); state.overview=validateOverview(await api('/api/v2/overview')); concepts(); render(); } catch(error){showError(error)} };
+  document.querySelector('#submit').onclick = async () => { try { const result = validateAttemptResult(await api('/api/v2/attempts',{draftId:draft.id,activeSeconds:Math.max(0,Math.floor((Date.now()-state.started)/1000))})); const overview=validateOverview(await api('/api/v2/overview')); state.result=result; state.overview=overview; concepts(); render(); } catch(error){showError(error)} };
 }
 document.querySelector('#export').onclick = async () => {
   try { const data=await api('/api/v2/export'); data.displayPreferences = {...preferences}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}
@@ -389,5 +416,11 @@ document.querySelector('#delete').onclick = async () => {
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
   try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
 };
-(async()=>{try{const overview=validateOverview(await api('/api/v2/overview'));state.overview=overview;state.conceptId=overview.pathRecommendation.conceptId;await refresh()}catch(error){showError(error)}})();
+async function boot() {
+  const overview = validateOverview(await api('/api/v2/overview'));
+  state.overview = overview;
+  state.conceptId = overview.pathRecommendation.conceptId;
+  await refresh();
+}
+boot().catch(showError);
 }

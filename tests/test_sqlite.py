@@ -68,6 +68,15 @@ class SQLiteStoreTests(unittest.TestCase):
             store.save_draft("d-utc", "a1", "v1", "x", earlier)
             store.save_draft("d-plus5", "a1", "v1", "y", later)
             self.assertEqual(store.open_draft("c1")["id"], "d-plus5")
+            store.save_hint("d-plus5", HintLevel.NUDGE, later)
+            store.save_hint("d-plus5", HintLevel.TARGETED, earlier)
+            self.assertEqual(store.hint_levels("d-plus5"),
+                             (HintLevel.NUDGE, HintLevel.TARGETED))
+            exported = store.export_all()
+            self.assertEqual([row["id"] for row in exported["attempts"]],
+                             ["t-plus5", "t-utc"])
+            self.assertEqual([row["id"] for row in exported["practiceDrafts"]],
+                             ["d-plus5", "d-utc"])
     def test_either_v2_branch_migrates_to_combined_schema(self) -> None:
         for absent_tables in (("lesson_completions",),
                               ("answer_revisions", "self_reviews")):

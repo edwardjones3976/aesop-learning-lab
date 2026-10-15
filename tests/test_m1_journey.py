@@ -92,6 +92,19 @@ class FiveConceptJourney(unittest.TestCase):
                                  {"1": "observed", "7": "insufficient_evidence"})
                 self.assertEqual(len(preview.store.export_all()["attempts"]),
                                  sum(expected_counts.values()) + 1)
+                clock[0] += timedelta(days=6)
+                week = preview.session(concepts[0])["activity"]
+                self.assertTrue(week["heldOut"])
+                self.assertEqual(week["checkDelayDays"], 7)
+                self.assertNotEqual(week["familyId"], due["familyId"])
+                week_item = next(item for item in preview.pack.items if item.id == week["id"])
+                week_id = str(uuid4())
+                preview.first_answer({"conceptId": concepts[0], "activityId": week["id"],
+                                      "draftId": week_id,
+                                      "answer": week_item.answer_key.accepted[0]})
+                preview.submit({"draftId": week_id})
+                self.assertEqual(preview.overview()["concepts"][0]["signals"]["evidence"]
+                                 ["delayedOutcomeByDay"], {"1": "observed", "7": "observed"})
             finally:
                 preview.store.close()
 

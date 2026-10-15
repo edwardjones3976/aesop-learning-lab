@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   evidenceMarkup,
@@ -10,6 +11,9 @@ import {
   validateOverview,
   validateSession,
 } from '../foreman_web/app.js';
+
+const repoRoot = fileURLToPath(new URL('../', import.meta.url));
+const sourcePath = fileURLToPath(new URL('../src/', import.meta.url));
 
 const emptyEvidence = () => ({
   byKind: Object.fromEntries(['recognition', 'recall', 'explanation', 'application', 'transfer']
@@ -72,6 +76,14 @@ test('null evidence.byKind is rejected with a contract path', () => {
   );
 });
 
+test('a delayed check without assistance status cannot be called independent', () => {
+  const evidence = emptyEvidence();
+  evidence.delayedChecks.push({ attemptId: 'attempt-1', checkDelayDays: 1,
+    evidenceKind: 'application', scoreStatus: 'correct',
+    familiarityStatus: 'not_verified', occurredAt: '2026-01-02T12:00:00Z' });
+  assert.throws(() => normalizeEvidence(evidence), /delayedChecks\[0\]\.assisted/);
+});
+
 test('session draft missing hintLevels is rejected rather than losing assistance history', () => {
   const activity = {
     id: 'a1',
@@ -88,6 +100,16 @@ test('session draft missing hintLevels is rejected rather than losing assistance
   }), /session\.draft\.hintLevels: expected an array/);
 });
 
+test('saved hint must have revealed text in the offered activity', () => {
+  const session = { activity: { id: 'a1', type: 'choice', evidenceKind: 'recognition',
+    prompt: 'Pick one', choices: ['yes'], hints: [{ level: 'nudge' }] },
+    draft: { id: 'd1', firstAnswer: 'yes', hintLevels: ['nudge'] },
+    recommendation: { reason: 'Resume.' } };
+  assert.throws(() => validateSession(session), /session\.activity\.hints\.nudge/);
+  session.activity.hints[0].text = 'Look at the return statement.';
+  assert.equal(validateSession(session).draft.hintLevels[0], 'nudge');
+});
+
 test('live preview API payloads validate for all five concepts', () => {
   const script = `
 import json, tempfile
@@ -101,6 +123,7 @@ try:
     order = preview.pack.learning_order()
     assert len(order) == 5
     overview = preview.overview()
+    saved_sessions = {}
     for cid in order:
         preview.complete_lesson(cid)
         lesson = preview.lesson(cid)
@@ -116,9 +139,11 @@ try:
                 "answer": answer,
             })
             preview.hint({"draftId": draft_id})
+            saved_sessions[cid] = preview.session(cid)
             preview.submit({"draftId": draft_id, "activeSeconds": 1})
     print(json.dumps({
         "overview": overview,
+        "savedSessions": saved_sessions,
         "concepts": {cid: {
             "lesson": preview.lesson(cid),
             "session": preview.session(cid),
@@ -127,13 +152,15 @@ try:
 finally:
     preview.store.close()
 `;
-  const result = spawnSync('python', ['-c', script], {
-    env: { ...process.env, PYTHONPATH: 'src' },
+  const result = spawnSync(process.env.PYTHON ?? 'python', ['-c', script], {
+    cwd: repoRoot,
+    env: { ...process.env, PYTHONPATH: sourcePath },
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const payload = JSON.parse(result.stdout);
   validateOverview(payload.overview);
+  for (const saved of Object.values(payload.savedSessions)) validateSession(saved);
   for (const cid of Object.keys(payload.concepts)) {
     validateLesson(payload.concepts[cid].lesson);
     validateSession(payload.concepts[cid].session);
@@ -151,7 +178,11 @@ test('attempt result validation guards feedback rendering', () => {
   });
   assert.equal(result.scoreStatus, 'correct');
   assert.throws(
-    () => validateAttemptResult({ attemptId: 'a', scoreStatus: 'correct' }),
-    /attempt\.nextReason/,
+    () => validateAttemptResult({ attemptId: 'a', scoreStatus: 'unknown', gradingMethod: 'key',
+      developmentOnly: true, assisted: false, nextReason: 'Unknown.' }),
+    /attempt\.scoreStatus/,
   );
+  assert.throws(() => validateAttemptResult({ attemptId: 'a', scoreStatus: 'correct',
+    gradingMethod: 'key', assisted: false, nextReason: 'Matched.' }),
+  /attempt\.developmentOnly/);
 });
