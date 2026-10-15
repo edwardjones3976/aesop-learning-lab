@@ -2,24 +2,31 @@ const content = document.querySelector('#content');
 const conceptsEl = document.querySelector('#concepts');
 const state = { overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', started: Date.now() };
 const preferenceKey = 'aesop.foreman.preferences.v1';
-let preferences = { minutes: 20, textSize: 'regular', focus: false };
+let preferences = { minutes: 20, textSize: 'regular', theme: 'system', focus: false };
 try {
   const saved = JSON.parse(localStorage.getItem(preferenceKey) || '{}');
   if ([5,10,20,30,45].includes(saved.minutes)) preferences.minutes = saved.minutes;
   if (['regular','large'].includes(saved.textSize)) preferences.textSize = saved.textSize;
+  if (['system','light','dark'].includes(saved.theme)) preferences.theme = saved.theme;
   if (typeof saved.focus === 'boolean') preferences.focus = saved.focus;
 } catch (_) { /* Private browsing may disable storage. */ }
+const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 function applyPreferences() {
   document.querySelector('#minutes').value = String(preferences.minutes);
   document.querySelector('#text-size').value = preferences.textSize;
+  document.querySelector('#theme').value = preferences.theme;
   document.querySelector('#focus').checked = preferences.focus;
+  document.documentElement.dataset.theme = preferences.theme === 'system'
+    ? (systemTheme.matches ? 'dark' : 'light') : preferences.theme;
   document.body.classList.toggle('large-reading', preferences.textSize === 'large');
   document.body.classList.toggle('quiet', preferences.focus);
   try { localStorage.setItem(preferenceKey, JSON.stringify(preferences)); } catch (_) { /* Settings remain usable for this tab. */ }
 }
 document.querySelector('#minutes').onchange = async event => { preferences.minutes = Number(event.target.value); applyPreferences(); await refresh().catch(showError); };
 document.querySelector('#text-size').onchange = event => { preferences.textSize = event.target.value; applyPreferences(); };
+document.querySelector('#theme').onchange = event => { preferences.theme = event.target.value; applyPreferences(); };
 document.querySelector('#focus').onchange = event => { preferences.focus = event.target.checked; applyPreferences(); };
+systemTheme.addEventListener('change', () => { if (preferences.theme === 'system') applyPreferences(); });
 applyPreferences();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -130,6 +137,6 @@ document.querySelector('#export').onclick = async () => {
 };
 document.querySelector('#delete').onclick = async () => {
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
-  try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
+  try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
 };
 (async()=>{try{state.overview=await api('/api/v2/overview');state.conceptId=state.overview.concepts[0].id;await refresh()}catch(error){showError(error)}})();

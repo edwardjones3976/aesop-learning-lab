@@ -248,6 +248,7 @@ def make_handler(preview: Preview):
                         return self._json(200, preview.store.export_all())
                     files = {"/": ("index.html", "text/html"),
                              "/app.js": ("app.js", "text/javascript"),
+                             "/theme-init.js": ("theme-init.js", "text/javascript"),
                              "/style.css": ("style.css", "text/css"),
                              "/icon.svg": ("icon.svg", "image/svg+xml")}
                     if path in files:

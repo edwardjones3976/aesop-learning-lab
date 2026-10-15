@@ -14,7 +14,7 @@ The pack remains `draft`, with candidate answer keys and a scoped independent re
 
 ## Personalization boundary
 
-The primary goal is better learning for each person; Python is the first subject used to build and evaluate the method. The preview now shows attempt, unassisted match, and hint-use signals alongside the scheduling reason. It offers local controls for time available, text size, and a quiet view. These controls improve access and comfort but do not suppress retrieval, reveal hints before a first answer, or remove delayed checks. They are preferences, not a diagnosis of a fixed learning style. Settings live in this browser's local storage; attempt data lives in SQLite. The UI export includes both, and the UI delete action clears both.
+The primary goal is better learning for each person; Python is the first subject used to build and evaluate the method. The preview now shows attempt, unassisted match, and hint-use signals alongside the scheduling reason. It offers local controls for time available, text size, a quiet view, and Light, Dark, or System appearance. System follows changes to the device's color scheme. These controls improve access and comfort but do not suppress retrieval, reveal hints before a first answer, or remove delayed checks. They are preferences, not a diagnosis of a fixed learning style. Settings live in this browser's local storage; attempt data lives in SQLite. The UI export includes both, and the UI delete action clears both.
 
 This pilot has **not** shown that its personalization improves outcomes. The rules are transparent hypotheses to evaluate using delayed, unassisted, unfamiliar tasks and sustainable participation.
 
