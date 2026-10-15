@@ -35,29 +35,25 @@ function requireBoolean(value, path) {
 }
 
 export function normalizeEvidence(evidence, path = 'evidence') {
-  const raw = evidence == null ? {} : evidence;
-  requireRecord(raw, path);
+  const raw = requireRecord(evidence, path);
   const byKind = {};
-  if (raw.byKind !== undefined) {
-    const source = requireRecord(raw.byKind, `${path}.byKind`);
-    for (const [kind, row] of Object.entries(source)) {
+  const source = requireRecord(raw.byKind, `${path}.byKind`);
+  for (const kind of EVIDENCE_KINDS) {
+      const row = source[kind];
       const counts = requireRecord(row, `${path}.byKind.${kind}`);
       byKind[kind] = {
-        unassistedCorrect: requireNumber(counts.unassistedCorrect ?? 0, `${path}.byKind.${kind}.unassistedCorrect`),
-        assistedCorrect: requireNumber(counts.assistedCorrect ?? 0, `${path}.byKind.${kind}.assistedCorrect`),
-        incorrect: requireNumber(counts.incorrect ?? 0, `${path}.byKind.${kind}.incorrect`),
-        ungraded: requireNumber(counts.ungraded ?? 0, `${path}.byKind.${kind}.ungraded`),
+        unassistedCorrect: requireNumber(counts.unassistedCorrect, `${path}.byKind.${kind}.unassistedCorrect`),
+        assistedCorrect: requireNumber(counts.assistedCorrect, `${path}.byKind.${kind}.assistedCorrect`),
+        incorrect: requireNumber(counts.incorrect, `${path}.byKind.${kind}.incorrect`),
+        ungraded: requireNumber(counts.ungraded, `${path}.byKind.${kind}.ungraded`),
       };
-    }
   }
   const delayedOutcomeByDay = {};
-  if (raw.delayedOutcomeByDay != null) {
-    const source = requireRecord(raw.delayedOutcomeByDay, `${path}.delayedOutcomeByDay`);
-    for (const [day, status] of Object.entries(source)) {
+  const intervals = requireRecord(raw.delayedOutcomeByDay, `${path}.delayedOutcomeByDay`);
+  for (const [day, status] of Object.entries(intervals)) {
       delayedOutcomeByDay[day] = requireString(status, `${path}.delayedOutcomeByDay.${day}`);
-    }
   }
-  const delayedChecks = raw.delayedChecks == null ? [] : requireArray(raw.delayedChecks, `${path}.delayedChecks`);
+  const delayedChecks = requireArray(raw.delayedChecks, `${path}.delayedChecks`);
   delayedChecks.forEach((check, index) => {
     const row = requireRecord(check, `${path}.delayedChecks[${index}]`);
     requireNumber(row.checkDelayDays, `${path}.delayedChecks[${index}].checkDelayDays`);
@@ -69,18 +65,17 @@ export function normalizeEvidence(evidence, path = 'evidence') {
     byKind,
     delayedChecks,
     delayedOutcomeByDay,
-    confidenceOutcomePairs: typeof raw.confidenceOutcomePairs === 'number' && !Number.isNaN(raw.confidenceOutcomePairs)
-      ? raw.confidenceOutcomePairs : 0,
+    confidenceOutcomePairs: requireNumber(raw.confidenceOutcomePairs, `${path}.confidenceOutcomePairs`),
   };
 }
 
 function validateSignals(signals, path) {
   const raw = requireRecord(signals, path);
   return {
-    attempts: requireNumber(raw.attempts ?? 0, `${path}.attempts`),
-    unassistedCorrect: requireNumber(raw.unassistedCorrect ?? 0, `${path}.unassistedCorrect`),
-    hintAssisted: requireNumber(raw.hintAssisted ?? 0, `${path}.hintAssisted`),
-    needsReview: requireNumber(raw.needsReview ?? 0, `${path}.needsReview`),
+    attempts: requireNumber(raw.attempts, `${path}.attempts`),
+    unassistedCorrect: requireNumber(raw.unassistedCorrect, `${path}.unassistedCorrect`),
+    hintAssisted: requireNumber(raw.hintAssisted, `${path}.hintAssisted`),
+    needsReview: requireNumber(raw.needsReview, `${path}.needsReview`),
     recentOutcome: raw.recentOutcome == null ? null : requireString(raw.recentOutcome, `${path}.recentOutcome`),
     evidence: normalizeEvidence(raw.evidence, `${path}.evidence`),
   };
@@ -97,7 +92,7 @@ export function validateOverview(data) {
     return {
       id: requireString(row.id, `${path}.id`),
       title: requireString(row.title, `${path}.title`),
-      lessonComplete: requireBoolean(row.lessonComplete ?? false, `${path}.lessonComplete`),
+      lessonComplete: requireBoolean(row.lessonComplete, `${path}.lessonComplete`),
       signals: validateSignals(row.signals, `${path}.signals`),
     };
   });
@@ -169,7 +164,7 @@ function validateActivity(activity, path) {
 
 function validateDraft(draft, path) {
   const row = requireRecord(draft, path);
-  const hintLevels = row.hintLevels == null ? [] : requireArray(row.hintLevels, `${path}.hintLevels`);
+  const hintLevels = requireArray(row.hintLevels, `${path}.hintLevels`);
   hintLevels.forEach((level, index) => {
     const value = requireString(level, `${path}.hintLevels[${index}]`);
     if (!HINT_LEVELS.has(value)) throw contractError(`${path}.hintLevels[${index}]`, 'hint level is not recognized.');
@@ -208,7 +203,7 @@ export function validateAttemptResult(data) {
   requireString(result.attemptId, 'attempt.attemptId');
   requireString(result.scoreStatus, 'attempt.scoreStatus');
   requireString(result.nextReason, 'attempt.nextReason');
-  requireBoolean(result.assisted ?? false, 'attempt.assisted');
+  requireBoolean(result.assisted, 'attempt.assisted');
   if (result.rubric != null) {
     const rubric = requireRecord(result.rubric, 'attempt.rubric');
     requireString(rubric.id, 'attempt.rubric.id');

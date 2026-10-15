@@ -11,6 +11,14 @@ import {
   validateSession,
 } from '../foreman_web/app.js';
 
+const emptyEvidence = () => ({
+  byKind: Object.fromEntries(['recognition', 'recall', 'explanation', 'application', 'transfer']
+    .map(kind => [kind, { unassistedCorrect: 0, assistedCorrect: 0, incorrect: 0, ungraded: 0 }])),
+  delayedChecks: [],
+  delayedOutcomeByDay: { 1: 'insufficient_evidence', 7: 'insufficient_evidence' },
+  confidenceOutcomePairs: 0,
+});
+
 const baseConcept = (id, title, signals = {}) => ({
   id,
   title,
@@ -21,6 +29,7 @@ const baseConcept = (id, title, signals = {}) => ({
     hintAssisted: 0,
     needsReview: 0,
     recentOutcome: null,
+    evidence: emptyEvidence(),
     ...signals,
   },
 });
@@ -46,16 +55,14 @@ test('missing pathRecommendation is reported before render would touch concepts'
   assert.throws(() => validateOverview(payload), /overview\.pathRecommendation: expected an object/);
 });
 
-test('old profile signals without evidence normalize instead of throwing on markup', () => {
+test('missing evidence is identified before rendering instead of displayed as zero progress', () => {
   const payload = baseOverview(
     [baseConcept('c1', 'One', { evidence: undefined })],
     { conceptId: 'c1', action: 'lesson', reason: 'Begin.' },
   );
-  const overview = validateOverview(payload);
-  assert.equal(overview.concepts[0].signals.evidence.byKind.recognition, undefined);
-  const html = evidenceMarkup(overview.concepts[0].signals.evidence);
+  assert.throws(() => validateOverview(payload), /overview\.concepts\[0\]\.signals\.evidence: expected an object/);
+  const html = evidenceMarkup(emptyEvidence());
   assert.match(html, /Inspect learning evidence/);
-  assert.doesNotThrow(() => Object.entries(overview.concepts[0].signals.evidence.byKind));
 });
 
 test('null evidence.byKind is rejected with a contract path', () => {
@@ -65,7 +72,7 @@ test('null evidence.byKind is rejected with a contract path', () => {
   );
 });
 
-test('session draft missing hintLevels defaults to empty array for older payloads', () => {
+test('session draft missing hintLevels is rejected rather than losing assistance history', () => {
   const activity = {
     id: 'a1',
     type: 'choice',
@@ -74,12 +81,11 @@ test('session draft missing hintLevels defaults to empty array for older payload
     choices: ['yes'],
     hints: [{ level: 'nudge' }],
   };
-  const session = validateSession({
+  assert.throws(() => validateSession({
     activity,
     draft: { id: 'd1', firstAnswer: 'yes' },
     recommendation: { reason: 'Practice' },
-  });
-  assert.deepEqual(session.draft.hintLevels, []);
+  }), /session\.draft\.hintLevels: expected an array/);
 });
 
 test('live preview API payloads validate for all five concepts', () => {
