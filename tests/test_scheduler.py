@@ -38,6 +38,17 @@ def state(now: datetime, attempts: tuple[Attempt, ...] = (),
 
 
 class SchedulerTests(unittest.TestCase):
+    def test_two_errors_across_items_target_shared_evidence_kind(self) -> None:
+        recall = Activity("recall", "recursion", "v1", "recall-family",
+                          ActivityType.CHOICE, EvidenceKind.RECALL)
+        activities = (PRACTICE_A, PRACTICE_B, recall)
+        prior = (attempt("wrong-a", PRACTICE_A, correct=False),
+                 attempt("wrong-b", PRACTICE_B, correct=False))
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior, activities),
+                             20, "pilot-v1")
+        self.assertIn(decision.recommendation.activity_id, (PRACTICE_A.id, PRACTICE_B.id))
+        self.assertIn("Two incorrect answers on application", decision.reason)
+
     def test_distinct_week_check_waits_for_day_one_and_seven_days(self) -> None:
         activities = (PRACTICE_A, CHECK, WEEK_CHECK)
         day_six = LESSON_TIME + timedelta(days=6)

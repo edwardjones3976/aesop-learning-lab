@@ -4,7 +4,9 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  buildAttemptPayload,
   evidenceMarkup,
+  lessonMarkup,
   normalizeEvidence,
   validateAttemptResult,
   validateLesson,
@@ -89,7 +91,8 @@ test('attempt history preserves assistance and escapes the saved answer', () => 
   const attempt = { id: 'a1', activityId: 'item-1', contentVersion: 'v3',
     evidenceKind: 'recognition', occurredAt: '2026-01-01T12:00:00Z',
     firstAnswer: '<script>alert(1)</script>', scoreStatus: 'incorrect',
-    gradingMethod: 'development_fixture_exact_key', hintLevel: 'nudge', assisted: true };
+    gradingMethod: 'development_fixture_exact_key', hintLevel: 'nudge', assisted: true,
+    confidence: 0.5, outsideStudy: 'unknown' };
   const payload = baseOverview([baseConcept('c1', 'One', { recordedAttempts: [attempt] })],
     { conceptId: 'c1', action: 'practice', reason: 'Try again.' });
   const overview = validateOverview(payload);
@@ -97,6 +100,7 @@ test('attempt history preserves assistance and escapes the saved answer', () => 
     overview.concepts[0].signals.recordedAttempts);
   assert.match(html, /item-1.*assisted/);
   assert.match(html, /&lt;script&gt;/);
+  assert.match(html, /Pre-hint confidence: 50%/);
   assert.doesNotMatch(html, /<script>/);
   attempt.assisted = false;
   assert.throws(() => validateOverview(payload), /recordedAttempts\[0\]\.assisted/);
@@ -126,6 +130,23 @@ test('saved hint must have revealed text in the offered activity', () => {
   assert.throws(() => validateSession(session), /session\.activity\.hints\.nudge/);
   session.activity.hints[0].text = 'Look at the return statement.';
   assert.equal(validateSession(session).draft.hintLevels[0], 'nudge');
+  session.draft.confidence = 0.75;
+  assert.equal(validateSession(session).draft.confidence, 0.75);
+  session.draft.confidence = 2;
+  assert.throws(() => validateSession(session), /session\.draft\.confidence/);
+});
+
+test('activity objective is available before answer while explanation is withheld', () => {
+  const activity = { id: 'a1', type: 'choice', evidenceKind: 'recognition', prompt: 'Pick one',
+    learningObjective: 'Distinguish return from print', difficulty: 'introductory',
+    choices: ['return 1'], hints: [] };
+  const session = { activity, draft: null, recommendation: { reason: 'Begin practice.' } };
+  const valid = validateSession(session);
+  assert.equal(valid.activity.learningObjective, 'Distinguish return from print');
+  assert.equal(valid.activity.difficulty, 'introductory');
+  assert.equal(Object.hasOwn(valid.activity, 'explanation'), false);
+  activity.explanation = 'return sends the value back';
+  assert.throws(() => validateSession(session), /session\.activity\.explanation: must not be sent/);
 });
 
 test('live preview API payloads validate for all five concepts', () => {
@@ -143,8 +164,8 @@ try:
     overview = preview.overview()
     saved_sessions = {}
     for cid in order:
-        preview.complete_lesson(cid)
         lesson = preview.lesson(cid)
+        preview.complete_lesson(cid)
         session = preview.session(cid)
         activity = session.get("activity")
         if activity and activity["type"] == "choice":
@@ -195,6 +216,8 @@ test('attempt result validation guards feedback rendering', () => {
     developmentOnly: true,
   });
   assert.equal(result.scoreStatus, 'correct');
+  assert.equal(validateAttemptResult({ ...result, explanation: 'return sends a value back' }).explanation,
+    'return sends a value back');
   assert.throws(
     () => validateAttemptResult({ attemptId: 'a', scoreStatus: 'unknown', gradingMethod: 'key',
       developmentOnly: true, assisted: false, nextReason: 'Unknown.' }),
@@ -203,4 +226,53 @@ test('attempt result validation guards feedback rendering', () => {
   assert.throws(() => validateAttemptResult({ attemptId: 'a', scoreStatus: 'correct',
     gradingMethod: 'key', assisted: false, nextReason: 'Matched.' }),
   /attempt\.developmentOnly/);
+});
+
+test('experiment lesson condition controls optional labeled diagram', () => {
+  const base = { conceptId: 'c1', title: 'Functions', body: 'Shared explanation', completed: false,
+    sources: [], method: { conditionId: 'text', protocolId: 'pilot-1', protocolVersion: '1' },
+    diagram: null, experimentNotice: 'Assignment is stable.' };
+  assert.equal(validateLesson(base).method.conditionId, 'text');
+  assert.equal(validateLesson({ ...base, method: { ...base.method, conditionId: 'diagram' }, diagram: 'input → output' }).diagram, 'input → output');
+  assert.throws(() => validateLesson({ ...base, diagram: 'leaked diagram' }), /lesson\.diagram: a diagram requires/);
+  assert.throws(() => validateLesson({ ...base, method: { ...base.method, conditionId: 'unknown' } }), /lesson\.method\.conditionId/);
+});
+
+test('lesson headings and Python examples render as escaped structured text', () => {
+  const html = lessonMarkup('## Objective\nUse `return`.\n\n```python\nprint("<unsafe>")\n```\n<script>alert(1)</script>');
+  assert.match(html, /<h3>Objective<\/h3>/);
+  assert.match(html, /<code>return<\/code>/);
+  assert.match(html, /<pre class="lesson-code">/);
+  assert.match(html, /&lt;unsafe&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+});
+
+test('lesson sources reject executable URL schemes', () => {
+  assert.throws(() => validateLesson({ conceptId: 'c1', title: 'One', body: 'Text', completed: false,
+    sources: [{ title: 'Unsafe', url: 'javascript:alert(1)' }] }), /lesson\.sources\[0\]\.url/);
+});
+
+test('experiment finding remains explicitly insufficient without delayed human evidence', () => {
+  const payload = baseOverview([baseConcept('c1', 'One')], { conceptId: 'c1', action: 'lesson', reason: 'Begin.' });
+  payload.experiment = { protocolId: 'pilot-1', protocolVersion: '1', status: 'insufficient_evidence', reason: 'No eligible delayed outcomes.' };
+  assert.equal(validateOverview(payload).experiment.status, 'insufficient_evidence');
+  payload.experiment.status = 'diagram_wins';
+  assert.throws(() => validateOverview(payload), /overview\.experiment\.status/);
+  payload.experiment.status = 'insufficient_evidence';
+  payload.experiment.protocol = { id: 'pilot-1', version: '1' };
+  payload.experiment.arms = { text: { assigned: 1, exposed: 0, eligible: 0, correct: 0, missing: 1 },
+    diagram: { assigned: 1, exposed: 0, eligible: 0, correct: 0, missing: 1 } };
+  assert.equal(validateOverview(payload).experiment.arms.diagram.eligible, 0);
+  delete payload.experiment.arms.diagram.correct;
+  assert.throws(() => validateOverview(payload), /overview\.experiment\.arms\.diagram\.correct/);
+});
+
+test('attempt context is explicit and cannot turn assistance into independent evidence', () => {
+  assert.deepEqual(buildAttemptPayload('draft-1', 14, 0.75, 'some', 'Read a book'), {
+    draftId: 'draft-1', activeSeconds: 14, confidence: 0.75,
+    outsideStudy: 'some', outsideStudyDetail: 'Read a book',
+  });
+  assert.equal(buildAttemptPayload('draft-1', 0, null, 'unknown').confidence, null);
+  assert.throws(() => buildAttemptPayload('draft-1', 0, 1.2, 'none'), /attempt\.confidence/);
+  assert.throws(() => buildAttemptPayload('draft-1', 0, 0.5, 'never'), /attempt\.outsideStudy/);
 });

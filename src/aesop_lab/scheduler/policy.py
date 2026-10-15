@@ -104,8 +104,33 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
 
     practice = [item for item in state.activities if not item.held_out]
     if practice:
+        # Target observable gaps; keep every choice replayable from attempts.
+        target_kind = None
+        adaptation_reason = None
+        errors = [a for a in state.attempts if a.score_status is ScoreStatus.INCORRECT]
+        assisted = [a for a in state.attempts if a.hint_level is not HintLevel.NONE]
+        if len(errors) >= 2:
+            target_kind = next((item.evidence_kind for item in practice
+                                if sum(next(activity for activity in state.activities
+                                            if activity.id == a.activity_id).evidence_kind
+                                       is item.evidence_kind for a in errors) >= 2), None)
+            if target_kind:
+                adaptation_reason = f"Two incorrect answers on {target_kind.value} practice suggest targeted remediation."
+        if target_kind is None and len(assisted) >= 2:
+            target_kind = EvidenceKind.RECALL
+            adaptation_reason = "Two hint-assisted attempts suggest an unassisted recall check with less scaffolding."
+        recall_success = any(a.score_status is ScoreStatus.CORRECT and a.unassisted and
+                             next(i for i in state.activities if i.id == a.activity_id).evidence_kind is EvidenceKind.RECALL
+                             for a in state.attempts)
+        application_success = any(a.score_status is ScoreStatus.CORRECT and a.unassisted and
+                                  next(i for i in state.activities if i.id == a.activity_id).evidence_kind is EvidenceKind.APPLICATION
+                                  for a in state.attempts)
+        if target_kind is None and recall_success and not application_success:
+            target_kind = EvidenceKind.APPLICATION
+            adaptation_reason = "Independent recall is recorded, but independent application has not yet been shown."
+        candidates = [item for item in practice if item.evidence_kind is target_kind] if target_kind else []
         # New items first; then rotate through the least practiced items.
-        item = min(practice, key=lambda candidate:
+        item = min(candidates or practice, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))
         if due_at is not None and state.now < due_at:
             reason = "Continue practice now; the independent check opens at its scheduled time."
@@ -117,6 +142,8 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
             reason = "Continue practice by choice; an independent check remains available."
         else:
             reason = "Continue practice; no unused independent check is available."
+        if adaptation_reason and candidates:
+            reason = adaptation_reason + " " + reason
         recommendation = Recommendation(item.id, policy_version, reason,
                                         tuple(attempt.id for attempt in state.attempts))
         return ScheduleDecision(recommendation, reason, next_check_at)

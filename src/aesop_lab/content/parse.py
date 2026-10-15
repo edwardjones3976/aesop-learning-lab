@@ -239,8 +239,10 @@ def _parse_lessons(data: Mapping[str, Any], seen: dict[str, str], concepts: list
         content_version = _field(raw, "content_version", str, path, issues)
         title = _field(raw, "title", str, path, issues)
         body = _field(raw, "body", str, path, issues)
+        diagram = _field(raw, "diagram", str, path, issues, required=False, default=None)
+        encountered = _str_list(raw, "encountered_family_ids", path, issues, required=False)
         cited = _str_list(raw, "source_ids", path, issues)
-        if None in (lesson_id, concept_id, content_version, title, body, cited):
+        if None in (lesson_id, concept_id, content_version, title, body, cited, encountered):
             continue
         if not _register(lesson_id, path, seen, issues):
             continue
@@ -251,7 +253,8 @@ def _parse_lessons(data: Mapping[str, Any], seen: dict[str, str], concepts: list
             issues.append(Issue(_join(path, "content_version"), "content_version_mismatch",
                                 "a lesson must share its concept's content version"))
         _check_sources(cited, path, source_ids, issues)
-        lessons.append(Lesson(lesson_id, concept_id, content_version, title, body, cited))
+        lessons.append(Lesson(lesson_id, concept_id, content_version, title, body, cited,
+                              diagram, encountered))
     return lessons
 
 
@@ -282,6 +285,9 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     check_delay_days = _field(raw, "check_delay_days", int, path, issues,
                               required=False, default=1 if held_out else 0)
     prompt = _field(raw, "prompt", str, path, issues)
+    objective = _field(raw, "learning_objective", str, path, issues, required=False, default=None)
+    difficulty = _field(raw, "difficulty", str, path, issues, required=False, default=None)
+    explanation = _field(raw, "explanation", str, path, issues, required=False, default=None)
     body = _field(raw, "body", str, path, issues, required=False, default="", allow_empty=True)
     choices = _str_list(raw, "choices", path, issues, required=False)
     cited = _str_list(raw, "source_ids", path, issues)
@@ -314,7 +320,8 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     _check_item_shape(activity_type, path, choices, key, check_expression, rubric, hints, issues)
     if len(issues) > before:
         return None
-    return ItemContent(activity, prompt, body, choices, key, check_expression, rubric, hints, cited)
+    return ItemContent(activity, prompt, body, choices, key, check_expression, rubric, hints,
+                       cited, objective, difficulty, explanation)
 
 
 def _enum_value(raw: Mapping[str, Any], key: str, enum_type: type, path: str, issues: list[Issue]) -> Any:
