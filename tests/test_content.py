@@ -25,10 +25,18 @@ class ShippedPackTests(unittest.TestCase):
         self.assertEqual(validate_pack(raw_pack()), ())
         self.assertEqual(load_pack(PACK_PATH).pack_id, "python-functions-recursion")
 
-    def test_pack_is_an_honest_draft(self) -> None:
+    def test_pack_is_an_honest_draft_with_scoped_review(self) -> None:
         pack = load_pack(PACK_PATH)
         self.assertEqual(pack.status, "draft")
-        self.assertEqual(pack.receipts, ())
+        self.assertEqual({receipt.outcome for receipt in pack.receipts},
+                         {"approved", "changes_requested"})
+        approved = {scope for receipt in pack.receipts if receipt.outcome == "approved"
+                    for scope in receipt.scope_ids}
+        changes = {scope for receipt in pack.receipts if receipt.outcome == "changes_requested"
+                   for scope in receipt.scope_ids}
+        self.assertFalse(approved & changes)
+        self.assertEqual(len(changes), 4)
+        self.assertEqual(len(approved), 34)
         self.assertTrue(all(item.answer_key.status == "candidate"
                             for item in pack.items if item.answer_key is not None))
 

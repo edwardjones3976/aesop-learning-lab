@@ -6,8 +6,37 @@
   "status": "draft",
   "author": "Claude (L1 content author)",
   "review": {
-    "note": "Draft. Awaiting independent review. No review receipts exist yet; keys are candidates only.",
-    "receipts": []
+    "note": "Codex independent review completed for this draft. Four records need changes before full approval; answer keys remain candidates.",
+    "receipts": [
+      {
+        "reviewer": "Codex (independent content reviewer)",
+        "reviewed_on": "2026-10-14",
+        "outcome": "approved",
+        "scope_ids": [
+          "function-definition-and-return", "parameters-and-local-scope", "recursion-as-self-call",
+          "base-case", "recursive-case-and-trace", "lesson-function-definition-and-return",
+          "lesson-parameters-and-local-scope", "lesson-base-case", "lesson-recursive-case-and-trace",
+          "def-return-choice-01", "def-return-trace-01", "def-return-transfer-01",
+          "scope-local-trace-01", "scope-global-choice-01", "recursion-explain-01",
+          "recursion-halving-transfer-01", "base-case-trace-01", "base-case-choice-01",
+          "base-case-explain-01", "base-case-transfer-01", "recursive-case-trace-01",
+          "recursive-case-choice-01", "recursive-case-design-01",
+          "py-tutorial-defining-functions", "py-tutorial-more-on-functions",
+          "py-tutorial-keyword-arguments", "py-ref-calls", "py-ref-naming-binding",
+          "py-faq-local-global", "py-lib-recursionerror", "py-lib-getrecursionlimit",
+          "recursion-explain-rubric", "base-case-explain-rubric", "recursive-design-rubric"
+        ]
+      },
+      {
+        "reviewer": "Codex (independent content reviewer)",
+        "reviewed_on": "2026-10-14",
+        "outcome": "changes_requested",
+        "scope_ids": [
+          "lesson-recursion-as-self-call", "recursion-recognize-choice-01",
+          "scope-keyword-transfer-01", "recursive-case-transfer-01"
+        ]
+      }
+    ]
   },
   "sources": [
     {

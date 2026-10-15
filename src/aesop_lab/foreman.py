@@ -46,8 +46,10 @@ def _catalog_item(item) -> CatalogItem:
 class Preview:
     def __init__(self, db: Path = DB) -> None:
         self.pack = load_pack(PACK_PATH)
-        if self.pack.status != "draft" or self.pack.receipts:
-            raise RuntimeError("This preview is only for the unreviewed draft pack")
+        if self.pack.status != "draft" or any(
+            item.answer_key and item.answer_key.status != "candidate" for item in self.pack.items
+        ):
+            raise RuntimeError("This preview is only for a draft pack with candidate keys")
         self.store = SQLiteStore(db)
         self.services = {
             concept.id: LearningService(
