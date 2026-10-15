@@ -58,6 +58,7 @@ async function refresh() {
     api('/api/v2/overview'), api(`/api/v2/lesson?conceptId=${cid}`),
     api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`)
   ]);
+  document.querySelector('.notice').textContent = `Draft content · ${state.overview.packVersion} · Candidate answer keys; independent review remains required. Results are for development, not mastery claims.`;
   if (state.session.draft) state.answer = state.session.draft.firstAnswer;
   concepts(); render();
 }

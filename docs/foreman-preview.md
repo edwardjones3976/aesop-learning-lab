@@ -10,7 +10,15 @@ py scripts/run_foreman.py
 
 Open <http://127.0.0.1:8775/>. The server binds only to the loopback interface and keeps learner data in `.local/foreman.sqlite3` within this worktree. It has no cloud account or public address.
 
-The pack remains `draft`, with candidate answer keys and a scoped independent review that requested changes to four records. See [the review report](independent-content-review.md). Automatic matches are development feedback only. The interface records a lesson completion when the learner presses the lesson button, saves each first answer before opening hints, persists each hint view, and links an idempotent attempt to the saved answer. Export and deletion include saved answers and hint views. A held out check uses the existing scheduling policy; it is not presented as a mastery decision.
+If that database contains v1 learner records, the preview stays on `m1-draft.1` to preserve their original content. To try the corrected v2 draft with a separate local record, run this in another terminal and open <http://127.0.0.1:8776/>:
+
+```powershell
+py scripts/run_foreman.py --port 8776 --db .local/foreman-v2.sqlite3
+```
+
+The two local databases do not share learner records. Export each one separately if you need both histories.
+
+The pack remains `draft`, with candidate answer keys. The original `m1-draft.1` pack is frozen, and its [scoped independent review](independent-content-review.md) requested four corrections. The new `m1-draft.2` candidate addresses those findings but has **no independent review receipt**. Fresh local records use v2; existing v1 learner records stay on v1 until explicitly deleted, so a restart does not reinterpret a saved answer against new content. The preview displays the active pack version. Automatic matches are development feedback only. The interface records a lesson completion when the learner presses the lesson button, saves each first answer before opening hints, persists each hint view, and links an idempotent attempt to the saved answer. Export and deletion include saved answers and hint views. A held out check uses the existing scheduling policy; it is not presented as a mastery decision.
 
 The path now suggests the next concept and explains why: finish a saved answer, take a due held-out check, build one unassisted candidate-key match, or read the next prerequisite-ready lesson. Learners can choose another concept in **Your Path**. **Inspect learning evidence** shows separate recognition, recall, explanation, application, and transfer attempt counts, assisted and unassisted matches, and observed 24-hour checks. It says `insufficient_evidence` until a delayed check is recorded and leaves family familiarity `not_verified` because lesson and example exposure is not yet logged. Confidence counts include only independent scored attempts with confidence recorded; no confidence calibration or probabilistic mastery estimate is inferred.
 

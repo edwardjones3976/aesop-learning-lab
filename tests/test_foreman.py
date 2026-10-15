@@ -7,7 +7,10 @@ from pathlib import Path
 from uuid import uuid4
 
 from aesop_lab.api.service import ApiError
+from aesop_lab.content import load_pack
 from aesop_lab.foreman import Preview
+from aesop_lab.foreman import PACK_PATH as ORIGINAL_PACK_PATH
+from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class ForemanPreviewTests(unittest.TestCase):
@@ -50,6 +53,40 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertEqual(len(exported["hintEvents"]), 1)
         self.preview.store.delete_all()
         self.assertEqual(self.preview.store.export_all()["practiceDrafts"], [])
+
+    def test_existing_v1_learner_is_pinned_until_explicit_delete(self):
+        path = Path(self.temp.name) / "legacy.db"
+        old = load_pack(ORIGINAL_PACK_PATH)
+        with SQLiteStore(path) as store:
+            concept = old.concepts[0]
+            store.add_concept(concept)
+            store.record_lesson_completion(concept.id, concept.content_version,
+                                           datetime(2026, 1, 1, tzinfo=timezone.utc))
+            self.assertEqual(store.learner_content_versions(), frozenset({"v1"}))
+        legacy = Preview(path)
+        self.addCleanup(legacy.store.close)
+        self.assertEqual(legacy.overview()["packVersion"], "m1-draft.1")
+        self.assertTrue(legacy.lesson(concept.id)["completed"])
+        exported = legacy.store.export_all()
+        self.assertEqual(exported["lessonCompletions"][0]["content_version"], "v1")
+        self.assertEqual(legacy.delete_data()["packVersion"], "m1-draft.2")
+        self.assertEqual(legacy.store.export_all()["lessonCompletions"], [])
+        self.assertEqual(legacy.overview()["packVersion"], "m1-draft.2")
+
+    def test_fresh_learner_keeps_v2_on_restart_and_mixed_history_is_rejected(self):
+        self.assertEqual(self.preview.overview()["packVersion"], "m1-draft.2")
+        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v2"}))
+        restarted = Preview(self.path)
+        try:
+            self.assertEqual(restarted.overview()["packVersion"], "m1-draft.2")
+        finally:
+            restarted.store.close()
+        old = load_pack(ORIGINAL_PACK_PATH)
+        self.preview.store.add_concept(old.concepts[0])
+        self.preview.store.record_lesson_completion(old.concepts[0].id, "v1",
+                                                  datetime(2026, 1, 1, tzinfo=timezone.utc))
+        with self.assertRaisesRegex(RuntimeError, "incompatible content versions"):
+            Preview(self.path)
 
     def test_answer_requires_offered_activity_and_lesson(self):
         other = self.preview.pack.learning_order()[1]

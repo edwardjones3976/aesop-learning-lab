@@ -19,6 +19,7 @@ from aesop_lab.storage.sqlite import SQLiteStore
 
 ROOT = Path(__file__).resolve().parents[2]
 PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack.json"
+REVISED_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.2.json"
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -48,12 +49,19 @@ def _catalog_item(item) -> CatalogItem:
 class Preview:
     def __init__(self, db: Path = DB, *, now: Callable[[], datetime] = _now) -> None:
         self.now = now
-        self.pack = load_pack(PACK_PATH)
+        self.store = SQLiteStore(db)
+        versions = self.store.learner_content_versions()
+        if versions - {"v1", "v2"} or len(versions) > 1:
+            self.store.close()
+            raise RuntimeError("Learner records span incompatible content versions; resolve them before opening this preview")
+        self._activate_pack(PACK_PATH if versions == {"v1"} else REVISED_PACK_PATH)
+
+    def _activate_pack(self, path: Path) -> None:
+        self.pack = load_pack(path)
         if self.pack.status != "draft" or any(
             item.answer_key and item.answer_key.status != "candidate" for item in self.pack.items
         ):
             raise RuntimeError("This preview is only for a draft pack with candidate keys")
-        self.store = SQLiteStore(db)
         self.services = {
             concept.id: LearningService(
                 self.store, concept,
@@ -85,7 +93,13 @@ class Preview:
                          cid, self.pack.concept(cid).content_version) is not None,
                      "signals": summary(cid)} for cid in order]
         return {"developmentOnly": True, "packStatus": self.pack.status,
+                "packVersion": self.pack.pack_version,
                 "concepts": concepts, "pathRecommendation": self._path_recommendation(concepts)}
+
+    def delete_data(self) -> dict:
+        self.store.delete_all()
+        self._activate_pack(REVISED_PACK_PATH)
+        return {"deleted": True, "packVersion": self.pack.pack_version}
 
     def _path_recommendation(self, concepts: list[dict]) -> dict:
         by_id = {concept["id"]: concept for concept in concepts}
@@ -244,15 +258,15 @@ class Preview:
         return draft, service, service.items[activity.id]
 
 
-def make_handler(preview: Preview):
+def make_handler(preview: Preview, *, port: int = PORT):
     class Handler(BaseHTTPRequestHandler):
         def _check_origin(self) -> bool:
             host = self.headers.get("Host", "")
-            if host not in (f"{HOST}:{PORT}", f"localhost:{PORT}"):
+            if host not in (f"{HOST}:{port}", f"localhost:{port}"):
                 self._json(403, {"error": "Invalid host"})
                 return False
             if self.command == "POST" and self.headers.get("Origin") not in (
-                f"http://{HOST}:{PORT}", f"http://localhost:{PORT}"):
+                f"http://{HOST}:{port}", f"http://localhost:{port}"):
                 self._json(403, {"error": "Invalid origin"})
                 return False
             return True
@@ -319,7 +333,7 @@ def make_handler(preview: Preview):
                               "/api/v2/attempts": lambda: preview.submit(body),
                               "/api/v2/self-reviews": lambda: preview._service(body.get("conceptId")).submit_self_review(body),
                               "/api/v2/revisions": lambda: preview._service(body.get("conceptId")).submit_revision(body),
-                              "/api/v2/delete": lambda: (preview.store.delete_all() or {"deleted": True})}
+                              "/api/v2/delete": preview.delete_data}
                     if path in routes:
                         return self._json(200, routes[path]())
             except (ApiError, ValueError, json.JSONDecodeError) as exc:
@@ -337,10 +351,12 @@ def make_handler(preview: Preview):
     return Handler
 
 
-def main() -> None:
-    preview = Preview()
-    print(f"Foreman preview: http://{HOST}:{PORT}/", flush=True)
-    HTTPServer((HOST, PORT), make_handler(preview)).serve_forever()
+def main(*, port: int = PORT, db: Path = DB) -> None:
+    if not 1 <= port <= 65535:
+        raise ValueError("port must be between 1 and 65535")
+    preview = Preview(db)
+    print(f"Foreman preview: http://{HOST}:{port}/ ({preview.pack.pack_version})", flush=True)
+    HTTPServer((HOST, port), make_handler(preview, port=port)).serve_forever()
 
 
 if __name__ == "__main__":

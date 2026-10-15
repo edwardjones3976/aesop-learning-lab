@@ -423,6 +423,15 @@ class SQLiteStore:
                 "SELECT * FROM practice_hint_events ORDER BY viewed_at, draft_id")],
         }
 
+    def learner_content_versions(self) -> frozenset[str]:
+        """Versions referenced by learner events, excluding cached catalog rows."""
+        versions = self.connection.execute("""
+            SELECT content_version FROM attempts
+            UNION SELECT content_version FROM lesson_completions
+            UNION SELECT content_version FROM practice_drafts
+        """).fetchall()
+        return frozenset(row[0] for row in versions)
+
     def delete_all(self) -> None:
         with self.connection:
             self.connection.execute("DELETE FROM practice_hint_events")

@@ -6,6 +6,7 @@ from aesop_lab.content import ContentValidationError, load_pack, parse_pack, val
 from aesop_lab.domain.models import ActivityType, EvidenceKind, HintLevel
 
 PACK_PATH = Path(__file__).resolve().parents[1] / "content" / "packs" / "python-functions-recursion" / "pack.json"
+REVISED_PACK_PATH = PACK_PATH.with_name("pack-m1-draft.2.json")
 
 
 def raw_pack() -> dict:
@@ -68,18 +69,19 @@ class ShippedPackTests(unittest.TestCase):
 
     def test_candidate_keys_match_the_snippets_they_grade(self) -> None:
         # Trusted authored content, run only by this test to confirm each candidate key.
-        pack = load_pack(PACK_PATH)
-        checked = 0
-        for item in pack.items:
-            if item.check_expression is None:
-                continue
-            with self.subTest(item=item.id):
-                namespace: dict = {}
-                exec(item.body, namespace)
-                value = str(eval(item.check_expression, namespace))
-                self.assertIn(value, item.answer_key.accepted)
-                checked += 1
-        self.assertGreaterEqual(checked, 8)
+        for path in (PACK_PATH, REVISED_PACK_PATH):
+            pack = load_pack(path)
+            checked = 0
+            for item in pack.items:
+                if item.check_expression is None:
+                    continue
+                with self.subTest(pack=pack.pack_version, item=item.id):
+                    namespace: dict = {}
+                    exec(item.body, namespace)
+                    value = str(eval(item.check_expression, namespace))
+                    self.assertIn(value, item.answer_key.accepted)
+                    checked += 1
+            self.assertGreaterEqual(checked, 8)
 
     def test_every_trace_item_has_a_check_expression(self) -> None:
         for item in load_pack(PACK_PATH).items:
@@ -109,6 +111,40 @@ class ShippedPackTests(unittest.TestCase):
             with self.subTest(source=source.id):
                 self.assertTrue(source.url.startswith("https://docs.python.org/3.12/"))
                 self.assertIn(source.id, cited)
+
+    def test_revised_pack_corrects_findings_without_claiming_review(self) -> None:
+        from aesop_lab.assessment.engine import assess
+        from aesop_lab.foreman import _catalog_item
+
+        old, revised = load_pack(PACK_PATH), load_pack(REVISED_PACK_PATH)
+        self.assertEqual((old.pack_version, revised.pack_version), ("m1-draft.1", "m1-draft.2"))
+        self.assertEqual({c.content_version for c in old.concepts}, {"v1"})
+        self.assertEqual({c.content_version for c in revised.concepts}, {"v2"})
+        self.assertEqual(validate_pack(json.loads(REVISED_PACK_PATH.read_text(encoding="utf-8"))), ())
+        self.assertEqual(revised.status, "draft")
+        self.assertEqual(revised.receipts, ())
+        self.assertTrue(all(item.answer_key.status == "candidate" for item in revised.items
+                            if item.answer_key))
+
+        for item_id, expected in (("scope-keyword-transfer-01", "Hi Ana?"),
+                                  ("recursive-case-transfer-01", "cba")):
+            with self.subTest(item=item_id):
+                item = next(item for item in revised.items if item.id == item_id)
+                spec = _catalog_item(item).spec
+                for answer in (expected, repr(expected), f'"{expected}"'):
+                    self.assertEqual(assess(spec, answer, HintLevel.NONE).score_status.value,
+                                     "correct")
+
+        choice = next(item for item in revised.items if item.id == "recursion-recognize-choice-01")
+        definition = choice.answer_key.accepted[0]
+        self.assertIn(definition, choice.choices)
+        namespace: dict = {}
+        exec(definition, namespace)
+        self.assertEqual(namespace["b"](0), 0)
+        self.assertEqual(namespace["b"](3), 3)
+        lesson = next(item for item in revised.lessons if item.id == "lesson-recursion-as-self-call")
+        self.assertIn("positive integers", lesson.body)
+        self.assertIn("zero or negative input", lesson.body)
 
 
 class ValidatorRejectsBrokenPacksTests(unittest.TestCase):
