@@ -59,11 +59,20 @@ class Preview:
 
     def overview(self) -> dict:
         order = self.pack.learning_order()
+        def summary(cid: str) -> dict:
+            attempts = self.store.list_attempts(cid)
+            return {
+                "attempts": len(attempts),
+                "unassistedCorrect": sum(a.score_status.value == "correct" and a.unassisted for a in attempts),
+                "hintAssisted": sum(not a.unassisted for a in attempts),
+                "needsReview": sum(a.score_status.value == "ungraded" for a in attempts),
+                "recentOutcome": attempts[-1].score_status.value if attempts else None,
+            }
         return {"developmentOnly": True, "packStatus": self.pack.status,
                 "concepts": [{"id": cid, "title": self.pack.concept(cid).title,
                               "lessonComplete": self.store.lesson_completed_at(
                                   cid, self.pack.concept(cid).content_version) is not None,
-                              "attemptCount": len(self.store.list_attempts(cid))}
+                              "signals": summary(cid)}
                              for cid in order]}
 
     def lesson(self, cid: str) -> dict:
@@ -80,10 +89,12 @@ class Preview:
         stamp = self._service(cid).complete_lesson()
         return {"completedAt": stamp.isoformat(), "developmentOnly": True}
 
-    def session(self, cid: str, mode: str = "recommended") -> dict:
+    def session(self, cid: str, mode: str = "recommended", available_minutes: int = 20) -> dict:
         service = self._service(cid)
         if mode not in ("recommended", "practice"):
             raise ApiError("validation_error", "Unknown practice mode.")
+        if type(available_minutes) is not int or not 5 <= available_minutes <= 60:
+            raise ApiError("validation_error", "Choose a session length from 5 to 60 minutes.")
         if self.store.lesson_completed_at(cid, service.concept.content_version) is None:
             return {"lessonRequired": True, "activity": None}
         draft = self.store.open_draft(cid)
@@ -93,7 +104,7 @@ class Preview:
                       "draft": {"id": draft["id"], "firstAnswer": draft["first_answer"],
                                 "hintLevels": [x.value for x in self.store.hint_levels(draft["id"])]}}
         else:
-            result = service.next_session(20, mode)
+            result = service.next_session(available_minutes, mode)
             result["draft"] = None
         if result.get("activity"):
             viewed = set(result["draft"]["hintLevels"]) if result["draft"] else set()
@@ -119,7 +130,8 @@ class Preview:
             return {"draftId": did, "saved": True}
         if self.store.open_draft(cid):
             raise ApiError("conflict", "Finish your saved answer first.", 409)
-        session = self.session(cid, body.get("mode", "recommended"))
+        session = self.session(cid, body.get("mode", "recommended"),
+                               body.get("availableMinutes", 20))
         if not session.get("activity") or session["activity"]["id"] != aid:
             raise ApiError("activity_unavailable", "Choose the activity currently offered.", 409)
         item = service.items[aid]
@@ -224,8 +236,12 @@ def make_handler(preview: Preview):
                     if path == "/api/v2/lesson":
                         return self._json(200, preview.lesson(query.get("conceptId", [None])[0]))
                     if path == "/api/v2/session":
+                        raw_minutes = query.get("availableMinutes", ["20"])[0]
+                        if not raw_minutes.isdecimal():
+                            raise ApiError("validation_error", "Session length must be a whole number.")
                         return self._json(200, preview.session(query.get("conceptId", [None])[0],
-                                                               query.get("mode", ["recommended"])[0]))
+                                                               query.get("mode", ["recommended"])[0],
+                                                               int(raw_minutes)))
                     if path == "/api/v2/export":
                         return self._json(200, preview.store.export_all())
                     files = {"/": ("index.html", "text/html"),

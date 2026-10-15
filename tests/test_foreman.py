@@ -57,6 +57,26 @@ class ForemanPreviewTests(unittest.TestCase):
             self.preview.first_answer({"conceptId": other, "activityId": "unknown",
                                        "draftId": str(uuid4()), "answer": "x"})
 
+    def test_personalization_reports_observed_signals_and_keeps_policy_floor(self):
+        initial = self.preview.overview()["concepts"][0]["signals"]
+        self.assertEqual(initial["attempts"], 0)
+        self.assertIsNotNone(self.preview.session(self.concept, available_minutes=5)["activity"])
+        with self.assertRaises(ApiError):
+            self.preview.session(self.concept, available_minutes=4)
+        with self.assertRaises(ApiError):
+            self.preview.session(self.concept, available_minutes=True)
+        activity = self.preview.session(self.concept)["activity"]
+        draft_id = str(uuid4())
+        self.preview.first_answer({"conceptId": self.concept, "activityId": activity["id"],
+                                   "draftId": draft_id, "answer": activity["choices"][0],
+                                   "availableMinutes": 5})
+        self.preview.hint({"draftId": draft_id})
+        self.preview.submit({"draftId": draft_id})
+        signals = self.preview.overview()["concepts"][0]["signals"]
+        self.assertEqual(signals["attempts"], 1)
+        self.assertEqual(signals["hintAssisted"], 1)
+        self.assertEqual(signals["unassistedCorrect"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

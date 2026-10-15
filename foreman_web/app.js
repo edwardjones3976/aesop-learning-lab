@@ -1,6 +1,26 @@
 const content = document.querySelector('#content');
 const conceptsEl = document.querySelector('#concepts');
 const state = { overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', started: Date.now() };
+const preferenceKey = 'aesop.foreman.preferences.v1';
+let preferences = { minutes: 20, textSize: 'regular', focus: false };
+try {
+  const saved = JSON.parse(localStorage.getItem(preferenceKey) || '{}');
+  if ([5,10,20,30,45].includes(saved.minutes)) preferences.minutes = saved.minutes;
+  if (['regular','large'].includes(saved.textSize)) preferences.textSize = saved.textSize;
+  if (typeof saved.focus === 'boolean') preferences.focus = saved.focus;
+} catch (_) { /* Private browsing may disable storage. */ }
+function applyPreferences() {
+  document.querySelector('#minutes').value = String(preferences.minutes);
+  document.querySelector('#text-size').value = preferences.textSize;
+  document.querySelector('#focus').checked = preferences.focus;
+  document.body.classList.toggle('large-reading', preferences.textSize === 'large');
+  document.body.classList.toggle('quiet', preferences.focus);
+  try { localStorage.setItem(preferenceKey, JSON.stringify(preferences)); } catch (_) { /* Settings remain usable for this tab. */ }
+}
+document.querySelector('#minutes').onchange = async event => { preferences.minutes = Number(event.target.value); applyPreferences(); await refresh().catch(showError); };
+document.querySelector('#text-size').onchange = event => { preferences.textSize = event.target.value; applyPreferences(); };
+document.querySelector('#focus').onchange = event => { preferences.focus = event.target.checked; applyPreferences(); };
+applyPreferences();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function api(path, body) {
@@ -16,7 +36,7 @@ function showError(error) {
   content.prepend(el);
 }
 function concepts() {
-  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.attemptCount} attempt${c.attemptCount === 1 ? '' : 's'}</small></span></button>`).join('');
+  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}</small></span></button>`).join('');
   conceptsEl.querySelectorAll('[data-concept]').forEach(button => button.onclick = () => select(button.dataset.concept));
 }
 async function select(cid) {
@@ -29,14 +49,15 @@ async function refresh() {
   const cid = encodeURIComponent(state.conceptId);
   [state.overview, state.lesson, state.session] = await Promise.all([
     api('/api/v2/overview'), api(`/api/v2/lesson?conceptId=${cid}`),
-    api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}`)
+    api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`)
   ]);
   if (state.session.draft) state.answer = state.session.draft.firstAnswer;
   concepts(); render();
 }
 function render() {
   const index = state.overview.concepts.findIndex(c => c.id === state.conceptId) + 1;
-  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(state.overview.concepts[index-1].title)}</h2><p class="lede">Read the idea, then try an activity. Your first answer and any hints are saved locally.</p><div class="divider"></div>`;
+  const current = state.overview.concepts[index-1], signals = current.signals;
+  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="signals"><div class="signal"><strong>${signals.attempts}</strong>attempts</div><div class="signal"><strong>${signals.unassistedCorrect}</strong>unassisted candidate matches</div><div class="signal"><strong>${signals.hintAssisted}</strong>hint-assisted attempts</div></div><div class="divider"></div>`;
   if (!state.lesson.completed) {
     content.innerHTML = intro + `<span class="pill">Short lesson</span><h2>${esc(state.lesson.title)}</h2><div class="lesson-body">${esc(state.lesson.body)}</div><p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've read this lesson →</button></div>`;
     document.querySelector('#complete').onclick = async () => { try { await api('/api/v2/lesson-completions',{conceptId:state.conceptId}); await refresh(); } catch(e){showError(e)} };
@@ -70,12 +91,14 @@ function render() {
     return;
   }
   const saved = Boolean(s.draft);
-  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}</span><h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div><div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>`;
+  const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
+  const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
+  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}</span><h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div><div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>`;
   drawAnswer(a, saved);
   document.querySelector('#save').onclick = async () => {
     try {
       if (!state.answer.trim()) throw new Error('Enter an answer first.');
-      await api('/api/v2/first-answers', { conceptId:state.conceptId, activityId:a.id, draftId:crypto.randomUUID(), answer:state.answer, mode:state.mode });
+      await api('/api/v2/first-answers', { conceptId:state.conceptId, activityId:a.id, draftId:crypto.randomUUID(), answer:state.answer, mode:state.mode, availableMinutes:preferences.minutes });
       await refresh();
     } catch(error){showError(error)}
   };
@@ -103,10 +126,10 @@ function drawAfterSave(a, draft) {
   document.querySelector('#submit').onclick = async () => { try { state.result = await api('/api/v2/attempts',{draftId:draft.id,activeSeconds:Math.max(0,Math.floor((Date.now()-state.started)/1000))}); state.overview=await api('/api/v2/overview'); concepts(); render(); } catch(error){showError(error)} };
 }
 document.querySelector('#export').onclick = async () => {
-  try { const data=await api('/api/v2/export'); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}
+  try { const data=await api('/api/v2/export'); data.displayPreferences = {...preferences}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}
 };
 document.querySelector('#delete').onclick = async () => {
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
-  try { await api('/api/v2/delete',{}); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
+  try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
 };
 (async()=>{try{state.overview=await api('/api/v2/overview');state.conceptId=state.overview.concepts[0].id;await refresh()}catch(error){showError(error)}})();

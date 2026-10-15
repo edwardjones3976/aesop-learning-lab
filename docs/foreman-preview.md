@@ -12,6 +12,19 @@ Open <http://127.0.0.1:8775/>. The server binds only to the loopback interface a
 
 The pack remains `draft`, with candidate answer keys and no independent review receipts. Automatic matches are development feedback only. The interface records a lesson completion when the learner presses the lesson button, saves each first answer before opening hints, persists each hint view, and links an idempotent attempt to the saved answer. Export and deletion include saved answers and hint views. A held out check uses the existing scheduling policy; it is not presented as a mastery decision.
 
+## Personalization boundary
+
+The primary goal is better learning for each person; Python is the first subject used to build and evaluate the method. The preview now shows attempt, unassisted match, and hint-use signals alongside the scheduling reason. It offers local controls for time available, text size, and a quiet view. These controls improve access and comfort but do not suppress retrieval, reveal hints before a first answer, or remove delayed checks. They are preferences, not a diagnosis of a fixed learning style. Settings live in this browser's local storage; attempt data lives in SQLite. The UI export includes both, and the UI delete action clears both.
+
+This pilot has **not** shown that its personalization improves outcomes. The rules are transparent hypotheses to evaluate using delayed, unassisted, unfamiliar tasks and sustainable participation.
+
+Research informing these guardrails:
+
+- [Dunlosky et al. (2013), review of learning techniques](https://pubmed.ncbi.nlm.nih.gov/26173288/): practice testing and distributed practice have broad support across the reviewed settings.
+- [Karpicke and Roediger (2008), retrieval experiment](https://doi.org/10.1126/science.1152408): retrieval practice can support later retention.
+- [Pashler et al. (2008), learning-styles evidence review](https://doi.org/10.1111/j.1539-6053.2009.01038.x): evidence does not justify assigning instruction by a fixed style label.
+- [Soderstrom and Bjork (2015), learning versus performance review](https://www.psychologicalscience.org/journals/perspectives/1745691615569000/): immediate ease or performance should not be treated as lasting learning.
+
 Run checks with:
 
 ```powershell
