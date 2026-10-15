@@ -32,7 +32,7 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.export_all()["selfReviews"], [])
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 4)
 
     def test_either_v2_branch_migrates_to_combined_schema(self) -> None:
         for absent_tables in (("lesson_completions",),
@@ -47,7 +47,7 @@ class SQLiteStoreTests(unittest.TestCase):
                     connection.execute("PRAGMA user_version = 2")
                     connection.commit()
                 with SQLiteStore(path) as store:
-                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 4)
                     self.assertEqual(store.export_all()["selfReviews"], [])
                     self.assertEqual(store.export_all()["lessonCompletions"], [])
                     self.assertEqual(store.get_concept("c1", "v1").title, "Concept")

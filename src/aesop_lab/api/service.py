@@ -38,6 +38,7 @@ class CatalogItem:
             "id": activity.id, "conceptId": activity.concept_id,
             "contentVersion": activity.content_version, "familyId": activity.family_id,
             "type": activity.activity_type.value, "evidenceKind": activity.evidence_kind.value,
+            "heldOut": activity.held_out,
             "prompt": self.prompt, "body": self.body,
             "choices": list(self.spec.choices),
             "hints": [{"level": hint.level.value, "text": hint.text}
@@ -119,7 +120,7 @@ class LearningService:
             result["reason"] = decision.reason
         return result
 
-    def submit_attempt(self, body: object) -> dict[str, object]:
+    def submit_attempt(self, body: object, *, attempt_id: str | None = None) -> dict[str, object]:
         if not isinstance(body, dict):
             raise ApiError("validation_error", "Attempt body must be an object.")
         required = ("activityId", "contentVersion", "firstAnswer", "hintLevel",
@@ -173,7 +174,7 @@ class LearningService:
                 scope="Development fixture key only; no human review or learner claim.",
             )
         attempt = build_attempt(
-            item.spec, result, attempt_id=str(uuid4()), occurred_at=self.now(),
+            item.spec, result, attempt_id=attempt_id or str(uuid4()), occurred_at=self.now(),
             first_answer=body["firstAnswer"], selection_reason=reason,
             confidence=confidence, outside_study=outside, outside_study_detail=detail,
             active_seconds=seconds,

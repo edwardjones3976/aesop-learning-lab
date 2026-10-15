@@ -17,7 +17,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class SQLiteStore:
@@ -82,8 +82,9 @@ class SQLiteStore:
                     ON attempts(activity_id, content_version, occurred_at);
             """)
             self.connection.execute("PRAGMA user_version = 1")
-        with self.connection:
-            self.connection.executescript("""
+        if current < 3:
+            with self.connection:
+                self.connection.executescript("""
                 CREATE TABLE IF NOT EXISTS lesson_completions (
                     concept_id TEXT NOT NULL, content_version TEXT NOT NULL,
                     completed_at TEXT NOT NULL,
@@ -107,8 +108,33 @@ class SQLiteStore:
                     ON self_reviews(attempt_id, occurred_at);
                 CREATE INDEX IF NOT EXISTS revisions_by_review
                     ON answer_revisions(review_id, occurred_at);
+                """)
+                self.connection.execute("PRAGMA user_version = 3")
+        with self.connection:
+            self.connection.executescript("""
+                CREATE TABLE IF NOT EXISTS practice_drafts (
+                    id TEXT PRIMARY KEY,
+                    activity_id TEXT NOT NULL,
+                    content_version TEXT NOT NULL,
+                    first_answer TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL,
+                    submitted_attempt_id TEXT,
+                    response_json TEXT,
+                    FOREIGN KEY (activity_id, content_version)
+                        REFERENCES activities(id, content_version),
+                    FOREIGN KEY (submitted_attempt_id) REFERENCES attempts(id)
+                );
+                CREATE TABLE IF NOT EXISTS practice_hint_events (
+                    draft_id TEXT NOT NULL,
+                    level TEXT NOT NULL,
+                    viewed_at TEXT NOT NULL,
+                    PRIMARY KEY (draft_id, level),
+                    FOREIGN KEY (draft_id) REFERENCES practice_drafts(id)
+                );
+                CREATE INDEX IF NOT EXISTS open_drafts_by_activity
+                    ON practice_drafts(activity_id, content_version, submitted_attempt_id);
             """)
-            self.connection.execute("PRAGMA user_version = 3")
+            self.connection.execute("PRAGMA user_version = 4")
 
     def record_lesson_completion(self, concept_id: str, version: str,
                                  completed_at: datetime) -> datetime:
@@ -221,6 +247,48 @@ class SQLiteStore:
             OutsideStudy(row["outside_study"]) if row["outside_study"] else None,
             row["outside_study_detail"], row["active_seconds"]
         ) for row in rows)
+
+    def open_draft(self, concept_id: str) -> sqlite3.Row | None:
+        return self.connection.execute(
+            "SELECT d.* FROM practice_drafts d JOIN activities a ON "
+            "d.activity_id = a.id AND d.content_version = a.content_version "
+            "WHERE a.concept_id = ? AND d.submitted_attempt_id IS NULL "
+            "ORDER BY d.recorded_at, d.id LIMIT 1", (concept_id,),
+        ).fetchone()
+
+    def get_draft(self, draft_id: str) -> sqlite3.Row | None:
+        return self.connection.execute("SELECT * FROM practice_drafts WHERE id = ?", (draft_id,)).fetchone()
+
+    def save_draft(self, draft_id: str, activity_id: str, version: str,
+                   answer: str, recorded_at: datetime) -> None:
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO practice_drafts "
+                "(id, activity_id, content_version, first_answer, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (draft_id, activity_id, version, answer, recorded_at.isoformat()),
+            )
+
+    def hint_levels(self, draft_id: str) -> tuple[HintLevel, ...]:
+        rows = self.connection.execute(
+            "SELECT level FROM practice_hint_events WHERE draft_id = ? ORDER BY viewed_at, rowid",
+            (draft_id,),
+        ).fetchall()
+        return tuple(HintLevel(row[0]) for row in rows)
+
+    def save_hint(self, draft_id: str, level: HintLevel, viewed_at: datetime) -> None:
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO practice_hint_events VALUES (?, ?, ?)",
+                (draft_id, level.value, viewed_at.isoformat()),
+            )
+
+    def finish_draft(self, draft_id: str, response: dict[str, object]) -> None:
+        with self.connection:
+            self.connection.execute(
+                "UPDATE practice_drafts SET submitted_attempt_id = ?, response_json = ? WHERE id = ?",
+                (response["attemptId"], json.dumps(response), draft_id),
+            )
 
     def append_self_review(self, review: SelfReview) -> None:
         attempt = self.connection.execute(
@@ -348,10 +416,17 @@ class SQLiteStore:
             "experimentAssignments": [dict(row) for row in assignments],
             "lessonCompletions": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
+            "practiceDrafts": [dict(row) for row in self.connection.execute(
+                "SELECT id, activity_id, content_version, first_answer, recorded_at, "
+                "submitted_attempt_id FROM practice_drafts ORDER BY recorded_at, id")],
+            "hintEvents": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM practice_hint_events ORDER BY viewed_at, draft_id")],
         }
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM practice_hint_events")
+            self.connection.execute("DELETE FROM practice_drafts")
             self.connection.execute("DELETE FROM answer_revisions")
             self.connection.execute("DELETE FROM self_reviews")
             self.connection.execute("DELETE FROM attempts")
