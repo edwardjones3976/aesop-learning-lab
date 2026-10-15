@@ -247,9 +247,11 @@ class SQLiteStore:
         rows = self.connection.execute(
             "SELECT t.* FROM attempts t JOIN activities a ON "
             "t.activity_id = a.id AND t.content_version = a.content_version "
-            "WHERE a.concept_id = ? ORDER BY t.occurred_at, t.id",
+            "WHERE a.concept_id = ?",
             (concept_id,),
         ).fetchall()
+        # Stored ISO text sorts wrongly across UTC offsets; order by instant.
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["occurred_at"]), row["id"]))
         return tuple(Attempt(
             row["id"], row["activity_id"], row["content_version"],
             datetime.fromisoformat(row["occurred_at"]), row["first_answer"],
@@ -261,12 +263,13 @@ class SQLiteStore:
         ) for row in rows)
 
     def open_draft(self, concept_id: str) -> sqlite3.Row | None:
-        return self.connection.execute(
+        rows = self.connection.execute(
             "SELECT d.* FROM practice_drafts d JOIN activities a ON "
             "d.activity_id = a.id AND d.content_version = a.content_version "
-            "WHERE a.concept_id = ? AND d.submitted_attempt_id IS NULL "
-            "ORDER BY d.recorded_at, d.id LIMIT 1", (concept_id,),
-        ).fetchone()
+            "WHERE a.concept_id = ? AND d.submitted_attempt_id IS NULL", (concept_id,),
+        ).fetchall()
+        return min(rows, default=None, key=lambda row: (
+            datetime.fromisoformat(row["recorded_at"]), row["id"]))
 
     def get_draft(self, draft_id: str) -> sqlite3.Row | None:
         return self.connection.execute("SELECT * FROM practice_drafts WHERE id = ?", (draft_id,)).fetchone()
@@ -332,8 +335,9 @@ class SQLiteStore:
 
     def list_self_reviews(self, attempt_id: str) -> tuple[SelfReview, ...]:
         rows = self.connection.execute(
-            "SELECT * FROM self_reviews WHERE attempt_id = ? ORDER BY occurred_at, id", (attempt_id,)
+            "SELECT * FROM self_reviews WHERE attempt_id = ?", (attempt_id,)
         ).fetchall()
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["occurred_at"]), row["id"]))
         return tuple(SelfReview(
             row["id"], row["attempt_id"], row["rubric_id"], row["rubric_version"],
             datetime.fromisoformat(row["occurred_at"]),
@@ -366,8 +370,9 @@ class SQLiteStore:
 
     def list_revisions(self, review_id: str) -> tuple[AnswerRevision, ...]:
         rows = self.connection.execute(
-            "SELECT * FROM answer_revisions WHERE review_id = ? ORDER BY occurred_at, id", (review_id,)
+            "SELECT * FROM answer_revisions WHERE review_id = ?", (review_id,)
         ).fetchall()
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["occurred_at"]), row["id"]))
         return tuple(AnswerRevision(row["id"], row["review_id"],
                                     datetime.fromisoformat(row["occurred_at"]), row["answer"])
                      for row in rows)
@@ -400,9 +405,9 @@ class SQLiteStore:
 
     def list_assignments(self, protocol_id: str) -> tuple[ExperimentAssignment, ...]:
         rows = self.connection.execute(
-            "SELECT * FROM experiment_assignments WHERE protocol_id = ? "
-            "ORDER BY assigned_at, item_family_id", (protocol_id,)
+            "SELECT * FROM experiment_assignments WHERE protocol_id = ?", (protocol_id,)
         ).fetchall()
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["assigned_at"]), row["item_family_id"]))
         return tuple(ExperimentAssignment(
             row["protocol_id"], row["protocol_version"], row["concept_id"],
             row["item_family_id"], row["condition_id"], row["seed"],
