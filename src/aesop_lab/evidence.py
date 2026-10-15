@@ -32,11 +32,12 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
                 attempt.score_status is not ScoreStatus.UNGRADED):
             confidence_pairs += 1
         if (activity.held_out and lesson_completed_at is not None and
-                attempt.occurred_at >= lesson_completed_at + timedelta(hours=24)):
+                attempt.occurred_at >= lesson_completed_at + timedelta(days=activity.check_delay_days)):
             delayed.append({
                 "attemptId": attempt.id,
                 "activityId": activity.id,
                 "evidenceKind": activity.evidence_kind.value,
+                "checkDelayDays": activity.check_delay_days,
                 "occurredAt": attempt.occurred_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "scoreStatus": attempt.score_status.value,
                 "assisted": not attempt.unassisted,
@@ -44,10 +45,17 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
                 "familiarityStatus": "not_verified",
             })
     delayed.sort(key=lambda row: (str(row["occurredAt"]), str(row["attemptId"])))
+    expected_intervals = sorted({activity.check_delay_days for activity in activities.values()
+                                 if activity.held_out})
+    interval_outcomes = {
+        str(day): "observed" if any(row["checkDelayDays"] == day for row in delayed)
+        else "insufficient_evidence" for day in expected_intervals
+    }
     return {
         "byKind": kinds,
         "delayedChecks": delayed,
         "delayedOutcome": "observed" if delayed else "insufficient_evidence",
+        "delayedOutcomeByDay": interval_outcomes,
         "confidenceOutcomePairs": confidence_pairs,
         "interpretation": "Development candidate-key observations only; no mastery or learning-effect claim.",
     }

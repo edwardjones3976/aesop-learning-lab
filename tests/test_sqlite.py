@@ -13,6 +13,22 @@ from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class SQLiteStoreTests(unittest.TestCase):
+    def test_v4_held_out_rows_gain_one_day_delay(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.db"
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("CREATE TABLE activities (id TEXT, content_version TEXT, "
+                                   "concept_id TEXT, family_id TEXT, activity_type TEXT, "
+                                   "evidence_kind TEXT, held_out INTEGER)")
+                connection.execute("INSERT INTO activities VALUES "
+                                   "('old-check', 'v2', 'c1', 'family', 'trace', 'transfer', 1)")
+                connection.execute("PRAGMA user_version = 4")
+                connection.commit()
+            with SQLiteStore(path) as store:
+                check = store.get_activity("old-check", "v2")
+                self.assertEqual(check.check_delay_days, 1)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+
     def test_v1_database_adds_review_tables_without_losing_attempts(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "learning.db"
@@ -32,7 +48,7 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.export_all()["selfReviews"], [])
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 4)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
 
     def test_either_v2_branch_migrates_to_combined_schema(self) -> None:
         for absent_tables in (("lesson_completions",),
@@ -47,7 +63,7 @@ class SQLiteStoreTests(unittest.TestCase):
                     connection.execute("PRAGMA user_version = 2")
                     connection.commit()
                 with SQLiteStore(path) as store:
-                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 4)
+                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
                     self.assertEqual(store.export_all()["selfReviews"], [])
                     self.assertEqual(store.export_all()["lessonCompletions"], [])
                     self.assertEqual(store.get_concept("c1", "v1").title, "Concept")

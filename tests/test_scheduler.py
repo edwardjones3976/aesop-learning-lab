@@ -19,11 +19,13 @@ def activity(id: str, family: str, *, held_out: bool = False) -> Activity:
 PRACTICE_A = activity("practice-a", "family-a")
 PRACTICE_B = activity("practice-b", "family-b")
 CHECK = activity("held-out", "family-c", held_out=True)
+WEEK_CHECK = Activity("week-check", "recursion", "v1", "family-d",
+                      ActivityType.TRACE, EvidenceKind.TRANSFER, True, 7)
 
 
 def attempt(id: str, item: Activity, *, correct: bool = True,
-            hint: HintLevel = HintLevel.NONE) -> Attempt:
-    return Attempt(id, item.id, "v1", LESSON_TIME + timedelta(minutes=10), "2",
+            hint: HintLevel = HintLevel.NONE, at: datetime | None = None) -> Attempt:
+    return Attempt(id, item.id, "v1", at or LESSON_TIME + timedelta(minutes=10), "2",
                    hint, ScoreStatus.CORRECT if correct else ScoreStatus.INCORRECT,
                    "reviewed_exact_key", "assessment-v1", "practice")
 
@@ -36,6 +38,27 @@ def state(now: datetime, attempts: tuple[Attempt, ...] = (),
 
 
 class SchedulerTests(unittest.TestCase):
+    def test_distinct_week_check_waits_for_day_one_and_seven_days(self) -> None:
+        activities = (PRACTICE_A, CHECK, WEEK_CHECK)
+        day_six = LESSON_TIME + timedelta(days=6)
+        first = attempt("practice", PRACTICE_A)
+        initial = recommend(state(day_six, (first,), activities), 10, "pilot-v1")
+        self.assertEqual(initial.recommendation.activity_id, CHECK.id)
+        day_one = attempt("day-one", CHECK, correct=False,
+                          at=LESSON_TIME + timedelta(days=1))
+        waiting = recommend(state(day_six, (first, day_one), activities), 10, "pilot-v1")
+        self.assertEqual(waiting.next_check_at, LESSON_TIME + timedelta(days=7))
+        self.assertNotEqual(waiting.recommendation.activity_id, WEEK_CHECK.id)
+        due = recommend(state(LESSON_TIME + timedelta(days=7), (first, day_one), activities),
+                        10, "pilot-v1")
+        self.assertEqual(due.recommendation.activity_id, WEEK_CHECK.id)
+        self.assertEqual(due.recommendation.due_at, LESSON_TIME + timedelta(days=7))
+        used = recommend(state(LESSON_TIME + timedelta(days=8),
+                               (first, day_one, attempt("week", WEEK_CHECK,
+                                                        at=LESSON_TIME + timedelta(days=7))), activities),
+                         10, "pilot-v1")
+        self.assertIsNone(used.next_check_at)
+
     def test_practice_remains_available_before_delayed_check(self) -> None:
         decision = recommend(state(LESSON_TIME + timedelta(hours=2),
                                    (attempt("a1", PRACTICE_A),)), 10, "pilot-v1")

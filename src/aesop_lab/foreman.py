@@ -20,6 +20,8 @@ from aesop_lab.storage.sqlite import SQLiteStore
 ROOT = Path(__file__).resolve().parents[2]
 PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack.json"
 REVISED_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.2.json"
+WEEK_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.3.json"
+PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH}
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -51,10 +53,10 @@ class Preview:
         self.now = now
         self.store = SQLiteStore(db)
         versions = self.store.learner_content_versions()
-        if versions - {"v1", "v2"} or len(versions) > 1:
+        if versions - PACK_BY_VERSION.keys() or len(versions) > 1:
             self.store.close()
             raise RuntimeError("Learner records span incompatible content versions; resolve them before opening this preview")
-        self._activate_pack(PACK_PATH if versions == {"v1"} else REVISED_PACK_PATH)
+        self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else WEEK_PACK_PATH)
 
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
@@ -68,6 +70,7 @@ class Preview:
                 tuple(_catalog_item(item) for item in self.pack.items_for(concept.id)),
                 reviewed=False, allow_development_fixtures=True,
                 now=self.now,
+                policy_version="pilot-v2" if self.pack.pack_version == "m1-draft.3" else "pilot-v1",
             ) for concept in self.pack.concepts
         }
 
@@ -98,7 +101,7 @@ class Preview:
 
     def delete_data(self) -> dict:
         self.store.delete_all()
-        self._activate_pack(REVISED_PACK_PATH)
+        self._activate_pack(WEEK_PACK_PATH)
         return {"deleted": True, "packVersion": self.pack.pack_version}
 
     def _path_recommendation(self, concepts: list[dict]) -> dict:

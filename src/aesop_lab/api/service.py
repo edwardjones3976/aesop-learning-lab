@@ -39,6 +39,7 @@ class CatalogItem:
             "contentVersion": activity.content_version, "familyId": activity.family_id,
             "type": activity.activity_type.value, "evidenceKind": activity.evidence_kind.value,
             "heldOut": activity.held_out,
+            "checkDelayDays": activity.check_delay_days,
             "prompt": self.prompt, "body": self.body,
             "choices": list(self.spec.choices),
             "hints": [{"level": hint.level.value, "text": hint.text}

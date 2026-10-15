@@ -10,6 +10,7 @@ from aesop_lab.api.service import ApiError
 from aesop_lab.content import load_pack
 from aesop_lab.foreman import Preview
 from aesop_lab.foreman import PACK_PATH as ORIGINAL_PACK_PATH
+from aesop_lab.foreman import REVISED_PACK_PATH
 from aesop_lab.storage.sqlite import SQLiteStore
 
 
@@ -69,16 +70,16 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertTrue(legacy.lesson(concept.id)["completed"])
         exported = legacy.store.export_all()
         self.assertEqual(exported["lessonCompletions"][0]["content_version"], "v1")
-        self.assertEqual(legacy.delete_data()["packVersion"], "m1-draft.2")
+        self.assertEqual(legacy.delete_data()["packVersion"], "m1-draft.3")
         self.assertEqual(legacy.store.export_all()["lessonCompletions"], [])
-        self.assertEqual(legacy.overview()["packVersion"], "m1-draft.2")
+        self.assertEqual(legacy.overview()["packVersion"], "m1-draft.3")
 
-    def test_fresh_learner_keeps_v2_on_restart_and_mixed_history_is_rejected(self):
-        self.assertEqual(self.preview.overview()["packVersion"], "m1-draft.2")
-        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v2"}))
+    def test_fresh_learner_keeps_v3_on_restart_and_mixed_history_is_rejected(self):
+        self.assertEqual(self.preview.overview()["packVersion"], "m1-draft.3")
+        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v3"}))
         restarted = Preview(self.path)
         try:
-            self.assertEqual(restarted.overview()["packVersion"], "m1-draft.2")
+            self.assertEqual(restarted.overview()["packVersion"], "m1-draft.3")
         finally:
             restarted.store.close()
         old = load_pack(ORIGINAL_PACK_PATH)
@@ -87,6 +88,18 @@ class ForemanPreviewTests(unittest.TestCase):
                                                   datetime(2026, 1, 1, tzinfo=timezone.utc))
         with self.assertRaisesRegex(RuntimeError, "incompatible content versions"):
             Preview(self.path)
+
+    def test_existing_v2_learner_remains_on_v2(self):
+        path = Path(self.temp.name) / "prior-v2.db"
+        concept = load_pack(REVISED_PACK_PATH).concepts[0]
+        with SQLiteStore(path) as store:
+            store.add_concept(concept)
+            store.record_lesson_completion(concept.id, "v2",
+                                           datetime(2026, 1, 1, tzinfo=timezone.utc))
+        prior = Preview(path)
+        self.addCleanup(prior.store.close)
+        self.assertEqual(prior.overview()["packVersion"], "m1-draft.2")
+        self.assertEqual(prior.store.learner_content_versions(), frozenset({"v2"}))
 
     def test_answer_requires_offered_activity_and_lesson(self):
         other = self.preview.pack.learning_order()[1]
@@ -150,6 +163,8 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertEqual(before["byKind"][activity["evidenceKind"]]["assistedCorrect"], 1)
         self.assertEqual(before["byKind"][next_activity["evidenceKind"]]["unassistedCorrect"], 1)
         self.assertEqual(before["delayedOutcome"], "insufficient_evidence")
+        self.assertEqual(before["delayedOutcomeByDay"],
+                         {"1": "insufficient_evidence", "7": "insufficient_evidence"})
         self.assertFalse(preview.session(first)["activity"]["heldOut"])
         self.assertEqual(preview.overview()["pathRecommendation"]["action"], "lesson")
 
@@ -167,11 +182,32 @@ class ForemanPreviewTests(unittest.TestCase):
         evidence = preview.overview()["concepts"][0]["signals"]["evidence"]
         self.assertEqual(evidence["delayedOutcome"], "observed")
         self.assertEqual(evidence["delayedChecks"][0]["attemptId"], check_id)
+        self.assertEqual(evidence["delayedChecks"][0]["checkDelayDays"], 1)
+        self.assertEqual(evidence["delayedOutcomeByDay"]["7"], "insufficient_evidence")
         self.assertTrue(evidence["delayedChecks"][0]["independentSuccess"])
         self.assertEqual(evidence["delayedChecks"][0]["familiarityStatus"], "not_verified")
         self.assertEqual(evidence["confidenceOutcomePairs"], 1)
         self.assertNotEqual(preview.overview()["pathRecommendation"]["action"], "delayed_check")
-        self.assertEqual(len(preview.store.export_all()["attempts"]), 3)
+        clock[0] += timedelta(days=5)
+        waiting = preview.session(first)
+        self.assertEqual(waiting["nextCheckAt"], "2026-01-08T12:00:00Z")
+        self.assertFalse(waiting["activity"]["heldOut"])
+        clock[0] += timedelta(days=1)
+        week = preview.session(first)["activity"]
+        self.assertTrue(week["heldOut"])
+        self.assertEqual(week["checkDelayDays"], 7)
+        self.assertNotEqual(week["familyId"], check["familyId"])
+        week_key = next(item.answer_key.accepted[0] for item in preview.pack.items
+                        if item.id == week["id"])
+        week_id = str(uuid4())
+        preview.first_answer({"conceptId": first, "activityId": week["id"],
+                              "draftId": week_id, "answer": week_key})
+        preview.submit({"draftId": week_id})
+        evidence = preview.overview()["concepts"][0]["signals"]["evidence"]
+        self.assertEqual([row["checkDelayDays"] for row in evidence["delayedChecks"]], [1, 7])
+        self.assertTrue(evidence["delayedChecks"][1]["independentSuccess"])
+        self.assertEqual(evidence["delayedOutcomeByDay"]["7"], "observed")
+        self.assertEqual(len(preview.store.export_all()["attempts"]), 4)
         preview.store.delete_all()
         self.assertEqual(preview.overview()["concepts"][0]["signals"]["evidence"]["delayedOutcome"],
                          "insufficient_evidence")

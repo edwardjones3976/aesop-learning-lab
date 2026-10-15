@@ -7,6 +7,7 @@ from aesop_lab.domain.models import ActivityType, EvidenceKind, HintLevel
 
 PACK_PATH = Path(__file__).resolve().parents[1] / "content" / "packs" / "python-functions-recursion" / "pack.json"
 REVISED_PACK_PATH = PACK_PATH.with_name("pack-m1-draft.2.json")
+WEEK_PACK_PATH = PACK_PATH.with_name("pack-m1-draft.3.json")
 
 
 def raw_pack() -> dict:
@@ -69,7 +70,7 @@ class ShippedPackTests(unittest.TestCase):
 
     def test_candidate_keys_match_the_snippets_they_grade(self) -> None:
         # Trusted authored content, run only by this test to confirm each candidate key.
-        for path in (PACK_PATH, REVISED_PACK_PATH):
+        for path in (PACK_PATH, REVISED_PACK_PATH, WEEK_PACK_PATH):
             pack = load_pack(path)
             checked = 0
             for item in pack.items:
@@ -145,6 +146,20 @@ class ShippedPackTests(unittest.TestCase):
         lesson = next(item for item in revised.lessons if item.id == "lesson-recursion-as-self-call")
         self.assertIn("positive integers", lesson.body)
         self.assertIn("zero or negative input", lesson.body)
+
+    def test_week_pack_has_distinct_unreviewed_day_one_and_day_seven_items(self) -> None:
+        raw = json.loads(WEEK_PACK_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(validate_pack(raw), ())
+        pack = load_pack(WEEK_PACK_PATH)
+        self.assertEqual(pack.pack_version, "m1-draft.3")
+        self.assertEqual({concept.content_version for concept in pack.concepts}, {"v3"})
+        self.assertEqual(pack.status, "draft")
+        self.assertEqual(pack.receipts, ())
+        for concept in pack.concepts:
+            checks = [item for item in pack.items_for(concept.id) if item.activity.held_out]
+            self.assertEqual({item.activity.check_delay_days for item in checks}, {1, 7})
+            self.assertEqual(len({item.activity.family_id for item in checks}), 2)
+            self.assertTrue(all(item.answer_key.status == "candidate" for item in checks))
 
 
 class ValidatorRejectsBrokenPacksTests(unittest.TestCase):

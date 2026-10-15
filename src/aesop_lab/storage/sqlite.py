@@ -17,7 +17,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 class SQLiteStore:
@@ -135,6 +135,17 @@ class SQLiteStore:
                     ON practice_drafts(activity_id, content_version, submitted_attempt_id);
             """)
             self.connection.execute("PRAGMA user_version = 4")
+        if current < 5:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute("PRAGMA table_info(activities)")}
+                if "check_delay_days" not in columns:
+                    self.connection.execute(
+                        "ALTER TABLE activities ADD COLUMN check_delay_days INTEGER NOT NULL DEFAULT 0"
+                    )
+                    self.connection.execute(
+                        "UPDATE activities SET check_delay_days = 1 WHERE held_out = 1"
+                    )
+                self.connection.execute("PRAGMA user_version = 5")
 
     def record_lesson_completion(self, concept_id: str, version: str,
                                  completed_at: datetime) -> datetime:
@@ -175,10 +186,10 @@ class SQLiteStore:
     def add_activity(self, activity: Activity) -> None:
         values = (activity.id, activity.content_version, activity.concept_id,
                   activity.family_id, activity.activity_type.value,
-                  activity.evidence_kind.value, int(activity.held_out))
+                  activity.evidence_kind.value, int(activity.held_out), activity.check_delay_days)
         old = self.connection.execute(
             "SELECT id, content_version, concept_id, family_id, activity_type, "
-            "evidence_kind, held_out FROM activities WHERE id = ? AND content_version = ?",
+            "evidence_kind, held_out, check_delay_days FROM activities WHERE id = ? AND content_version = ?",
             values[:2],
         ).fetchone()
         if old is not None:
@@ -186,7 +197,7 @@ class SQLiteStore:
                 raise ValueError("content version is immutable")
             return
         with self.connection:
-            self.connection.execute("INSERT INTO activities VALUES (?, ?, ?, ?, ?, ?, ?)", values)
+            self.connection.execute("INSERT INTO activities VALUES (?, ?, ?, ?, ?, ?, ?, ?)", values)
 
     def get_concept(self, concept_id: str, version: str) -> Concept | None:
         row = self.connection.execute(
@@ -216,7 +227,8 @@ class SQLiteStore:
     def _activity(row: sqlite3.Row) -> Activity:
         return Activity(row["id"], row["concept_id"], row["content_version"],
                         row["family_id"], ActivityType(row["activity_type"]),
-                        EvidenceKind(row["evidence_kind"]), bool(row["held_out"]))
+                        EvidenceKind(row["evidence_kind"]), bool(row["held_out"]),
+                        row["check_delay_days"])
 
     def append_attempt(self, attempt: Attempt) -> None:
         with self.connection:

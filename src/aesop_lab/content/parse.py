@@ -279,6 +279,8 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     activity_type = _enum_value(raw, "activity_type", ActivityType, path, issues)
     evidence_kind = _enum_value(raw, "evidence_kind", EvidenceKind, path, issues)
     held_out = _field(raw, "held_out", bool, path, issues, required=False, default=False)
+    check_delay_days = _field(raw, "check_delay_days", int, path, issues,
+                              required=False, default=1 if held_out else 0)
     prompt = _field(raw, "prompt", str, path, issues)
     body = _field(raw, "body", str, path, issues, required=False, default="", allow_empty=True)
     choices = _str_list(raw, "choices", path, issues, required=False)
@@ -289,7 +291,7 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     hints = _parse_hints(raw, path, issues)
 
     if None in (item_id, concept_id, content_version, family_id, activity_type, evidence_kind,
-                held_out, prompt, body, choices, cited, hints):
+                held_out, check_delay_days, prompt, body, choices, cited, hints):
         return None
     if not _register(item_id, path, seen, issues):
         return None
@@ -303,7 +305,7 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
 
     try:
         activity = Activity(item_id, concept_id, content_version, family_id,
-                            activity_type, evidence_kind, held_out)
+                            activity_type, evidence_kind, held_out, check_delay_days)
     except ValueError as exc:
         issues.append(Issue(path, "domain_invalid", str(exc)))
         return None
