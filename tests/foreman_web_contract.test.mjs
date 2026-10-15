@@ -33,6 +33,7 @@ const baseConcept = (id, title, signals = {}) => ({
     hintAssisted: 0,
     needsReview: 0,
     recentOutcome: null,
+    recordedAttempts: [],
     evidence: emptyEvidence(),
     ...signals,
   },
@@ -82,6 +83,23 @@ test('a delayed check without assistance status cannot be called independent', (
     evidenceKind: 'application', scoreStatus: 'correct',
     familiarityStatus: 'not_verified', occurredAt: '2026-01-02T12:00:00Z' });
   assert.throws(() => normalizeEvidence(evidence), /delayedChecks\[0\]\.assisted/);
+});
+
+test('attempt history preserves assistance and escapes the saved answer', () => {
+  const attempt = { id: 'a1', activityId: 'item-1', contentVersion: 'v3',
+    evidenceKind: 'recognition', occurredAt: '2026-01-01T12:00:00Z',
+    firstAnswer: '<script>alert(1)</script>', scoreStatus: 'incorrect',
+    gradingMethod: 'development_fixture_exact_key', hintLevel: 'nudge', assisted: true };
+  const payload = baseOverview([baseConcept('c1', 'One', { recordedAttempts: [attempt] })],
+    { conceptId: 'c1', action: 'practice', reason: 'Try again.' });
+  const overview = validateOverview(payload);
+  const html = evidenceMarkup(overview.concepts[0].signals.evidence,
+    overview.concepts[0].signals.recordedAttempts);
+  assert.match(html, /item-1.*assisted/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  attempt.assisted = false;
+  assert.throws(() => validateOverview(payload), /recordedAttempts\[0\]\.assisted/);
 });
 
 test('session draft missing hintLevels is rejected rather than losing assistance history', () => {

@@ -74,6 +74,11 @@ class FiveConceptJourney(unittest.TestCase):
                     self.assertEqual(signals["attempts"], expected_counts[concept])
                     self.assertEqual(signals["unassistedCorrect"], 1)
                     self.assertEqual(signals["hintAssisted"], 1)
+                    self.assertEqual(len(signals["recordedAttempts"]), expected_counts[concept])
+                    self.assertTrue(any(row["assisted"] and row["hintLevel"] == "worked_solution"
+                                        for row in signals["recordedAttempts"]))
+                    self.assertTrue(any(not row["assisted"] and row["scoreStatus"] == "correct"
+                                        for row in signals["recordedAttempts"]))
                     self.assertEqual(signals["evidence"]["delayedOutcome"], "insufficient_evidence")
 
                 clock[0] += timedelta(days=1, minutes=1)

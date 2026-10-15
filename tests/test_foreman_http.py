@@ -68,6 +68,10 @@ class ForemanHttpJourney(unittest.TestCase):
                 result = request("/api/v2/attempts", {"draftId": draft_id})
                 self.assertTrue(result["assisted"])
                 self.assertEqual(result, request("/api/v2/attempts", {"draftId": draft_id}))
+                history = request("/api/v2/overview")["concepts"][0]["signals"]["recordedAttempts"]
+                self.assertEqual(len(history), 1)
+                self.assertEqual(history[0]["firstAnswer"], activity["choices"][0])
+                self.assertTrue(history[0]["assisted"])
                 exported = request("/api/v2/export")
                 self.assertEqual(len(exported["attempts"]), 1)
                 self.assertEqual(len(exported["hintEvents"]), 1)
