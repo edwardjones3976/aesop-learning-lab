@@ -2,6 +2,7 @@
 
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -76,6 +77,67 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertEqual(signals["attempts"], 1)
         self.assertEqual(signals["hintAssisted"], 1)
         self.assertEqual(signals["unassistedCorrect"], 0)
+
+    def test_evidence_path_and_delayed_outcome_journey(self):
+        clock = [datetime(2026, 1, 1, 12, tzinfo=timezone.utc)]
+        preview = Preview(Path(self.temp.name) / "journey.db", now=lambda: clock[0])
+        self.addCleanup(preview.store.close)
+        first = preview.pack.learning_order()[0]
+        initial = preview.overview()
+        self.assertEqual(initial["pathRecommendation"]["action"], "lesson")
+        self.assertEqual(initial["concepts"][0]["signals"]["evidence"]["delayedOutcome"],
+                         "insufficient_evidence")
+        preview.complete_lesson(first)
+        self.assertEqual(preview.overview()["pathRecommendation"]["action"], "practice")
+
+        activity = preview.session(first)["activity"]
+        key = next(item.answer_key.accepted[0] for item in preview.pack.items
+                   if item.id == activity["id"])
+        assisted_id = str(uuid4())
+        preview.first_answer({"conceptId": first, "activityId": activity["id"],
+                              "draftId": assisted_id, "answer": key})
+        self.assertEqual(preview.overview()["pathRecommendation"]["action"], "resume")
+        preview.hint({"draftId": assisted_id})
+        preview.submit({"draftId": assisted_id, "confidence": .8})
+        self.assertEqual(preview.overview()["concepts"][0]["signals"]["unassistedCorrect"], 0)
+        self.assertFalse(preview.session(first)["activity"]["heldOut"])
+
+        next_activity = preview.session(first)["activity"]
+        next_key = next(item.answer_key.accepted[0] for item in preview.pack.items
+                        if item.id == next_activity["id"])
+        independent_id = str(uuid4())
+        preview.first_answer({"conceptId": first, "activityId": next_activity["id"],
+                              "draftId": independent_id, "answer": next_key})
+        preview.submit({"draftId": independent_id, "confidence": .7})
+        before = preview.overview()["concepts"][0]["signals"]["evidence"]
+        self.assertEqual(before["byKind"][activity["evidenceKind"]]["assistedCorrect"], 1)
+        self.assertEqual(before["byKind"][next_activity["evidenceKind"]]["unassistedCorrect"], 1)
+        self.assertEqual(before["delayedOutcome"], "insufficient_evidence")
+        self.assertFalse(preview.session(first)["activity"]["heldOut"])
+        self.assertEqual(preview.overview()["pathRecommendation"]["action"], "lesson")
+
+        clock[0] += timedelta(days=1, minutes=1)
+        due = preview.overview()["pathRecommendation"]
+        self.assertEqual((due["conceptId"], due["action"]), (first, "delayed_check"))
+        check = preview.session(first)["activity"]
+        self.assertTrue(check["heldOut"])
+        check_key = next(item.answer_key.accepted[0] for item in preview.pack.items
+                         if item.id == check["id"])
+        check_id = str(uuid4())
+        preview.first_answer({"conceptId": first, "activityId": check["id"],
+                              "draftId": check_id, "answer": check_key})
+        preview.submit({"draftId": check_id})
+        evidence = preview.overview()["concepts"][0]["signals"]["evidence"]
+        self.assertEqual(evidence["delayedOutcome"], "observed")
+        self.assertEqual(evidence["delayedChecks"][0]["attemptId"], check_id)
+        self.assertTrue(evidence["delayedChecks"][0]["independentSuccess"])
+        self.assertEqual(evidence["delayedChecks"][0]["familiarityStatus"], "not_verified")
+        self.assertEqual(evidence["confidenceOutcomePairs"], 1)
+        self.assertNotEqual(preview.overview()["pathRecommendation"]["action"], "delayed_check")
+        self.assertEqual(len(preview.store.export_all()["attempts"]), 3)
+        preview.store.delete_all()
+        self.assertEqual(preview.overview()["concepts"][0]["signals"]["evidence"]["delayedOutcome"],
+                         "insufficient_evidence")
 
 
 if __name__ == "__main__":

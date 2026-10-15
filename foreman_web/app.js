@@ -43,7 +43,7 @@ function showError(error) {
   content.prepend(el);
 }
 function concepts() {
-  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}</small></span></button>`).join('');
+  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}${c.id === state.overview.pathRecommendation.conceptId ? ' · Suggested' : ''}</small></span></button>`).join('');
   conceptsEl.querySelectorAll('[data-concept]').forEach(button => button.onclick = () => select(button.dataset.concept));
 }
 async function select(cid) {
@@ -64,7 +64,9 @@ async function refresh() {
 function render() {
   const index = state.overview.concepts.findIndex(c => c.id === state.conceptId) + 1;
   const current = state.overview.concepts[index-1], signals = current.signals;
-  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="signals"><div class="signal"><strong>${signals.attempts}</strong>attempts</div><div class="signal"><strong>${signals.unassistedCorrect}</strong>unassisted candidate matches</div><div class="signal"><strong>${signals.hintAssisted}</strong>hint-assisted attempts</div></div><div class="divider"></div>`;
+  const suggested = state.overview.pathRecommendation;
+  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div><div class="signals"><div class="signal"><strong>${signals.attempts}</strong>attempts</div><div class="signal"><strong>${signals.unassistedCorrect}</strong>unassisted candidate matches</div><div class="signal"><strong>${signals.hintAssisted}</strong>hint-assisted attempts</div></div>${evidenceMarkup(signals.evidence)}<div class="divider"></div>`;
+  content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
     content.innerHTML = intro + `<span class="pill">Short lesson</span><h2>${esc(state.lesson.title)}</h2><div class="lesson-body">${esc(state.lesson.body)}</div><p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've read this lesson →</button></div>`;
     document.querySelector('#complete').onclick = async () => { try { await api('/api/v2/lesson-completions',{conceptId:state.conceptId}); await refresh(); } catch(e){showError(e)} };
@@ -100,7 +102,7 @@ function render() {
   const saved = Boolean(s.draft);
   const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
   const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
-  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}</span><h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div><div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>`;
+  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}</span><h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div><div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>`;
   drawAnswer(a, saved);
   document.querySelector('#save').onclick = async () => {
     try {
@@ -110,6 +112,11 @@ function render() {
     } catch(error){showError(error)}
   };
   if (saved) drawAfterSave(a, s.draft);
+}
+function evidenceMarkup(evidence) {
+  const rows = Object.entries(evidence.byKind).map(([kind, count]) => `<tr><th scope="row">${esc(kind)}</th><td>${count.unassistedCorrect}</td><td>${count.assistedCorrect}</td><td>${count.incorrect}</td><td>${count.ungraded}</td></tr>`).join('');
+  const delayed = evidence.delayedChecks.length ? evidence.delayedChecks.map(check => `<li>${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(check.familiarityStatus.replace('_', ' '))} · ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
+  return `<details class="evidence-panel"><summary>Inspect learning evidence</summary><p class="muted">Observed answers by kind. Candidate-key matches are development feedback, not mastery.</p><div class="table-scroll"><table><thead><tr><th scope="col">Kind</th><th scope="col">Independent matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Ungraded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Delayed checks</strong></p><ul>${delayed}</ul><p class="muted">Independent scored answers with confidence recorded: ${evidence.confidenceOutcomePairs}. No calibrated estimate is available.</p></details>`;
 }
 function drawAnswer(a, saved) {
   const area = document.querySelector('#answer-area');
@@ -139,4 +146,4 @@ document.querySelector('#delete').onclick = async () => {
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
   try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
 };
-(async()=>{try{state.overview=await api('/api/v2/overview');state.conceptId=state.overview.concepts[0].id;await refresh()}catch(error){showError(error)}})();
+(async()=>{try{state.overview=await api('/api/v2/overview');state.conceptId=state.overview.pathRecommendation.conceptId;await refresh()}catch(error){showError(error)}})();

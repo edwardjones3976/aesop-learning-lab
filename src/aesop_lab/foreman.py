@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
+from typing import Callable
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from aesop_lab.api.service import ApiError, CatalogItem, LearningService
 from aesop_lab.assessment import AnswerKey, Hint, HintLadder, ItemSpec, Rubric, RubricCriterion, assess
 from aesop_lab.content import load_pack
 from aesop_lab.domain.models import HintLevel
+from aesop_lab.evidence import summarize_evidence
 from aesop_lab.storage.sqlite import SQLiteStore
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,7 +46,8 @@ def _catalog_item(item) -> CatalogItem:
 
 
 class Preview:
-    def __init__(self, db: Path = DB) -> None:
+    def __init__(self, db: Path = DB, *, now: Callable[[], datetime] = _now) -> None:
+        self.now = now
         self.pack = load_pack(PACK_PATH)
         if self.pack.status != "draft" or any(
             item.answer_key and item.answer_key.status != "candidate" for item in self.pack.items
@@ -56,26 +59,65 @@ class Preview:
                 self.store, concept,
                 tuple(_catalog_item(item) for item in self.pack.items_for(concept.id)),
                 reviewed=False, allow_development_fixtures=True,
+                now=self.now,
             ) for concept in self.pack.concepts
         }
 
     def overview(self) -> dict:
         order = self.pack.learning_order()
         def summary(cid: str) -> dict:
-            attempts = self.store.list_attempts(cid)
+            service = self.services[cid]
+            attempts = tuple(a for a in self.store.list_attempts(cid)
+                             if a.content_version == service.concept.content_version)
+            completed = self.store.lesson_completed_at(cid, service.concept.content_version)
             return {
                 "attempts": len(attempts),
                 "unassistedCorrect": sum(a.score_status.value == "correct" and a.unassisted for a in attempts),
                 "hintAssisted": sum(not a.unassisted for a in attempts),
                 "needsReview": sum(a.score_status.value == "ungraded" for a in attempts),
                 "recentOutcome": attempts[-1].score_status.value if attempts else None,
+                "evidence": summarize_evidence(
+                    {item.spec.activity.id: item.spec.activity for item in service.items.values()},
+                    attempts, completed),
             }
+        concepts = [{"id": cid, "title": self.pack.concept(cid).title,
+                     "lessonComplete": self.store.lesson_completed_at(
+                         cid, self.pack.concept(cid).content_version) is not None,
+                     "signals": summary(cid)} for cid in order]
         return {"developmentOnly": True, "packStatus": self.pack.status,
-                "concepts": [{"id": cid, "title": self.pack.concept(cid).title,
-                              "lessonComplete": self.store.lesson_completed_at(
-                                  cid, self.pack.concept(cid).content_version) is not None,
-                              "signals": summary(cid)}
-                             for cid in order]}
+                "concepts": concepts, "pathRecommendation": self._path_recommendation(concepts)}
+
+    def _path_recommendation(self, concepts: list[dict]) -> dict:
+        by_id = {concept["id"]: concept for concept in concepts}
+        # Resume a locked answer before offering another activity.
+        for concept in concepts:
+            if self.store.open_draft(concept["id"]):
+                return {"conceptId": concept["id"], "action": "resume",
+                        "reason": "Finish your saved first answer before starting another activity."}
+        for concept in concepts:
+            if concept["lessonComplete"]:
+                session = self.services[concept["id"]].next_session(20)
+                if session["activity"] and session["activity"]["heldOut"]:
+                    return {"conceptId": concept["id"], "action": "delayed_check",
+                            "reason": session["recommendation"]["reason"]}
+        for concept in concepts:
+            if (concept["lessonComplete"] and
+                    concept["signals"]["unassistedCorrect"] == 0):
+                return {"conceptId": concept["id"], "action": "practice",
+                        "reason": "Build one independent candidate-key match before moving on."}
+        for concept in concepts:
+            if not concept["lessonComplete"] and all(
+                by_id[parent]["lessonComplete"] and
+                by_id[parent]["signals"]["unassistedCorrect"] > 0
+                for parent in self.pack.prerequisites_of(concept["id"])):
+                return {"conceptId": concept["id"], "action": "lesson",
+                        "reason": "Read the next lesson in prerequisite order."}
+        for concept in concepts:
+            if concept["lessonComplete"]:
+                return {"conceptId": concept["id"], "action": "practice",
+                        "reason": "Continue practice while waiting for an independent delayed check."}
+        return {"conceptId": concepts[0]["id"], "action": "lesson",
+                "reason": "Begin with the first lesson."}
 
     def lesson(self, cid: str) -> dict:
         service = self._service(cid)
@@ -139,7 +181,7 @@ class Preview:
         item = service.items[aid]
         if item.spec.choices and answer not in item.spec.choices:
             raise ApiError("validation_error", "Choose one of the listed options.")
-        self.store.save_draft(did, aid, service.concept.content_version, answer, _now())
+        self.store.save_draft(did, aid, service.concept.content_version, answer, self.now())
         return {"draftId": did, "saved": True}
 
     def hint(self, body: dict) -> dict:
@@ -151,7 +193,7 @@ class Preview:
         next_level = item.spec.hints.next_level(current)
         if next_level is None:
             raise ApiError("hint_exhausted", "All hints are open.", 409)
-        self.store.save_hint(draft["id"], next_level, _now())
+        self.store.save_hint(draft["id"], next_level, self.now())
         revealed = next(h for h in item.spec.hints.hints if h.level == next_level)
         return {"level": next_level.value, "text": revealed.text}
 
