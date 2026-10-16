@@ -17,7 +17,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class SQLiteStore:
@@ -44,7 +44,7 @@ class SQLiteStore:
             raise RuntimeError(f"database schema {current} is newer than supported {SCHEMA_VERSION}")
         if current == SCHEMA_VERSION:
             return
-        with self.connection:
+        if current == 0:
             self.connection.executescript("""
                 CREATE TABLE IF NOT EXISTS concepts (
                     id TEXT NOT NULL, content_version TEXT NOT NULL,
@@ -97,7 +97,58 @@ class SQLiteStore:
                 CREATE INDEX IF NOT EXISTS revisions_by_review
                     ON answer_revisions(review_id, occurred_at);
             """)
-            self.connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+            self.connection.execute("PRAGMA user_version = 1")
+        if current < 2:
+            self.connection.executescript("""
+                CREATE TABLE IF NOT EXISTS self_reviews (
+                    id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL,
+                    rubric_id TEXT NOT NULL, rubric_version TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, judgments TEXT NOT NULL,
+                    confidence REAL,
+                    FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+                );
+                CREATE TABLE IF NOT EXISTS answer_revisions (
+                    id TEXT PRIMARY KEY, review_id TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, answer TEXT NOT NULL,
+                    FOREIGN KEY (review_id) REFERENCES self_reviews(id)
+                );
+                CREATE INDEX IF NOT EXISTS reviews_by_attempt
+                    ON self_reviews(attempt_id, occurred_at);
+                CREATE INDEX IF NOT EXISTS revisions_by_review
+                    ON answer_revisions(review_id, occurred_at);
+            """)
+            self.connection.execute("PRAGMA user_version = 2")
+        with self.connection:
+            self.connection.execute("""
+                CREATE TABLE IF NOT EXISTS lesson_completions (
+                    concept_id TEXT NOT NULL, content_version TEXT NOT NULL,
+                    completed_at TEXT NOT NULL,
+                    PRIMARY KEY (concept_id, content_version),
+                    FOREIGN KEY (concept_id, content_version)
+                        REFERENCES concepts(id, content_version)
+                )
+            """)
+            self.connection.execute("PRAGMA user_version = 3")
+
+    def record_lesson_completion(self, concept_id: str, version: str,
+                                 completed_at: datetime) -> datetime:
+        if completed_at.tzinfo is None or completed_at.utcoffset() is None:
+            raise ValueError("lesson completion requires a timezone")
+        with self.connection:
+            self.connection.execute(
+                "INSERT OR IGNORE INTO lesson_completions VALUES (?, ?, ?)",
+                (concept_id, version, completed_at.isoformat()),
+            )
+        recorded = self.lesson_completed_at(concept_id, version)
+        assert recorded is not None
+        return recorded
+
+    def lesson_completed_at(self, concept_id: str, version: str) -> datetime | None:
+        row = self.connection.execute(
+            "SELECT completed_at FROM lesson_completions WHERE concept_id = ? "
+            "AND content_version = ?", (concept_id, version),
+        ).fetchone()
+        return datetime.fromisoformat(row[0]) if row else None
 
     def add_concept(self, concept: Concept) -> None:
         values = (concept.id, concept.content_version, concept.title,
@@ -310,6 +361,8 @@ class SQLiteStore:
             "selfReviews": [dict(row) for row in reviews],
             "answerRevisions": [dict(row) for row in revisions],
             "experimentAssignments": [dict(row) for row in assignments],
+            "lessonCompletions": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
         }
 
     def delete_all(self) -> None:
@@ -318,3 +371,4 @@ class SQLiteStore:
             self.connection.execute("DELETE FROM self_reviews")
             self.connection.execute("DELETE FROM attempts")
             self.connection.execute("DELETE FROM experiment_assignments")
+            self.connection.execute("DELETE FROM lesson_completions")
