@@ -136,6 +136,15 @@ class SchedulerTests(unittest.TestCase):
         self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
         self.assertIsNone(decision.next_check_at)
 
+    def test_familiar_only_check_does_not_promise_24_hour_opening(self) -> None:
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2),
+                                   (attempt("a1", PRACTICE_A),),
+                                   encountered=frozenset({"family-c"})),
+                             10, "pilot-v1")
+        self.assertIsNone(decision.next_check_at)
+        self.assertIn("no unused independent check", decision.reason)
+        self.assertNotIn("opens after 24 hours", decision.reason)
+
     def test_no_qualifying_evidence_has_no_promised_check_time(self) -> None:
         decision = recommend(state(LESSON_TIME + timedelta(hours=2)), 10, "pilot-v1")
         self.assertIsNone(decision.next_check_at)

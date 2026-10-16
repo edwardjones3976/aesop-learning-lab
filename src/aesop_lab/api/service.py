@@ -158,10 +158,13 @@ class LearningService:
         seconds = body["activeSeconds"]
         if type(seconds) is not int or seconds < 0:
             raise ApiError("validation_error", "activeSeconds must be a nonnegative whole number.")
+        available_minutes = body.get("availableMinutes", 20)
+        if type(available_minutes) is not int or available_minutes < 1:
+            raise ApiError("validation_error", "availableMinutes must be a positive whole number.")
         state = self._state()
         activity = item.spec.activity
         if activity.held_out:
-            decision = recommend(state, 20, self.policy_version)
+            decision = recommend(state, available_minutes, self.policy_version)
             if decision.recommendation is None or decision.recommendation.activity_id != activity.id:
                 raise ApiError("check_unavailable", "This independent check is not available.", 409)
             reason = decision.reason
