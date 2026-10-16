@@ -76,7 +76,7 @@ def _parse(data: Any) -> tuple[ContentPack | None, list[Issue]]:
     if concepts is not None and lessons is not None and items is not None:
         _check_coverage(concepts, lessons, items, issues)
     if None not in (status, author) and concepts is not None and lessons is not None and items is not None:
-        _check_review(status, author, concepts, lessons, items, receipts, issues)
+        _check_review(status, author, concepts, lessons, items, sources or [], receipts, issues)
 
     if issues or None in (pack_id, pack_version, topic, status, author) or concepts is None:
         return None, issues
@@ -482,10 +482,16 @@ def _parse_receipts(data: Mapping[str, Any], issues: list[Issue]) -> list[Review
 
 
 def _check_review(status: str, author: str, concepts: list[Concept], lessons: list[Lesson],
-                  items: list[ItemContent], receipts: list[ReviewReceipt] | None,
+                  items: list[ItemContent], sources: list[Source], receipts: list[ReviewReceipt] | None,
                   issues: list[Issue]) -> None:
     receipts = receipts or []
-    all_ids = {concept.id for concept in concepts} | {lesson.id for lesson in lessons} | {item.id for item in items}
+    # Receipts cover every reviewable record: concepts, lessons, items, source references, and rubrics.
+    record_ids = ({concept.id for concept in concepts} | {lesson.id for lesson in lessons}
+                  | {item.id for item in items} | {source.id for source in sources})
+    rubric_ids = [item.rubric.id for item in items if item.rubric is not None]
+    for rubric_id in sorted({rid for rid in rubric_ids if rubric_ids.count(rid) > 1 or rid in record_ids}):
+        issues.append(Issue(rubric_id, "duplicate_id", "a rubric id must be unique across the pack's records"))
+    all_ids = record_ids | set(rubric_ids)
     for receipt in receipts:
         if receipt.reviewer == author:
             issues.append(Issue("review.receipts", "review_invalid", "a reviewer cannot review their own pack"))

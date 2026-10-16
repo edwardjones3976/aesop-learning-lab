@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import unittest
 
 from aesop_lab.content import ContentValidationError, load_pack, parse_pack, validate_pack
@@ -18,6 +19,36 @@ def codes(raw: dict) -> set[str]:
 
 def raw_item(raw: dict, item_id: str) -> dict:
     return next(item for item in raw["items"] if item["id"] == item_id)
+
+
+def code_lines(text: str) -> set[str]:
+    """Unindented code lines (defs, assignments, calls) with comments and spacing normalised."""
+    lines = set()
+    for line in text.splitlines():
+        if line and not line[0].isspace():
+            lines.add(re.sub(r"\s+", " ", line.split("#")[0]).strip())
+    lines.discard("")
+    return lines
+
+
+def lesson_code_blocks(raw: dict) -> list[str]:
+    fence = re.compile(r"```python\n(.*?)```", re.S)
+    return [block for lesson in raw["lessons"] for block in fence.findall(lesson["body"])]
+
+
+def reviewed_raw() -> dict:
+    """A pack with approvals for every record, as a reviewer other than the author would record them."""
+    raw = raw_pack()
+    raw["status"] = "reviewed"
+    for item in raw["items"]:
+        if item.get("answer_key"):
+            item["answer_key"]["status"] = "reviewed"
+    scope = ([concept["id"] for concept in raw["concepts"]] + [lesson["id"] for lesson in raw["lessons"]]
+             + [item["id"] for item in raw["items"]] + [source["id"] for source in raw["sources"]]
+             + [item["rubric"]["id"] for item in raw["items"] if item.get("rubric")])
+    raw["review"]["receipts"] = [{"reviewer": "Independent reviewer", "reviewed_on": "2026-10-14",
+                                  "outcome": "approved", "scope_ids": scope}]
+    return raw
 
 
 class ShippedPackTests(unittest.TestCase):
@@ -101,6 +132,28 @@ class ShippedPackTests(unittest.TestCase):
             with self.subTest(source=source.id):
                 self.assertTrue(source.url.startswith("https://docs.python.org/3.12/"))
                 self.assertIn(source.id, cited)
+
+    def test_items_do_not_repeat_lesson_examples_or_inputs(self) -> None:
+        raw = raw_pack()
+        taught_lines = set().union(*(code_lines(block) for block in lesson_code_blocks(raw)))
+        taught_blocks = {re.sub(r"\s+", " ", block).strip() for block in lesson_code_blocks(raw)}
+        for item in raw["items"]:
+            with self.subTest(item=item["id"]):
+                self.assertEqual(code_lines(item["body"]) & taught_lines, set())
+                body = re.sub(r"\s+", " ", item["body"])
+                self.assertFalse(any(block in body for block in taught_blocks))
+
+    def test_held_out_items_do_not_repeat_other_items(self) -> None:
+        raw = raw_pack()
+        for held_out in (item for item in raw["items"] if item["held_out"]):
+            others = set().union(*(code_lines(item["body"]) for item in raw["items"] if item is not held_out))
+            with self.subTest(item=held_out["id"]):
+                self.assertEqual(code_lines(held_out["body"]) & others, set())
+
+    def test_halving_transfer_item_differs_from_the_lesson_example(self) -> None:
+        body = raw_item(raw_pack(), "recursion-halving-transfer-01")["body"]
+        self.assertNotIn("steps(8)", body)
+        self.assertNotIn("def steps", body)
 
 
 class ValidatorRejectsBrokenPacksTests(unittest.TestCase):
@@ -225,6 +278,44 @@ class ValidatorRejectsBrokenPacksTests(unittest.TestCase):
             if item.get("answer_key"):
                 item["answer_key"]["status"] = "reviewed"
         self.assertIn("review_claimed", codes(raw))
+
+    def test_complete_receipts_let_a_reviewed_pack_validate(self) -> None:
+        self.assertEqual(validate_pack(reviewed_raw()), ())
+
+    def test_reviewed_pack_needs_an_approved_receipt_for_every_source(self) -> None:
+        raw = reviewed_raw()
+        missing = raw["sources"][0]["id"]
+        raw["review"]["receipts"][0]["scope_ids"].remove(missing)
+        self.assertIn((missing, "review_claimed"), {(issue.path, issue.code) for issue in validate_pack(raw)})
+
+    def test_reviewed_pack_needs_an_approved_receipt_for_every_rubric(self) -> None:
+        raw = reviewed_raw()
+        missing = raw_item(raw, "recursion-explain-01")["rubric"]["id"]
+        raw["review"]["receipts"][0]["scope_ids"].remove(missing)
+        self.assertIn((missing, "review_claimed"), {(issue.path, issue.code) for issue in validate_pack(raw)})
+
+    def test_non_approved_receipt_does_not_cover_sources_or_rubrics(self) -> None:
+        raw = reviewed_raw()
+        raw["review"]["receipts"][0]["outcome"] = "changes_requested"
+        flagged = {issue.path for issue in validate_pack(raw) if issue.code == "review_claimed"}
+        self.assertIn(raw["sources"][0]["id"], flagged)
+        self.assertIn("base-case-explain-rubric", flagged)
+
+    def test_receipt_may_scope_sources_and_rubrics(self) -> None:
+        raw = raw_pack()
+        raw["review"]["receipts"] = [{
+            "reviewer": "Independent reviewer", "reviewed_on": "2026-10-13", "outcome": "changes_requested",
+            "scope_ids": ["py-ref-calls", "recursion-explain-rubric"],
+        }]
+        self.assertEqual(validate_pack(raw), ())
+
+    def test_rubric_ids_must_not_collide_with_other_records(self) -> None:
+        raw = raw_pack()
+        raw_item(raw, "base-case-explain-01")["rubric"]["id"] = "recursion-explain-rubric"
+        self.assertIn("duplicate_id", codes(raw))
+        raw = raw_pack()
+        raw_item(raw, "base-case-explain-01")["rubric"]["id"] = "py-ref-calls"
+        self.assertIn("duplicate_id", codes(raw))
 
     def test_reviewer_cannot_be_the_author(self) -> None:
         raw = raw_pack()

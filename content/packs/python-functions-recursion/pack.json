@@ -154,14 +154,14 @@
       "evidence_kind": "application",
       "held_out": false,
       "prompt": "After this code runs, what is the value of result?",
-      "body": "def double(x):\n    return x * 2\nresult = double(4) + 1",
+      "body": "def triple(x):\n    return x * 3\nresult = triple(5) - 1",
       "choices": [],
-      "answer_key": {"status": "candidate", "accepted": ["9"]},
+      "answer_key": {"status": "candidate", "accepted": ["14"]},
       "check_expression": "result",
       "hints": [
-        {"level": "nudge", "text": "Evaluate double(4) first."},
-        {"level": "targeted", "text": "double(4) returns 4 * 2."},
-        {"level": "worked_solution", "text": "double(4) is 8, so result is 8 + 1, which is 9."}
+        {"level": "nudge", "text": "Evaluate triple(5) first."},
+        {"level": "targeted", "text": "triple(5) returns 5 * 3."},
+        {"level": "worked_solution", "text": "triple(5) is 15, so result is 15 - 1, which is 14."}
       ],
       "source_ids": ["py-tutorial-defining-functions", "py-ref-calls"]
     },
@@ -194,14 +194,14 @@
       "evidence_kind": "application",
       "held_out": false,
       "prompt": "After this code runs, what is the value of result?",
-      "body": "total = 10\ndef add_five(total):\n    total = total + 5\n    return total\nresult = add_five(1)",
+      "body": "count = 20\ndef add_three(count):\n    count = count + 3\n    return count\nresult = add_three(4)",
       "choices": [],
-      "answer_key": {"status": "candidate", "accepted": ["6"]},
+      "answer_key": {"status": "candidate", "accepted": ["7"]},
       "check_expression": "result",
       "hints": [
-        {"level": "nudge", "text": "The parameter total is a new local name inside the function."},
-        {"level": "targeted", "text": "add_five(1) computes 1 + 5 inside its own call."},
-        {"level": "worked_solution", "text": "add_five(1) returns 6, so result is 6."}
+        {"level": "nudge", "text": "The parameter count is a new local name inside the function."},
+        {"level": "targeted", "text": "add_three(4) computes 4 + 3 inside its own call."},
+        {"level": "worked_solution", "text": "add_three(4) returns 7, so result is 7."}
       ],
       "source_ids": ["py-ref-naming-binding", "py-faq-local-global"]
     },
@@ -213,15 +213,15 @@
       "activity_type": "choice",
       "evidence_kind": "recall",
       "held_out": false,
-      "prompt": "After this code runs, what is the value of the global name total?",
-      "body": "total = 10\ndef add_five(total):\n    total = total + 5\n    return total\nadd_five(1)",
-      "choices": ["1", "6", "10"],
-      "answer_key": {"status": "candidate", "accepted": ["10"]},
-      "check_expression": "total",
+      "prompt": "After this code runs, what is the value of the global name count?",
+      "body": "count = 20\ndef add_three(count):\n    count = count + 3\n    return count\nadd_three(4)",
+      "choices": ["4", "7", "20"],
+      "answer_key": {"status": "candidate", "accepted": ["20"]},
+      "check_expression": "count",
       "hints": [
-        {"level": "nudge", "text": "Assignments inside add_five do not rebind the global name."},
-        {"level": "targeted", "text": "The total inside the function is local; the global total was set to 10 before the call."},
-        {"level": "worked_solution", "text": "The global total is still 10, so the answer is 10."}
+        {"level": "nudge", "text": "Assignments inside add_three do not rebind the global name."},
+        {"level": "targeted", "text": "The count inside the function is local; the global count was set to 20 before the call."},
+        {"level": "worked_solution", "text": "The global count is still 20, so the answer is 20."}
       ],
       "source_ids": ["py-ref-naming-binding", "py-faq-local-global"]
     },
@@ -298,14 +298,14 @@
       "evidence_kind": "transfer",
       "held_out": true,
       "prompt": "After this code runs, what is the value of result?",
-      "body": "def steps(n):\n    if n == 1:\n        return 0\n    return 1 + steps(n // 2)\nresult = steps(8)",
+      "body": "def halvings(n):\n    if n <= 1:\n        return 0\n    return 1 + halvings(n // 2)\nresult = halvings(20)",
       "choices": [],
-      "answer_key": {"status": "candidate", "accepted": ["3"]},
+      "answer_key": {"status": "candidate", "accepted": ["4"]},
       "check_expression": "result",
       "hints": [
-        {"level": "nudge", "text": "Find what steps(1) returns."},
-        {"level": "targeted", "text": "steps(2) is 1 + steps(1); then steps(4) is 1 + steps(2)."},
-        {"level": "worked_solution", "text": "steps(1)=0, steps(2)=1, steps(4)=2, steps(8)=3."}
+        {"level": "nudge", "text": "Find what halvings(1) returns."},
+        {"level": "targeted", "text": "halvings(2) is 1 + halvings(1); then halvings(5) is 1 + halvings(2), because 5 // 2 is 2."},
+        {"level": "worked_solution", "text": "halvings(1)=0, halvings(2)=1, halvings(5)=2, halvings(10)=3, halvings(20)=4."}
       ],
       "source_ids": ["py-ref-calls"]
     },
@@ -318,14 +318,14 @@
       "evidence_kind": "application",
       "held_out": false,
       "prompt": "What value does this function return for n = 2?",
-      "body": "def f(n):\n    if n == 0: return 1\n    return n * f(n - 1)",
+      "body": "def h(n):\n    if n == 0: return 3\n    return 2 * h(n - 1)",
       "choices": [],
-      "answer_key": {"status": "candidate", "accepted": ["2"]},
-      "check_expression": "f(2)",
+      "answer_key": {"status": "candidate", "accepted": ["12"]},
+      "check_expression": "h(2)",
       "hints": [
         {"level": "nudge", "text": "Find the stopping condition."},
-        {"level": "targeted", "text": "Evaluate f(0), then f(1)."},
-        {"level": "worked_solution", "text": "f(0)=1, f(1)=1, f(2)=2."}
+        {"level": "targeted", "text": "Evaluate h(0), then h(1)."},
+        {"level": "worked_solution", "text": "h(0)=3, h(1)=6, h(2)=12."}
       ],
       "source_ids": ["py-ref-calls", "py-lib-recursionerror"]
     },
@@ -402,14 +402,14 @@
       "evidence_kind": "application",
       "held_out": false,
       "prompt": "After this code runs, what is the value of result?",
-      "body": "def total_to(n):\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)\nresult = total_to(3)",
+      "body": "def odd_sum(n):\n    if n == 0:\n        return 0\n    return (2 * n - 1) + odd_sum(n - 1)\nresult = odd_sum(3)",
       "choices": [],
-      "answer_key": {"status": "candidate", "accepted": ["6"]},
+      "answer_key": {"status": "candidate", "accepted": ["9"]},
       "check_expression": "result",
       "hints": [
-        {"level": "nudge", "text": "Each call adds n and then calls itself with n - 1."},
-        {"level": "targeted", "text": "Work from the inside out: total_to(0), then total_to(1), total_to(2)."},
-        {"level": "worked_solution", "text": "total_to(0)=0, total_to(1)=1, total_to(2)=3, total_to(3)=6."}
+        {"level": "nudge", "text": "Each call adds 2 * n - 1 and then calls itself with n - 1."},
+        {"level": "targeted", "text": "Work from the inside out: odd_sum(0), then odd_sum(1), odd_sum(2)."},
+        {"level": "worked_solution", "text": "odd_sum(0)=0, odd_sum(1)=1, odd_sum(2)=4, odd_sum(3)=9."}
       ],
       "source_ids": ["py-ref-calls"]
     },
