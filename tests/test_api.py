@@ -91,6 +91,17 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(attempt.first_answer, "1")
         self.assertEqual(attempt.hint_level.value, "nudge")
 
+    def test_held_out_submit_respects_session_time_budget(self) -> None:
+        self.service.submit_attempt(answer("dev-trace-a", "1"))
+        self.clock[0] += timedelta(hours=25)
+        self.assertIsNone(self.service.next_session(3)["activity"])
+        with self.assertRaisesRegex(ApiError, "not available"):
+            self.service.submit_attempt({**answer("dev-check-d", "24"),
+                                         "availableMinutes": 3})
+        self.assertEqual(len(self.store.list_attempts(CONCEPT.id)), 1)
+        self.assertEqual(self.service.submit_attempt({**answer("dev-check-d", "24"),
+                                                      "availableMinutes": 20})["scoreStatus"], "correct")
+
     def test_held_out_check_rejected_before_due_and_errors_do_not_write(self) -> None:
         with self.assertRaises(ApiError) as problem:
             self.service.submit_attempt(answer("dev-check-d", "24"))

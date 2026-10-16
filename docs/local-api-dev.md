@@ -17,7 +17,9 @@ recorded on first start and remains fixed in SQLite across restarts. GET
 `/api/v1/session/next?availableMinutes=20&mode=recommended` is read-only;
 use `mode=practice` to choose routine practice while a delayed check is due.
 POST `/api/v1/attempts` uses the body in `api-v1.md` and records the first
-answer and highest hint level before the next scheduling decision.
+answer and highest hint level before the next scheduling decision. It also
+accepts optional `availableMinutes` (default 20); send the session's value
+when submitting a delayed check so the same time-budget gate applies.
 
 Only these two endpoints are implemented in this slice. Reviewed pack loading,
 the browser HTTP adapter, and open-ended review endpoints are integration work.
