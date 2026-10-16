@@ -19,7 +19,8 @@ The dependency direction is `web -> api -> domain ports <- adapters`. The domain
 
 - IDs and content versions are immutable once attempts reference them. Corrections create a new content version.
 - Every recorded attempt includes activity ID, content version, timestamp, first answer, assistance level, method, and selection reason. Optional confidence, response time, and outside-study notes remain explicitly optional.
-- A score has a grading method and limits. An ungraded explanation stays ungraded until self or human review; passing code tests never asserts conceptual understanding.
+- A score has a grading method and limits. An open-ended attempt stays ungraded; self or human review is recorded separately. Passing code tests never asserts conceptual understanding.
+- Self review is a separate append-only event tied to the locked first-answer attempt and a rubric ID/version. Every criterion receives shown, partial, not shown, or unsure. Shown and partial require a quote from the first answer. The annotated example appears only after the review is saved. A later revision is another event and never replaces the first answer or changes its ungraded status. Even an all-shown self review only queues an independent check; it does not credit mastery.
 - The experiment protocol is immutable during a run; policy changes create a new protocol version.
 - API responses expose recommendation reasons and evidence scope. UI copy may explain them but may not invent unsupported conclusions.
 - Add contract fixtures before modules depend on each other. Breaking changes require a version bump and all affected owner reviews.

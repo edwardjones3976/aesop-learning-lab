@@ -2,7 +2,8 @@ import { assertLearningApi } from "./learning-api.js";
 import { practiceMarkup } from "./markup.js";
 import { createPracticeSession } from "./practice-session.js";
 
-const SKIP_BODY = new Set(["draft", "detail", "minutes", "confidence", "outside", "choice"]);
+const SKIP_BODY = new Set(["draft", "detail", "minutes", "confidence", "outside", "choice",
+  "review-evidence", "review-confidence", "revision-draft"]);
 
 export function formatActive(seconds) {
   const safe = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -107,6 +108,9 @@ export function mountPracticeApp(root, session) {
     if (control === "record") session.recordFirstAnswer();
     if (control === "hint") session.revealNextHint();
     if (control === "submit") session.submit();
+    if (control === "save-review") session.submitReview();
+    if (control === "save-revision") session.submitRevision();
+    if (control === "finish-review") session.finishWithoutRevision();
     if (control === "pause") session.togglePause();
     if (control === "continue" || control === "retry" || control === "check") session.load();
   });
@@ -115,11 +119,15 @@ export function mountPracticeApp(root, session) {
     if (control === "draft") session.setDraft(event.target.value);
     if (control === "detail") session.setOutsideStudyDetail(event.target.value);
     if (control === "minutes") session.setAvailableMinutes(event.target.value);
+    if (control === "review-evidence") session.setReviewEvidence(event.target.dataset.criterion, event.target.value);
+    if (control === "revision-draft") session.setRevisionDraft(event.target.value);
   });
   root.addEventListener("change", (event) => {
     const control = event.target.dataset.control;
     if (control === "confidence") session.setConfidence(event.target.value);
     if (control === "outside") session.setOutsideStudy(event.target.value);
+    if (control === "review-rating") session.setReviewRating(event.target.dataset.criterion, event.target.value);
+    if (control === "review-confidence") session.setReviewConfidence(event.target.value);
     if (event.target.name === "choice") session.setChoice(event.target.value);
   });
   document.addEventListener("keydown", (event) => {
@@ -151,6 +159,7 @@ export function mountPracticeApp(root, session) {
   });
 
   session.subscribe((state, meta) => {
+    const activeCriterion = document.activeElement?.dataset?.criterion;
     paint(state, meta);
     if (meta?.reason === "record") {
       if (!focusControl(root, "hint")) focusControl(root, "submit");
@@ -166,6 +175,16 @@ export function mountPracticeApp(root, session) {
       focusControl(root, "check");
     } else if (meta?.reason === "submit") {
       focusControl(root, "result");
+    } else if (meta?.reason === "review-saved") {
+      focusControl(root, "comparison");
+    } else if (meta?.reason === "revision-saved" || meta?.reason === "review-finished") {
+      focusControl(root, "review-done");
+    } else if (meta?.reason === "review-rating") {
+      const matching = [...root.querySelectorAll('[data-control="review-evidence"]')]
+        .find((node) => node.dataset.criterion === activeCriterion);
+      const rating = [...root.querySelectorAll('[data-control="review-rating"]')]
+        .find((node) => node.dataset.criterion === activeCriterion);
+      (matching ?? rating)?.focus();
     }
   });
 

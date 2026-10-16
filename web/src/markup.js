@@ -150,6 +150,75 @@ function resultPanel(state) {
   </article>`;
 }
 
+function reviewPanel(state) {
+  const criteria = state.rubric.criteria.map((criterion, index) => {
+    const current = state.judgments[criterion.id] ?? { rating: "", evidence: "" };
+    const option = (value, label) => `<option value="${value}"${current.rating === value ? " selected" : ""}>${label}</option>`;
+    const evidenceField = current.rating === "shown" || current.rating === "partial"
+      ? `<label class="stack-field">Quote the supporting words from your first answer
+          <input type="text" data-control="review-evidence" data-criterion="${escapeHtml(criterion.id)}" value="${escapeHtml(current.evidence)}" autocomplete="off">
+        </label>` : "";
+    return `<fieldset class="review-criterion"><legend>${index + 1}. ${escapeHtml(criterion.description)}</legend>
+      <p class="meta"><strong>Shown:</strong> ${escapeHtml(criterion.shownDescription)}</p>
+      <p class="meta"><strong>Partly shown:</strong> ${escapeHtml(criterion.partialDescription)}</p>
+      <label class="stack-field">Your comparison
+        <select data-control="review-rating" data-criterion="${escapeHtml(criterion.id)}">
+          ${option("", "Choose one")}${option("shown", "Shown")}${option("partial", "Partly shown")}
+          ${option("not_shown", "Not shown")}${option("unsure", "Unsure")}
+        </select>
+      </label>${evidenceField}</fieldset>`;
+  }).join("");
+  const confidence = state.reviewConfidence == null ? "" : state.reviewConfidence.toFixed(1);
+  const options = [`<option value=""${confidence === "" ? " selected" : ""}>Not answered</option>`];
+  for (let step = 0; step <= 10; step += 1) {
+    const value = (step / 10).toFixed(1);
+    options.push(`<option value="${value}"${confidence === value ? " selected" : ""}>${step * 10}%</option>`);
+  }
+  return `<article>
+    <h2 data-control="result" tabindex="-1">Review your first answer</h2>
+    <p class="meta">Attempt ${escapeHtml(state.result.attemptId)} · rubric ${escapeHtml(state.rubric.id)} ${escapeHtml(state.rubric.version)} · ungraded</p>
+    <p class="prompt">${escapeHtml(state.activity.prompt)}</p>
+    <p class="field-label">Locked first answer</p><p class="recorded">${escapeHtml(state.firstAnswer)}</p>
+    <p class="meta">For each check, choose a rating. If you choose shown or partly shown, copy the words in your answer that support it. Unsure is a valid choice.</p>
+    <form${state.phase === "review_submitting" ? " inert" : ""}>${criteria}
+      <label class="stack-field">How confident are you in this review? Optional
+        <select data-control="review-confidence">${options.join("")}</select>
+      </label>
+      <button type="button" data-control="save-review">Save review and reveal example</button>
+    </form>
+  </article>`;
+}
+
+function comparisonPanel(state) {
+  const mistakes = state.comparison.commonMistakes.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const next = state.review.nextStep === "independent_check"
+    ? "Your self review found every check shown. A later unassisted item is still needed to confirm it."
+    : "At least one check needs work or is uncertain. A targeted retry is recommended.";
+  return `<article>
+    <h2 data-control="comparison" tabindex="-1">Compare and revise</h2>
+    <p class="meta">Review ${escapeHtml(state.review.reviewId)} saved. The first answer remains unchanged and ungraded.</p>
+    <p class="field-label">Your first answer</p><p class="recorded">${escapeHtml(state.firstAnswer)}</p>
+    <h3>Annotated example</h3><p>${escapeHtml(state.comparison.annotatedExample)}</p>
+    <h3>Common mistakes</h3><ul>${mistakes}</ul>
+    <p>${escapeHtml(next)}</p>
+    <label class="stack-field">Revised answer, optional
+      <textarea data-control="revision-draft"${state.phase === "revision_submitting" ? " disabled" : ""}>${escapeHtml(state.revisionDraft)}</textarea>
+    </label>
+    <button type="button" data-control="save-revision"${state.phase === "revision_submitting" ? " disabled" : ""}>Save revision separately</button>
+    <button type="button" class="secondary" data-control="finish-review"${state.revisionDraft.trim() || state.phase === "revision_submitting" ? " disabled" : ""}>Finish without revision</button>
+  </article>`;
+}
+
+function reviewDonePanel(state) {
+  const next = state.review.nextStep === "independent_check"
+    ? "A later unassisted check is needed before progress is credited."
+    : "A targeted retry is recommended before an independent check.";
+  return `<article><h2 data-control="review-done" tabindex="-1">Review complete</h2>
+    <p>Your first answer is still ungraded. ${escapeHtml(next)}</p>
+    <p class="meta">Review ${escapeHtml(state.review.reviewId)}${state.revisionId ? ` · revision ${escapeHtml(state.revisionId)}` : ""}</p>
+    <button type="button" data-control="continue">Continue</button></article>`;
+}
+
 export function practiceMarkup(state) {
   if (state.phase === "loading") return `<p>Loading the next activity.</p>`;
   if (state.phase === "load_error") {
@@ -162,6 +231,9 @@ export function practiceMarkup(state) {
     return `<section><h2>Score not shown</h2><p>This page did not accept the response, so it is not shown as recorded.</p><button type="button" data-control="continue">Continue</button></section>`;
   }
   if (state.phase === "result") return resultPanel(state);
+  if (state.phase === "review" || state.phase === "review_submitting") return reviewPanel(state);
+  if (state.phase === "comparison" || state.phase === "revision_submitting") return comparisonPanel(state);
+  if (state.phase === "review_done") return reviewDonePanel(state);
   if (!state.activity) return `<p>Loading the next activity.</p>`;
   return practiceForm(state);
 }

@@ -5,7 +5,9 @@ import {
   exampleAttemptResponse,
   exampleNextSession,
   explanationActivity,
+  explanationRubric,
 } from "./fixtures.js";
+import { reviewNextStep, reviewProblem } from "./self-review.js";
 
 const HINT_LEVELS = new Set(["none", "nudge", "targeted", "worked_solution"]);
 const OUTSIDE = new Set(["none", "some", "unknown"]);
@@ -87,7 +89,7 @@ function scoreAttempt(activity, body) {
   }
   if (body.hintLevel === "worked_solution") {
     return {
-      scoreStatus: "incorrect",
+      scoreStatus: body.firstAnswer === answerKeys.get(activity.id) ? "ungraded" : "incorrect",
       gradingMethod: "reviewed_exact_key",
       assisted: true,
       nextReason: "A revealed solution cannot count as a correct attempt.",
@@ -111,6 +113,8 @@ export function createFixtureApi({ scenario = "default" } = {}) {
   }
   const activities = new Map(queue.map((activity) => [activity.id, activity]));
   const attempts = [];
+  const reviews = [];
+  const revisions = [];
   let cursor = 0;
 
   return {
@@ -149,8 +153,56 @@ export function createFixtureApi({ scenario = "default" } = {}) {
         && scored.scoreStatus === "correct";
       const attemptId = isExample ? exampleAttemptResponse.attemptId : `attempt-${attempts.length + 1}`;
       const result = { attemptId, ...scored };
-      attempts.push(result);
+      if (activity.type === "explanation" || activity.type === "code_design") {
+        result.rubric = clone({ id: explanationRubric.id, version: explanationRubric.version,
+          criteria: explanationRubric.criteria });
+      }
+      attempts.push({ ...result, firstAnswer: body.firstAnswer });
       return clone(result);
     },
+    async submitSelfReview(body) {
+      if (scenario === "storage") throw new ApiError("storage_unavailable", "Local records are unavailable right now.", 503);
+      const attempt = attempts.find((item) => item.attemptId === body?.attemptId);
+      if (!attempt || attempt.scoreStatus !== "ungraded") {
+        throw new ApiError("not_found", "An ungraded attempt is required for review.", 404);
+      }
+      if (body.rubricId !== explanationRubric.id || body.rubricVersion !== explanationRubric.version) {
+        throw new ApiError("validation_error", "The rubric version does not match.", 400);
+      }
+      const firstAnswer = attempt.firstAnswer;
+      const problem = reviewProblem(explanationRubric, firstAnswer, body.judgments);
+      if (problem) throw new ApiError("validation_error", problem, 400);
+      if (body.confidence !== null && (typeof body.confidence !== "number" || body.confidence < 0 || body.confidence > 1)) {
+        throw new ApiError("validation_error", "Review confidence must be between 0 and 1, or null.", 400);
+      }
+      const review = {
+        reviewId: `review-${reviews.length + 1}`,
+        attemptId: body.attemptId,
+        rubricId: body.rubricId,
+        rubricVersion: body.rubricVersion,
+        occurredAt: new Date().toISOString(),
+        judgments: clone(body.judgments),
+        confidence: body.confidence,
+        nextStep: reviewNextStep(body.judgments),
+      };
+      reviews.push(review);
+      return clone({ reviewId: review.reviewId, nextStep: review.nextStep,
+        comparison: { annotatedExample: explanationRubric.annotatedExample,
+          commonMistakes: explanationRubric.commonMistakes } });
+    },
+    async submitRevision(body) {
+      if (scenario === "storage") throw new ApiError("storage_unavailable", "Local records are unavailable right now.", 503);
+      if (!reviews.some((item) => item.reviewId === body?.reviewId)) {
+        throw new ApiError("not_found", "Review not found.", 404);
+      }
+      if (typeof body.answer !== "string" || !body.answer.trim()) {
+        throw new ApiError("validation_error", "Write a revision before saving it.", 400);
+      }
+      const revision = { revisionId: `revision-${revisions.length + 1}`, reviewId: body.reviewId,
+        occurredAt: new Date().toISOString(), answer: body.answer };
+      revisions.push(revision);
+      return clone({ revisionId: revision.revisionId });
+    },
+    reviewEvents() { return clone({ reviews, revisions }); },
   };
 }

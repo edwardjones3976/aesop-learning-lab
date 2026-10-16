@@ -69,3 +69,13 @@ The server records the first answer before hints or solution reveal. The client 
 - `DELETE /api/v1/data` deletes all learner records after a confirmation step; it does not delete the reviewed content pack.
 
 Errors use `{ "code": "stable_code", "message": "human-readable explanation" }`. Validation failures return HTTP 400; absent IDs return 404; unavailable local storage returns 503. The UI displays these messages without treating the attempted action as successful.
+
+## Open-ended review extension
+
+An explanation or code-design attempt response keeps `scoreStatus: "ungraded"` and includes a versioned `rubric` with `id`, `version`, and `criteria`. Each criterion has `id`, `description`, `shownDescription`, and `partialDescription`. The example and common mistakes are withheld from this response. These fields are review guidance, not an answer key or an automatic score.
+
+`POST /api/v1/self-reviews` accepts `attemptId`, `rubricId`, `rubricVersion`, optional `confidence` (0–1 or null), and one judgment per criterion. A judgment has `criterionId`, `rating` (`shown`, `partial`, `not_shown`, `unsure`), and `evidence`. Shown and partial ratings require a quote from the locked first answer; the others require empty evidence. The server validates the attempt, item, rubric version, and evidence before appending the review. It returns `reviewId`, `nextStep` (`independent_check` only if every criterion is shown; otherwise `targeted_retry`), and `comparison` with `annotatedExample` and `commonMistakes`. Neither next step changes the attempt score or credits mastery.
+
+`POST /api/v1/answer-revisions` accepts `reviewId` and a nonempty `answer`, returning `revisionId`. The revision is a separate append-only learner event. Both review and revision events are included in export and removed by learner-data deletion. The browser fixture implements these adapter methods; the HTTP endpoints remain to be implemented with the local service.
+
+The `nextStep` value is guidance for the future scheduler; the fixture queue does not yet schedule a targeted retry or independent check.
