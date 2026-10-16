@@ -34,12 +34,12 @@ class SQLiteStoreTests(unittest.TestCase):
     def test_v4_held_out_rows_gain_one_day_delay(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "legacy.db"
+            with SQLiteStore(path) as store:
+                store.add_concept(Concept("c1", "Concept", "v2"))
+                store.add_activity(Activity("old-check", "c1", "v2", "family",
+                                            ActivityType.TRACE, EvidenceKind.TRANSFER, True, 1))
             with closing(sqlite3.connect(path)) as connection:
-                connection.execute("CREATE TABLE activities (id TEXT, content_version TEXT, "
-                                   "concept_id TEXT, family_id TEXT, activity_type TEXT, "
-                                   "evidence_kind TEXT, held_out INTEGER)")
-                connection.execute("INSERT INTO activities VALUES "
-                                   "('old-check', 'v2', 'c1', 'family', 'trace', 'transfer', 1)")
+                connection.execute("ALTER TABLE activities DROP COLUMN check_delay_days")
                 connection.execute("PRAGMA user_version = 4")
                 connection.commit()
             with SQLiteStore(path) as store:
@@ -134,7 +134,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.list_self_reviews("t1"), (review,))
                 self.assertEqual(store.record_lesson_completion("c1", "v1", now), now)
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
 
     def test_merged_master_v3_upgrades_without_losing_learner_records(self) -> None:
         with TemporaryDirectory() as directory:
@@ -155,7 +155,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 connection.execute("PRAGMA user_version = 3")
                 connection.commit()
             with SQLiteStore(path) as store:
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
                 self.assertEqual(store.lesson_completed_at("c1", "v1"), now)
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertIn("check_delay_days", {row[1] for row in
