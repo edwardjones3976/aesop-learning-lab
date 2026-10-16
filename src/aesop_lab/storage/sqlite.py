@@ -110,8 +110,9 @@ class SQLiteStore:
                     ON answer_revisions(review_id, occurred_at);
                 """)
                 self.connection.execute("PRAGMA user_version = 3")
-        with self.connection:
-            self.connection.executescript("""
+        if current < 4:
+            with self.connection:
+                self.connection.executescript("""
                 CREATE TABLE IF NOT EXISTS practice_drafts (
                     id TEXT PRIMARY KEY,
                     activity_id TEXT NOT NULL,
@@ -133,8 +134,8 @@ class SQLiteStore:
                 );
                 CREATE INDEX IF NOT EXISTS open_drafts_by_activity
                     ON practice_drafts(activity_id, content_version, submitted_attempt_id);
-            """)
-            self.connection.execute("PRAGMA user_version = 4")
+                """)
+                self.connection.execute("PRAGMA user_version = 4")
         if current < 5:
             with self.connection:
                 columns = {row[1] for row in self.connection.execute("PRAGMA table_info(activities)")}
