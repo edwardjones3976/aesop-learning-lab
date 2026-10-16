@@ -10,11 +10,66 @@ from aesop_lab.api.service import ApiError
 from aesop_lab.content import load_pack
 from aesop_lab.foreman import Preview
 from aesop_lab.foreman import PACK_PATH as ORIGINAL_PACK_PATH
-from aesop_lab.foreman import REVISED_PACK_PATH
+from aesop_lab.foreman import REVISED_PACK_PATH, WEEK_PACK_PATH
 from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class ForemanPreviewTests(unittest.TestCase):
+    def test_v4_cannot_complete_experimental_exposure_without_opening_lesson(self):
+        path = Path(self.temp.name) / "unopened.db"
+        preview = Preview(path)
+        self.addCleanup(preview.store.close)
+        cid = preview.pack.learning_order()[0]
+        with self.assertRaisesRegex(ApiError, "Open the assigned lesson"):
+            preview.complete_lesson(cid)
+        self.assertEqual(preview.store.list_exposures(), ())
+        preview.lesson(cid)
+        self.assertTrue(preview.store.list_exposures()[0]["encountered_family_ids"])
+        preview.complete_lesson(cid)
+        self.assertIsNotNone(preview.store.list_exposures()[0]["completed_at"])
+
+    def test_v4_five_concepts_assignment_confidence_and_restart(self):
+        clock = [datetime(2026, 10, 15, 12, tzinfo=timezone.utc)]
+        path = Path(self.temp.name) / "adaptive.db"
+        preview = Preview(path, now=lambda: clock[0])
+        self.addCleanup(preview.store.close)
+        self.assertEqual(preview.overview()["packVersion"], "m2-draft.4")
+        methods = {}
+        for cid in preview.pack.learning_order():
+            lesson = preview.lesson(cid)
+            method = lesson["method"]
+            self.assertIn(method["conditionId"], ("text", "diagram"))
+            self.assertEqual(bool(lesson["diagram"]), method["conditionId"] == "diagram")
+            self.assertGreater(len(lesson["body"]), 1000)
+            methods[cid] = method["conditionId"]
+            preview.complete_lesson(cid)
+            activity = preview.session(cid)["activity"]
+            key = next(item.answer_key.accepted[0] for item in preview.pack.items
+                       if item.id == activity["id"])
+            did = str(uuid4())
+            preview.first_answer({"conceptId": cid, "activityId": activity["id"],
+                                  "draftId": did, "answer": key, "confidence": .6})
+            if cid == preview.pack.learning_order()[0]:
+                preview.hint({"draftId": did})
+            preview.submit({"draftId": did, "outsideStudy": "none"})
+        initial = preview.store.export_all()
+        self.assertEqual(len(initial["attempts"]), 5)
+        self.assertEqual(len(initial["experimentAssignments"]), 5)
+        self.assertEqual(len(initial["experimentExposures"]), 5)
+        self.assertEqual(initial["attempts"][0]["confidence"], .6)
+        self.assertEqual(preview.overview()["experiment"]["status"], "insufficient_evidence")
+        first = preview.pack.learning_order()[0]
+        preview.override({"conceptId": first, "mode": "practice", "reason": "learner_choice"})
+        preview.store.close()
+        reopened = Preview(path, now=lambda: clock[0])
+        self.addCleanup(reopened.store.close)
+        self.assertEqual(reopened.store.export_all()["attempts"], initial["attempts"])
+        self.assertEqual(reopened.store.export_all()["experimentAssignments"], initial["experimentAssignments"])
+        self.assertEqual(len(reopened.store.export_all()["recommendationOverrides"]), 1)
+        self.assertEqual({cid: reopened.lesson(cid)["method"]["conditionId"]
+                          for cid in methods}, methods)
+        self.assertEqual(len(reopened.store.export_all()["experimentExposures"]), 5)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -22,6 +77,7 @@ class ForemanPreviewTests(unittest.TestCase):
         self.preview = Preview(self.path)
         self.addCleanup(lambda: self.preview.store.close())
         self.concept = self.preview.pack.learning_order()[0]
+        self.preview.lesson(self.concept)
         self.preview.complete_lesson(self.concept)
 
     def test_first_answer_and_hint_survive_restart_and_retry(self):
@@ -70,16 +126,16 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertTrue(legacy.lesson(concept.id)["completed"])
         exported = legacy.store.export_all()
         self.assertEqual(exported["lessonCompletions"][0]["content_version"], "v1")
-        self.assertEqual(legacy.delete_data()["packVersion"], "m1-draft.3")
+        self.assertEqual(legacy.delete_data()["packVersion"], "m2-draft.4")
         self.assertEqual(legacy.store.export_all()["lessonCompletions"], [])
-        self.assertEqual(legacy.overview()["packVersion"], "m1-draft.3")
+        self.assertEqual(legacy.overview()["packVersion"], "m2-draft.4")
 
-    def test_fresh_learner_keeps_v3_on_restart_and_mixed_history_is_rejected(self):
-        self.assertEqual(self.preview.overview()["packVersion"], "m1-draft.3")
-        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v3"}))
+    def test_fresh_learner_keeps_v4_on_restart_and_mixed_history_is_rejected(self):
+        self.assertEqual(self.preview.overview()["packVersion"], "m2-draft.4")
+        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v4"}))
         restarted = Preview(self.path)
         try:
-            self.assertEqual(restarted.overview()["packVersion"], "m1-draft.3")
+            self.assertEqual(restarted.overview()["packVersion"], "m2-draft.4")
         finally:
             restarted.store.close()
         old = load_pack(ORIGINAL_PACK_PATH)
@@ -131,6 +187,8 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_evidence_path_and_delayed_outcome_journey(self):
         clock = [datetime(2026, 1, 1, 12, tzinfo=timezone.utc)]
         preview = Preview(Path(self.temp.name) / "journey.db", now=lambda: clock[0])
+        # Keep the established v3 journey fixture stable while v4 adds open-ended items.
+        preview._activate_pack(WEEK_PACK_PATH)
         self.addCleanup(preview.store.close)
         first = preview.pack.learning_order()[0]
         initial = preview.overview()
@@ -157,7 +215,7 @@ class ForemanPreviewTests(unittest.TestCase):
                         if item.id == next_activity["id"])
         independent_id = str(uuid4())
         preview.first_answer({"conceptId": first, "activityId": next_activity["id"],
-                              "draftId": independent_id, "answer": next_key})
+                              "draftId": independent_id, "answer": next_key, "confidence": .7})
         preview.submit({"draftId": independent_id, "confidence": .7})
         before = preview.overview()["concepts"][0]["signals"]["evidence"]
         self.assertEqual(before["byKind"][activity["evidenceKind"]]["assistedCorrect"], 1)

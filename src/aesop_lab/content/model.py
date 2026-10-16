@@ -41,6 +41,8 @@ class Lesson:
     title: str
     body: str
     source_ids: tuple[str, ...]
+    diagram: str | None = None
+    encountered_family_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,6 +88,9 @@ class ItemContent:
     rubric: RubricSpec | None
     hints: tuple[HintSpec, ...]
     source_ids: tuple[str, ...]
+    learning_objective: str | None = None
+    difficulty: str | None = None
+    explanation: str | None = None
 
     @property
     def id(self) -> str:

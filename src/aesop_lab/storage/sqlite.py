@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 import sqlite3
+from uuid import uuid4
 
 from aesop_lab.domain.models import (
     Activity, ActivityType, AnswerRevision, Attempt, Concept, CriterionReview, EvidenceKind,
@@ -17,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 8
 
 
 class SQLiteStore:
@@ -147,6 +148,78 @@ class SQLiteStore:
                         "UPDATE activities SET check_delay_days = 1 WHERE held_out = 1"
                     )
                 self.connection.execute("PRAGMA user_version = 5")
+        if current < 6:
+            with self.connection:
+                self.connection.executescript("""
+                CREATE TABLE IF NOT EXISTS experiment_exposures (
+                    concept_id TEXT NOT NULL, content_version TEXT NOT NULL,
+                    protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                    condition_id TEXT NOT NULL, exposed_at TEXT NOT NULL,
+                    completed_at TEXT, encountered_family_ids TEXT NOT NULL,
+                    PRIMARY KEY (concept_id, content_version, protocol_id, protocol_version)
+                );
+                CREATE TABLE IF NOT EXISTS recommendation_overrides (
+                    id TEXT PRIMARY KEY, concept_id TEXT NOT NULL,
+                    content_version TEXT NOT NULL, mode TEXT NOT NULL,
+                    reason TEXT NOT NULL, occurred_at TEXT NOT NULL
+                );
+                """)
+                self.connection.execute("PRAGMA user_version = 6")
+        if current < 7:
+            with self.connection:
+                self.connection.execute(
+                    "CREATE TABLE IF NOT EXISTS learner_identity (slot INTEGER PRIMARY KEY CHECK(slot = 1), id TEXT NOT NULL)"
+                )
+                self.connection.execute("PRAGMA user_version = 7")
+        if current < 8:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute(
+                    "PRAGMA table_info(practice_drafts)")}
+                if "confidence" not in columns:
+                    self.connection.execute(
+                        "ALTER TABLE practice_drafts ADD COLUMN confidence REAL"
+                    )
+                self.connection.execute("PRAGMA user_version = 8")
+
+    def learner_id(self) -> str:
+        row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
+        if row:
+            return row[0]
+        identity = str(uuid4())
+        with self.connection:
+            self.connection.execute("INSERT OR IGNORE INTO learner_identity VALUES (1, ?)", (identity,))
+        return self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()[0]
+
+    def record_exposure(self, concept_id: str, version: str, protocol_id: str,
+                        protocol_version: str, condition_id: str, at: datetime,
+                        encountered_family_ids: tuple[str, ...]) -> None:
+        with self.connection:
+            self.connection.execute(
+                "INSERT OR IGNORE INTO experiment_exposures VALUES (?, ?, ?, ?, ?, ?, NULL, ?)",
+                (concept_id, version, protocol_id, protocol_version, condition_id,
+                 at.isoformat(), json.dumps(encountered_family_ids)),
+            )
+
+    def complete_exposure(self, concept_id: str, version: str, protocol_id: str,
+                          protocol_version: str, at: datetime) -> None:
+        with self.connection:
+            self.connection.execute(
+                "UPDATE experiment_exposures SET completed_at = COALESCE(completed_at, ?) "
+                "WHERE concept_id = ? AND content_version = ? AND protocol_id = ? AND protocol_version = ?",
+                (at.isoformat(), concept_id, version, protocol_id, protocol_version),
+            )
+
+    def list_exposures(self) -> tuple[dict, ...]:
+        return tuple(dict(row) for row in self.connection.execute(
+            "SELECT * FROM experiment_exposures ORDER BY exposed_at, concept_id"))
+
+    def record_override(self, event_id: str, concept_id: str, version: str,
+                        mode: str, reason: str, at: datetime) -> None:
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO recommendation_overrides VALUES (?, ?, ?, ?, ?, ?)",
+                (event_id, concept_id, version, mode, reason, at.isoformat()),
+            )
 
     def record_lesson_completion(self, concept_id: str, version: str,
                                  completed_at: datetime) -> datetime:
@@ -276,13 +349,13 @@ class SQLiteStore:
         return self.connection.execute("SELECT * FROM practice_drafts WHERE id = ?", (draft_id,)).fetchone()
 
     def save_draft(self, draft_id: str, activity_id: str, version: str,
-                   answer: str, recorded_at: datetime) -> None:
+                   answer: str, recorded_at: datetime, confidence: float | None = None) -> None:
         with self.connection:
             self.connection.execute(
                 "INSERT INTO practice_drafts "
-                "(id, activity_id, content_version, first_answer, recorded_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (draft_id, activity_id, version, answer, recorded_at.isoformat()),
+                "(id, activity_id, content_version, first_answer, recorded_at, confidence) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (draft_id, activity_id, version, answer, recorded_at.isoformat(), confidence),
             )
 
     def hint_levels(self, draft_id: str) -> tuple[HintLevel, ...]:
@@ -431,10 +504,16 @@ class SQLiteStore:
             "selfReviews": [dict(row) for row in reviews],
             "answerRevisions": [dict(row) for row in revisions],
             "experimentAssignments": [dict(row) for row in assignments],
+            "learnerIdentity": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM learner_identity")],
+            "experimentExposures": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM experiment_exposures ORDER BY exposed_at, concept_id")],
+            "recommendationOverrides": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM recommendation_overrides ORDER BY occurred_at, id")],
             "lessonCompletions": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
             "practiceDrafts": [dict(row) for row in by_instant(
-                "SELECT id, activity_id, content_version, first_answer, recorded_at, "
+                "SELECT id, activity_id, content_version, first_answer, recorded_at, confidence, "
                 "submitted_attempt_id FROM practice_drafts", "recorded_at", "id")],
             "hintEvents": [dict(row) for row in by_instant(
                 "SELECT * FROM practice_hint_events", "viewed_at", "draft_id")],
@@ -451,6 +530,9 @@ class SQLiteStore:
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM learner_identity")
+            self.connection.execute("DELETE FROM recommendation_overrides")
+            self.connection.execute("DELETE FROM experiment_exposures")
             self.connection.execute("DELETE FROM practice_hint_events")
             self.connection.execute("DELETE FROM practice_drafts")
             self.connection.execute("DELETE FROM answer_revisions")

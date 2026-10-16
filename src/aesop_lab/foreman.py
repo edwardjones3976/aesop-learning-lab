@@ -8,12 +8,12 @@ import json
 from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, urlsplit
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from aesop_lab.api.service import ApiError, CatalogItem, LearningService
 from aesop_lab.assessment import AnswerKey, Hint, HintLadder, ItemSpec, Rubric, RubricCriterion, assess
 from aesop_lab.content import load_pack
-from aesop_lab.domain.models import HintLevel
+from aesop_lab.domain.models import ExperimentAssignment, HintLevel
 from aesop_lab.evidence import summarize_evidence
 from aesop_lab.storage.sqlite import SQLiteStore
 
@@ -21,7 +21,9 @@ ROOT = Path(__file__).resolve().parents[2]
 PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack.json"
 REVISED_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.2.json"
 WEEK_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.3.json"
-PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH}
+ADAPTIVE_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.4.json"
+PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH,
+                   "v4": ADAPTIVE_PACK_PATH}
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -45,7 +47,8 @@ def _catalog_item(item) -> CatalogItem:
         rubric=rubric,
         hints=HintLadder(tuple(Hint(h.level, h.text) for h in item.hints)),
     )
-    return CatalogItem(spec, item.prompt, item.body)
+    return CatalogItem(spec, item.prompt, item.body, item.learning_objective,
+                       item.difficulty, item.explanation)
 
 
 class Preview:
@@ -56,7 +59,8 @@ class Preview:
         if versions - PACK_BY_VERSION.keys() or len(versions) > 1:
             self.store.close()
             raise RuntimeError("Learner records span incompatible content versions; resolve them before opening this preview")
-        self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else WEEK_PACK_PATH)
+        self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else
+                            (ADAPTIVE_PACK_PATH if ADAPTIVE_PACK_PATH.exists() else WEEK_PACK_PATH))
 
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
@@ -69,8 +73,11 @@ class Preview:
                 self.store, concept,
                 tuple(_catalog_item(item) for item in self.pack.items_for(concept.id)),
                 reviewed=False, allow_development_fixtures=True,
+                encountered_family_ids=frozenset(next(
+                    lesson.encountered_family_ids for lesson in self.pack.lessons
+                    if lesson.concept_id == concept.id)),
                 now=self.now,
-                policy_version="pilot-v2" if self.pack.pack_version == "m1-draft.3" else "pilot-v1",
+                policy_version="pilot-v2" if concept.content_version in ("v3", "v4") else "pilot-v1",
             ) for concept in self.pack.concepts
         }
 
@@ -95,6 +102,8 @@ class Preview:
                      "firstAnswer": attempt.first_answer,
                      "scoreStatus": attempt.score_status.value,
                      "gradingMethod": attempt.grading_method,
+                     "confidence": attempt.confidence,
+                     "outsideStudy": attempt.outside_study.value if attempt.outside_study else None,
                      "hintLevel": attempt.hint_level.value,
                      "assisted": not attempt.unassisted}
                     for attempt in reversed(attempts)
@@ -109,11 +118,12 @@ class Preview:
                      "signals": summary(cid)} for cid in order]
         return {"developmentOnly": True, "packStatus": self.pack.status,
                 "packVersion": self.pack.pack_version,
-                "concepts": concepts, "pathRecommendation": self._path_recommendation(concepts)}
+                "concepts": concepts, "pathRecommendation": self._path_recommendation(concepts),
+                "experiment": self.experiment_findings()}
 
     def delete_data(self) -> dict:
         self.store.delete_all()
-        self._activate_pack(WEEK_PACK_PATH)
+        self._activate_pack(ADAPTIVE_PACK_PATH if ADAPTIVE_PACK_PATH.exists() else WEEK_PACK_PATH)
         return {"deleted": True, "packVersion": self.pack.pack_version}
 
     def _path_recommendation(self, concepts: list[dict]) -> dict:
@@ -152,15 +162,73 @@ class Preview:
         service = self._service(cid)
         lesson = next(x for x in self.pack.lessons if x.concept_id == cid)
         sources = {s.id: s for s in self.pack.sources}
+        method = self._method_for(cid)
+        if method:
+            self.store.record_exposure(cid, service.concept.content_version,
+                                       method["protocolId"], method["protocolVersion"],
+                                       method["conditionId"], self.now(), lesson.encountered_family_ids)
         return {"conceptId": cid, "title": lesson.title, "body": lesson.body,
+                "diagram": lesson.diagram if method and method["conditionId"] == "diagram" else None,
+                "method": method,
+                "experimentNotice": "Draft instructional comparison; no method benefit has been established." if method else None,
                 "completed": self.store.lesson_completed_at(
                     cid, service.concept.content_version) is not None,
                 "sources": [{"title": sources[sid].title, "url": sources[sid].url}
                             for sid in lesson.source_ids]}
 
     def complete_lesson(self, cid: str) -> dict:
-        stamp = self._service(cid).complete_lesson()
+        service = self._service(cid)
+        method = self._method_for(cid)
+        existing_exposure = next((row for row in self.store.list_exposures()
+                                  if row["concept_id"] == cid and
+                                  row["content_version"] == service.concept.content_version), None)
+        if method and not existing_exposure:
+            raise ApiError("lesson_required", "Open the assigned lesson before marking it read.", 409)
+        stamp = service.complete_lesson()
+        if method and existing_exposure:
+            self.store.complete_exposure(cid, service.concept.content_version,
+                                         method["protocolId"], method["protocolVersion"], stamp)
         return {"completedAt": stamp.isoformat(), "developmentOnly": True}
+
+    def _method_for(self, cid: str) -> dict | None:
+        if self.pack.concept(cid).content_version != "v4":
+            return None
+        from aesop_lab.experiment import PROTOCOL, assign_condition
+        assignment = next((a for a in self.store.list_assignments(PROTOCOL.id)
+                           if a.concept_id == cid and a.protocol_version == PROTOCOL.version), None)
+        if assignment is None:
+            assignment = ExperimentAssignment(PROTOCOL.id, PROTOCOL.version, cid, cid,
+                                              assign_condition(cid, self.store.learner_id()), PROTOCOL.seed, self.now())
+            self.store.save_assignment(assignment)
+        return {"conditionId": assignment.condition_id, "protocolId": PROTOCOL.id,
+                "protocolVersion": PROTOCOL.version}
+
+    def experiment_findings(self) -> dict:
+        if self.pack.concepts[0].content_version != "v4":
+            return {"status": "insufficient_evidence", "reason": "This content version predates the fixed comparison."}
+        from aesop_lab.experiment import PROTOCOL, Exposure, analyze
+        exposures = tuple(Exposure(
+            row["concept_id"], row["content_version"], row["condition_id"],
+            datetime.fromisoformat(row["exposed_at"]),
+            tuple(json.loads(row["encountered_family_ids"])),
+            row["protocol_id"], row["protocol_version"],
+            datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None,
+        ) for row in self.store.list_exposures())
+        attempts = tuple(a for concept in self.pack.concepts
+                         for a in self.store.list_attempts(concept.id))
+        activities = {item.activity.id: item.activity for item in self.pack.items}
+        return analyze(self.store.list_assignments(PROTOCOL.id), exposures, attempts,
+                       activities, now=self.now())
+
+    def override(self, body: dict) -> dict:
+        cid = body.get("conceptId")
+        service = self._service(cid)
+        if body.get("mode") != "practice" or body.get("reason") != "learner_choice":
+            raise ApiError("validation_error", "Choose a valid practice override.")
+        event_id = str(uuid4())
+        self.store.record_override(event_id, cid, service.concept.content_version,
+                                   "practice", "learner_choice", self.now())
+        return {"id": event_id, "saved": True}
 
     def session(self, cid: str, mode: str = "recommended", available_minutes: int = 20) -> dict:
         service = self._service(cid)
@@ -175,6 +243,7 @@ class Preview:
             item = service.items[draft["activity_id"]]
             result = {"activity": item.public(), "recommendation": {"reason": "Resume your saved answer"},
                       "draft": {"id": draft["id"], "firstAnswer": draft["first_answer"],
+                                "confidence": draft["confidence"],
                                 "hintLevels": [x.value for x in self.store.hint_levels(draft["id"])]}}
         else:
             result = service.next_session(available_minutes, mode)
@@ -196,9 +265,13 @@ class Preview:
             raise ApiError("validation_error", "A UUID draftId is required.") from None
         if not isinstance(answer, str) or not answer.strip() or len(answer) > 12000:
             raise ApiError("validation_error", "Enter an answer (up to 12,000 characters).")
+        confidence = body.get("confidence")
+        if confidence is not None and (type(confidence) not in (int, float) or
+                                       not 0 <= confidence <= 1):
+            raise ApiError("validation_error", "Confidence must be between 0 and 1 or null.")
         existing = self.store.get_draft(did)
         if existing:
-            if (existing["activity_id"], existing["first_answer"]) != (aid, answer):
+            if (existing["activity_id"], existing["first_answer"], existing["confidence"]) != (aid, answer, confidence):
                 raise ApiError("conflict", "This answer ID already belongs to another answer.", 409)
             return {"draftId": did, "saved": True}
         if self.store.open_draft(cid):
@@ -210,7 +283,7 @@ class Preview:
         item = service.items[aid]
         if item.spec.choices and answer not in item.spec.choices:
             raise ApiError("validation_error", "Choose one of the listed options.")
-        self.store.save_draft(did, aid, service.concept.content_version, answer, self.now())
+        self.store.save_draft(did, aid, service.concept.content_version, answer, self.now(), confidence)
         return {"draftId": did, "saved": True}
 
     def hint(self, body: dict) -> dict:
@@ -240,6 +313,8 @@ class Preview:
                         "gradingMethod": existing.grading_method,
                         "assisted": not existing.unassisted,
                         "nextReason": result.reason, "developmentOnly": True}
+            if item.spec.answer_key and item.explanation:
+                response["explanation"] = item.explanation
             if item.spec.rubric:
                 rubric = item.spec.rubric
                 response["rubric"] = {"id": rubric.id, "version": rubric.version,
@@ -251,9 +326,11 @@ class Preview:
             "activityId": item.spec.activity.id,
             "contentVersion": item.spec.activity.content_version,
             "firstAnswer": draft["first_answer"], "hintLevel": hint.value,
-            "confidence": body.get("confidence"), "outsideStudy": None,
-            "outsideStudyDetail": None, "activeSeconds": body.get("activeSeconds", 0),
+            "confidence": draft["confidence"], "outsideStudy": body.get("outsideStudy"),
+            "outsideStudyDetail": body.get("outsideStudyDetail"), "activeSeconds": body.get("activeSeconds", 0),
         }, attempt_id=draft["id"])
+        if item.spec.answer_key and item.explanation:
+            response["explanation"] = item.explanation
         self.store.finish_draft(draft["id"], response)
         return response
 
@@ -348,6 +425,7 @@ def make_handler(preview: Preview, *, port: int = PORT):
                               "/api/v2/attempts": lambda: preview.submit(body),
                               "/api/v2/self-reviews": lambda: preview._service(body.get("conceptId")).submit_self_review(body),
                               "/api/v2/revisions": lambda: preview._service(body.get("conceptId")).submit_revision(body),
+                              "/api/v2/overrides": lambda: preview.override(body),
                               "/api/v2/delete": preview.delete_data}
                     if path in routes:
                         return self._json(200, routes[path]())

@@ -27,6 +27,9 @@ class CatalogItem:
     spec: ItemSpec
     prompt: str
     body: str = ""
+    learning_objective: str | None = None
+    difficulty: str | None = None
+    explanation: str | None = None
 
     def __post_init__(self) -> None:
         if not self.prompt.strip():
@@ -41,6 +44,7 @@ class CatalogItem:
             "heldOut": activity.held_out,
             "checkDelayDays": activity.check_delay_days,
             "prompt": self.prompt, "body": self.body,
+            "learningObjective": self.learning_objective, "difficulty": self.difficulty,
             "choices": list(self.spec.choices),
             "hints": [{"level": hint.level.value, "text": hint.text}
                       for hint in self.spec.hints.hints],
