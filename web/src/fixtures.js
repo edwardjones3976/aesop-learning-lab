@@ -77,6 +77,30 @@ export const explanationActivity = {
   ],
 };
 
+export const explanationRubric = {
+  id: "explain-base-case",
+  version: "v1",
+  criteria: [
+    {
+      id: "stopping",
+      description: "Identifies the condition that stops further calls.",
+      shownDescription: "Names n == 0 and explains that this branch makes no new call.",
+      partialDescription: "Mentions stopping, but does not identify the condition or why calls stop.",
+    },
+    {
+      id: "return",
+      description: "Explains the value returned by the base case.",
+      shownDescription: "Says the base case returns 1, giving recursive calls a value to use.",
+      partialDescription: "Mentions a return value without explaining its role.",
+    },
+  ],
+  annotatedExample: "Stopping condition: when n == 0, the function does not call itself again. Return value: it returns 1, which lets the earlier calls finish their multiplication.",
+  commonMistakes: [
+    "Saying only that recursion has to stop, without naming the stopping condition.",
+    "Naming the base case without explaining what value it returns.",
+  ],
+};
+
 export const emptySession = {
   activity: null,
   recommendation: {

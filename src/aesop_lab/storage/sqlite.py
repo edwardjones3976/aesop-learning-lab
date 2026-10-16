@@ -12,8 +12,8 @@ from pathlib import Path
 import sqlite3
 
 from aesop_lab.domain.models import (
-    Activity, ActivityType, Attempt, Concept, EvidenceKind,
-    ExperimentAssignment, HintLevel, OutsideStudy, ScoreStatus,
+    Activity, ActivityType, AnswerRevision, Attempt, Concept, CriterionReview, EvidenceKind,
+    ExperimentAssignment, HintLevel, OutsideStudy, ReviewRating, ScoreStatus, SelfReview,
 )
 
 
@@ -78,8 +78,24 @@ class SQLiteStore:
                     assigned_at TEXT NOT NULL,
                     PRIMARY KEY (protocol_id, protocol_version, item_family_id)
                 );
+                CREATE TABLE IF NOT EXISTS self_reviews (
+                    id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL,
+                    rubric_id TEXT NOT NULL, rubric_version TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, judgments TEXT NOT NULL,
+                    confidence REAL,
+                    FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+                );
+                CREATE TABLE IF NOT EXISTS answer_revisions (
+                    id TEXT PRIMARY KEY, review_id TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, answer TEXT NOT NULL,
+                    FOREIGN KEY (review_id) REFERENCES self_reviews(id)
+                );
                 CREATE INDEX IF NOT EXISTS attempts_by_activity
                     ON attempts(activity_id, content_version, occurred_at);
+                CREATE INDEX IF NOT EXISTS reviews_by_attempt
+                    ON self_reviews(attempt_id, occurred_at);
+                CREATE INDEX IF NOT EXISTS revisions_by_review
+                    ON answer_revisions(review_id, occurred_at);
             """)
             self.connection.execute("PRAGMA user_version = 1")
         with self.connection:
@@ -206,6 +222,71 @@ class SQLiteStore:
             row["outside_study_detail"], row["active_seconds"]
         ) for row in rows)
 
+    def append_self_review(self, review: SelfReview) -> None:
+        attempt = self.connection.execute(
+            "SELECT t.score_status, t.occurred_at, a.activity_type FROM attempts t "
+            "JOIN activities a ON t.activity_id = a.id AND t.content_version = a.content_version "
+            "WHERE t.id = ?", (review.attempt_id,),
+        ).fetchone()
+        if attempt is None or attempt["score_status"] != ScoreStatus.UNGRADED.value or \
+                attempt["activity_type"] not in (ActivityType.EXPLANATION.value, ActivityType.CODE_DESIGN.value):
+            raise ValueError("review requires an ungraded open-ended attempt")
+        if review.occurred_at < datetime.fromisoformat(attempt["occurred_at"]):
+            raise ValueError("review cannot precede the attempt")
+        judgments = json.dumps([
+            {"criterionId": item.criterion_id, "rating": item.rating.value, "evidence": item.evidence}
+            for item in review.judgments
+        ])
+        values = (review.id, review.attempt_id, review.rubric_id, review.rubric_version,
+                  review.occurred_at.isoformat(), judgments, review.confidence)
+        old = self.connection.execute("SELECT * FROM self_reviews WHERE id = ?", (review.id,)).fetchone()
+        if old is not None:
+            if tuple(old) != values:
+                raise ValueError("self review is immutable")
+            return
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO self_reviews VALUES (?, ?, ?, ?, ?, ?, ?)",
+                values,
+            )
+
+    def list_self_reviews(self, attempt_id: str) -> tuple[SelfReview, ...]:
+        rows = self.connection.execute(
+            "SELECT * FROM self_reviews WHERE attempt_id = ? ORDER BY occurred_at, id", (attempt_id,)
+        ).fetchall()
+        return tuple(SelfReview(
+            row["id"], row["attempt_id"], row["rubric_id"], row["rubric_version"],
+            datetime.fromisoformat(row["occurred_at"]),
+            tuple(CriterionReview(item["criterionId"], ReviewRating(item["rating"]), item["evidence"])
+                  for item in json.loads(row["judgments"])), row["confidence"],
+        ) for row in rows)
+
+    def append_revision(self, revision: AnswerRevision) -> None:
+        review = self.connection.execute(
+            "SELECT occurred_at FROM self_reviews WHERE id = ?", (revision.review_id,)
+        ).fetchone()
+        if review is None or revision.occurred_at < datetime.fromisoformat(review["occurred_at"]):
+            raise ValueError("revision requires an earlier self review")
+        values = (revision.id, revision.review_id, revision.occurred_at.isoformat(), revision.answer)
+        old = self.connection.execute("SELECT * FROM answer_revisions WHERE id = ?", (revision.id,)).fetchone()
+        if old is not None:
+            if tuple(old) != values:
+                raise ValueError("answer revision is immutable")
+            return
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO answer_revisions VALUES (?, ?, ?, ?)",
+                values,
+            )
+
+    def list_revisions(self, review_id: str) -> tuple[AnswerRevision, ...]:
+        rows = self.connection.execute(
+            "SELECT * FROM answer_revisions WHERE review_id = ? ORDER BY occurred_at, id", (review_id,)
+        ).fetchall()
+        return tuple(AnswerRevision(row["id"], row["review_id"],
+                                    datetime.fromisoformat(row["occurred_at"]), row["answer"])
+                     for row in rows)
+
     def save_assignment(self, assignment: ExperimentAssignment) -> None:
         concept_exists = self.connection.execute(
             "SELECT 1 FROM concepts WHERE id = ? LIMIT 1", (assignment.concept_id,)
@@ -248,9 +329,17 @@ class SQLiteStore:
         assignments = self.connection.execute(
             "SELECT * FROM experiment_assignments ORDER BY assigned_at, item_family_id"
         ).fetchall()
+        reviews = self.connection.execute(
+            "SELECT * FROM self_reviews ORDER BY occurred_at, id"
+        ).fetchall()
+        revisions = self.connection.execute(
+            "SELECT * FROM answer_revisions ORDER BY occurred_at, id"
+        ).fetchall()
         return {
             "schemaVersion": SCHEMA_VERSION,
             "attempts": [dict(row) for row in attempts],
+            "selfReviews": [dict(row) for row in reviews],
+            "answerRevisions": [dict(row) for row in revisions],
             "experimentAssignments": [dict(row) for row in assignments],
             "lessonCompletions": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
@@ -258,6 +347,8 @@ class SQLiteStore:
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM answer_revisions")
+            self.connection.execute("DELETE FROM self_reviews")
             self.connection.execute("DELETE FROM attempts")
             self.connection.execute("DELETE FROM experiment_assignments")
             self.connection.execute("DELETE FROM lesson_completions")
