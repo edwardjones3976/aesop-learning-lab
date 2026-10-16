@@ -13,6 +13,22 @@ from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class SQLiteStoreTests(unittest.TestCase):
+    def test_v4_held_out_rows_gain_one_day_delay(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.db"
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("CREATE TABLE activities (id TEXT, content_version TEXT, "
+                                   "concept_id TEXT, family_id TEXT, activity_type TEXT, "
+                                   "evidence_kind TEXT, held_out INTEGER)")
+                connection.execute("INSERT INTO activities VALUES "
+                                   "('old-check', 'v2', 'c1', 'family', 'trace', 'transfer', 1)")
+                connection.execute("PRAGMA user_version = 4")
+                connection.commit()
+            with SQLiteStore(path) as store:
+                check = store.get_activity("old-check", "v2")
+                self.assertEqual(check.check_delay_days, 1)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+
     def test_v1_database_adds_review_tables_without_losing_attempts(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "learning.db"
@@ -32,8 +48,25 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.export_all()["selfReviews"], [])
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
 
+    def test_either_v2_branch_migrates_to_combined_schema(self) -> None:
+        for absent_tables in (("lesson_completions",),
+                              ("answer_revisions", "self_reviews")):
+            with self.subTest(absent_tables=absent_tables), TemporaryDirectory() as directory:
+                path = Path(directory) / "learning.db"
+                with SQLiteStore(path) as store:
+                    store.add_concept(Concept("c1", "Concept", "v1"))
+                with closing(sqlite3.connect(path)) as connection:
+                    for table in absent_tables:
+                        connection.execute(f"DROP TABLE {table}")
+                    connection.execute("PRAGMA user_version = 2")
+                    connection.commit()
+                with SQLiteStore(path) as store:
+                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+                    self.assertEqual(store.export_all()["selfReviews"], [])
+                    self.assertEqual(store.export_all()["lessonCompletions"], [])
+                    self.assertEqual(store.get_concept("c1", "v1").title, "Concept")
     def test_v2_database_adds_lesson_completion_without_losing_reviews(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "learning.db"
@@ -56,7 +89,32 @@ class SQLiteStoreTests(unittest.TestCase):
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.list_self_reviews("t1"), (review,))
                 self.assertEqual(store.record_lesson_completion("c1", "v1", now), now)
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+
+    def test_merged_master_v3_upgrades_without_losing_learner_records(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "learning.db"
+            now = datetime.now(timezone.utc)
+            with SQLiteStore(path) as store:
+                store.add_concept(Concept("c1", "Concept", "v1"))
+                store.add_activity(Activity("a1", "c1", "v1", "family-a",
+                                            ActivityType.TRACE, EvidenceKind.APPLICATION))
+                store.record_lesson_completion("c1", "v1", now)
+                store.append_attempt(Attempt("t1", "a1", "v1", now, "2", HintLevel.NONE,
+                                             ScoreStatus.CORRECT, "reviewed_exact_key", "assessment-v1",
+                                             "practice"))
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("DROP TABLE practice_hint_events")
+                connection.execute("DROP TABLE practice_drafts")
+                connection.execute("ALTER TABLE activities DROP COLUMN check_delay_days")
+                connection.execute("PRAGMA user_version = 3")
+                connection.commit()
+            with SQLiteStore(path) as store:
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
+                self.assertEqual(store.lesson_completed_at("c1", "v1"), now)
+                self.assertEqual(store.list_attempts("c1")[0].id, "t1")
+                self.assertIn("check_delay_days", {row[1] for row in
+                              store.connection.execute("PRAGMA table_info(activities)")})
 
     def test_reviews_and_revisions_are_append_only_exported_and_deleted(self) -> None:
         with TemporaryDirectory() as directory:

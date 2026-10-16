@@ -75,12 +75,19 @@ class Activity:
     activity_type: ActivityType
     evidence_kind: EvidenceKind
     held_out: bool = False
+    check_delay_days: int | None = None
 
     def __post_init__(self) -> None:
         if not all((self.id, self.concept_id, self.content_version, self.family_id)):
             raise ValueError("activity identity and version fields are required")
         if self.evidence_kind is EvidenceKind.TRANSFER and not self.held_out:
             raise ValueError("transfer items must be held out")
+        if self.check_delay_days is None:
+            object.__setattr__(self, "check_delay_days", 1 if self.held_out else 0)
+        if type(self.check_delay_days) is not int or self.check_delay_days < 0:
+            raise ValueError("check delay must be a nonnegative number of days")
+        if self.held_out != (self.check_delay_days > 0):
+            raise ValueError("held-out items need a positive check delay; practice needs zero")
 
 
 @dataclass(frozen=True, slots=True)

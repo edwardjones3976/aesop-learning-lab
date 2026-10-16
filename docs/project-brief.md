@@ -2,7 +2,7 @@
 
 ## Product outcome
 
-Help one learner retain, explain, and apply a bounded programming topic. Adapt the next activity using transparent rules, then check whether those choices lead to better delayed and unfamiliar performance than a competent fixed routine.
+Improve each person's learning experience, using Python functions and recursion as the first bounded topic. Adapt the next activity to observed evidence through transparent rules, and let learners adjust the presentation and time available. Keep retrieval, feedback, and delayed checks in place even when easier study feels more comfortable. Test whether the adaptive approach improves delayed and unfamiliar performance over a competent fixed routine. Do not infer a fixed learning style from preferences.
 
 ## V1 acceptance criteria
 

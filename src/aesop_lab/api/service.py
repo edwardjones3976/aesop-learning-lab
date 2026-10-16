@@ -10,7 +10,8 @@ from uuid import uuid4
 from aesop_lab.assessment.engine import assess, build_attempt
 from aesop_lab.assessment.errors import AssessmentError
 from aesop_lab.assessment.items import ItemSpec
-from aesop_lab.domain.models import Concept, HintLevel, OutsideStudy
+from aesop_lab.assessment.review import build_self_review
+from aesop_lab.domain.models import AnswerRevision, Concept, CriterionReview, HintLevel, OutsideStudy, ReviewRating
 from aesop_lab.scheduler import LearnerState, recommend
 from aesop_lab.storage.sqlite import SQLiteStore
 
@@ -37,6 +38,8 @@ class CatalogItem:
             "id": activity.id, "conceptId": activity.concept_id,
             "contentVersion": activity.content_version, "familyId": activity.family_id,
             "type": activity.activity_type.value, "evidenceKind": activity.evidence_kind.value,
+            "heldOut": activity.held_out,
+            "checkDelayDays": activity.check_delay_days,
             "prompt": self.prompt, "body": self.body,
             "choices": list(self.spec.choices),
             "hints": [{"level": hint.level.value, "text": hint.text}
@@ -118,7 +121,7 @@ class LearningService:
             result["reason"] = decision.reason
         return result
 
-    def submit_attempt(self, body: object) -> dict[str, object]:
+    def submit_attempt(self, body: object, *, attempt_id: str | None = None) -> dict[str, object]:
         if not isinstance(body, dict):
             raise ApiError("validation_error", "Attempt body must be an object.")
         required = ("activityId", "contentVersion", "firstAnswer", "hintLevel",
@@ -175,7 +178,7 @@ class LearningService:
                 scope="Development fixture key only; no human review or learner claim.",
             )
         attempt = build_attempt(
-            item.spec, result, attempt_id=str(uuid4()), occurred_at=self.now(),
+            item.spec, result, attempt_id=attempt_id or str(uuid4()), occurred_at=self.now(),
             first_answer=body["firstAnswer"], selection_reason=reason,
             confidence=confidence, outside_study=outside, outside_study_detail=detail,
             active_seconds=seconds,
@@ -186,7 +189,72 @@ class LearningService:
             "gradingMethod": result.grading_method, "assisted": result.assisted,
             "nextReason": result.reason, "developmentOnly": self.development_only,
         }
+        if item.spec.rubric is not None:
+            rubric = item.spec.rubric
+            response["rubric"] = {
+                "id": rubric.id, "version": rubric.version,
+                "criteria": [{"id": criterion.id, "description": criterion.description,
+                              "shownDescription": criterion.shown_description,
+                              "partialDescription": criterion.partial_description}
+                             for criterion in rubric.criteria],
+            }
         return response
+
+    def submit_self_review(self, body: object) -> dict[str, object]:
+        if not isinstance(body, dict):
+            raise ApiError("validation_error", "Self review body must be an object.")
+        attempt_id = body.get("attemptId")
+        if not isinstance(attempt_id, str):
+            raise ApiError("validation_error", "attemptId is required.")
+        attempt = next((a for a in self.store.list_attempts(self.concept.id)
+                        if a.id == attempt_id), None)
+        if attempt is None:
+            raise ApiError("not_found", "Attempt was not found.", 404)
+        item = self.items.get(attempt.activity_id)
+        if item is None or item.spec.rubric is None:
+            raise ApiError("validation_error", "Attempt has no self review rubric.")
+        rubric = item.spec.rubric
+        if body.get("rubricId") != rubric.id or body.get("rubricVersion") != rubric.version:
+            raise ApiError("validation_error", "The rubric version does not match.")
+        raw = body.get("judgments")
+        if not isinstance(raw, list):
+            raise ApiError("validation_error", "Review every rubric criterion.")
+        confidence = body.get("confidence")
+        if confidence is not None and (type(confidence) not in (int, float) or not 0 <= confidence <= 1):
+            raise ApiError("validation_error", "Review confidence must be between 0 and 1 or null.")
+        try:
+            judgments = tuple(CriterionReview(j["criterionId"], ReviewRating(j["rating"]),
+                                               j.get("evidence", "")) for j in raw)
+            review = build_self_review(item.spec, attempt, review_id=str(uuid4()),
+                                       occurred_at=self.now(), judgments=judgments,
+                                       confidence=confidence)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ApiError("validation_error", str(exc)) from exc
+        self.store.append_self_review(review)
+        return {"reviewId": review.id, "nextStep": review.next_step,
+                "comparison": {"annotatedExample": rubric.annotated_example,
+                               "commonMistakes": list(rubric.common_mistakes)},
+                "developmentOnly": self.development_only}
+
+    def submit_revision(self, body: object) -> dict[str, object]:
+        if not isinstance(body, dict) or not isinstance(body.get("reviewId"), str):
+            raise ApiError("validation_error", "reviewId is required.")
+        answer = body.get("answer")
+        if not isinstance(answer, str) or not answer.strip():
+            raise ApiError("validation_error", "A revision answer is required.")
+        review_id = body["reviewId"]
+        if not self.store.has_self_review(review_id):
+            raise ApiError("not_found", "Review was not found.", 404)
+        revision = AnswerRevision(str(uuid4()), review_id, self.now(), answer)
+        self.store.append_revision(revision)
+        return {"revisionId": revision.id, "developmentOnly": self.development_only}
+
+    def export_data(self) -> dict[str, object]:
+        return self.store.export_all()
+
+    def delete_data(self) -> dict[str, object]:
+        self.store.delete_all()
+        return {"deleted": True}
 
 
 def _iso(value: datetime | None) -> str | None:

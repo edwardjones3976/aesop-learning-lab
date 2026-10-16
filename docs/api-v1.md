@@ -76,6 +76,6 @@ An explanation or code-design attempt response keeps `scoreStatus: "ungraded"` a
 
 `POST /api/v1/self-reviews` accepts `attemptId`, `rubricId`, `rubricVersion`, optional `confidence` (0–1 or null), and one judgment per criterion. A judgment has `criterionId`, `rating` (`shown`, `partial`, `not_shown`, `unsure`), and `evidence`. Shown and partial ratings require a quote from the locked first answer; the others require empty evidence. The server validates the attempt, item, rubric version, and evidence before appending the review. It returns `reviewId`, `nextStep` (`independent_check` only if every criterion is shown; otherwise `targeted_retry`), and `comparison` with `annotatedExample` and `commonMistakes`. Neither next step changes the attempt score or credits mastery.
 
-`POST /api/v1/answer-revisions` accepts `reviewId` and a nonempty `answer`, returning `revisionId`. The revision is a separate append-only learner event. Both review and revision events are included in export and removed by learner-data deletion. The browser fixture implements these adapter methods; the HTTP endpoints remain to be implemented with the local service.
+`POST /api/v1/answer-revisions` accepts `reviewId` and a nonempty `answer`, returning `revisionId`. The revision is a separate append-only learner event. Both review and revision events are included in export and removed by learner-data deletion. The browser fixture and local HTTP service implement these adapter methods.
 
-The `nextStep` value is guidance for the future scheduler; the fixture queue does not yet schedule a targeted retry or independent check.
+The `nextStep` value is guidance for the future scheduler; the current scheduler does not yet schedule a targeted retry from self review alone.

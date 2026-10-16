@@ -204,5 +204,13 @@ export function createFixtureApi({ scenario = "default" } = {}) {
       return clone({ revisionId: revision.revisionId });
     },
     reviewEvents() { return clone({ reviews, revisions }); },
+    async exportData() { return clone({ attempts, selfReviews: reviews, answerRevisions: revisions }); },
+    async deleteData() {
+      attempts.length = 0;
+      reviews.length = 0;
+      revisions.length = 0;
+      cursor = 0;
+      return { deleted: true };
+    },
   };
 }

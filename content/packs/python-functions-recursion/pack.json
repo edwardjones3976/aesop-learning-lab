@@ -1,0 +1,517 @@
+{
+  "schema_version": "content-pack/1",
+  "pack_id": "python-functions-recursion",
+  "pack_version": "m1-draft.1",
+  "topic": "Python functions and recursion",
+  "status": "draft",
+  "author": "Claude (L1 content author)",
+  "review": {
+    "note": "Codex independent review completed for this draft. Four records need changes before full approval; answer keys remain candidates.",
+    "receipts": [
+      {
+        "reviewer": "Codex (independent content reviewer)",
+        "reviewed_on": "2026-10-14",
+        "outcome": "approved",
+        "scope_ids": [
+          "function-definition-and-return", "parameters-and-local-scope", "recursion-as-self-call",
+          "base-case", "recursive-case-and-trace", "lesson-function-definition-and-return",
+          "lesson-parameters-and-local-scope", "lesson-base-case", "lesson-recursive-case-and-trace",
+          "def-return-choice-01", "def-return-trace-01", "def-return-transfer-01",
+          "scope-local-trace-01", "scope-global-choice-01", "recursion-explain-01",
+          "recursion-halving-transfer-01", "base-case-trace-01", "base-case-choice-01",
+          "base-case-explain-01", "base-case-transfer-01", "recursive-case-trace-01",
+          "recursive-case-choice-01", "recursive-case-design-01",
+          "py-tutorial-defining-functions", "py-tutorial-more-on-functions",
+          "py-tutorial-keyword-arguments", "py-ref-calls", "py-ref-naming-binding",
+          "py-faq-local-global", "py-lib-recursionerror", "py-lib-getrecursionlimit",
+          "recursion-explain-rubric", "base-case-explain-rubric", "recursive-design-rubric"
+        ]
+      },
+      {
+        "reviewer": "Codex (independent content reviewer)",
+        "reviewed_on": "2026-10-14",
+        "outcome": "changes_requested",
+        "scope_ids": [
+          "lesson-recursion-as-self-call", "recursion-recognize-choice-01",
+          "scope-keyword-transfer-01", "recursive-case-transfer-01"
+        ]
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "py-tutorial-defining-functions",
+      "title": "The Python Tutorial, 4.8 Defining Functions",
+      "url": "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+    },
+    {
+      "id": "py-tutorial-more-on-functions",
+      "title": "The Python Tutorial, 4.9 More on Defining Functions",
+      "url": "https://docs.python.org/3.12/tutorial/controlflow.html#more-on-defining-functions"
+    },
+    {
+      "id": "py-tutorial-keyword-arguments",
+      "title": "The Python Tutorial, 4.9.2 Keyword Arguments",
+      "url": "https://docs.python.org/3.12/tutorial/controlflow.html#keyword-arguments"
+    },
+    {
+      "id": "py-ref-calls",
+      "title": "The Python Language Reference, 6.3.3 Calls",
+      "url": "https://docs.python.org/3.12/reference/expressions.html#calls"
+    },
+    {
+      "id": "py-ref-naming-binding",
+      "title": "The Python Language Reference, 4.2 Naming and binding",
+      "url": "https://docs.python.org/3.12/reference/executionmodel.html#naming-and-binding"
+    },
+    {
+      "id": "py-faq-local-global",
+      "title": "Python FAQ, What are the rules for local and global variables in Python?",
+      "url": "https://docs.python.org/3.12/faq/programming.html#what-are-the-rules-for-local-and-global-variables-in-python"
+    },
+    {
+      "id": "py-lib-recursionerror",
+      "title": "The Python Standard Library, RecursionError",
+      "url": "https://docs.python.org/3.12/library/exceptions.html#RecursionError"
+    },
+    {
+      "id": "py-lib-getrecursionlimit",
+      "title": "The Python Standard Library, sys.getrecursionlimit()",
+      "url": "https://docs.python.org/3.12/library/sys.html#sys.getrecursionlimit"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "function-definition-and-return",
+      "title": "Defining a function and returning a value",
+      "content_version": "v1",
+      "prerequisite_ids": []
+    },
+    {
+      "id": "parameters-and-local-scope",
+      "title": "Parameters, arguments, and local names",
+      "content_version": "v1",
+      "prerequisite_ids": ["function-definition-and-return"]
+    },
+    {
+      "id": "recursion-as-self-call",
+      "title": "A function that calls itself",
+      "content_version": "v1",
+      "prerequisite_ids": ["function-definition-and-return", "parameters-and-local-scope"]
+    },
+    {
+      "id": "base-case",
+      "title": "The base case stops the recursion",
+      "content_version": "v1",
+      "prerequisite_ids": ["recursion-as-self-call"]
+    },
+    {
+      "id": "recursive-case-and-trace",
+      "title": "The recursive case and tracing calls",
+      "content_version": "v1",
+      "prerequisite_ids": ["base-case"]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-function-definition-and-return",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v1",
+      "title": "Defining a function and returning a value",
+      "body": "A function is defined with `def`. Its indented body runs each time the function is called. A `return` statement ends the call and sends a value back to the caller. A function that reaches its end without `return` gives back `None`.\n\n```python\ndef double(x):\n    return x * 2\n\nresult = double(4) + 1\n```\n\n`double(4)` produces 8 for the caller to use. `print` only displays a value; it does not send the value back.",
+      "source_ids": ["py-tutorial-defining-functions"]
+    },
+    {
+      "id": "lesson-parameters-and-local-scope",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v1",
+      "title": "Parameters, arguments, and local names",
+      "body": "A parameter is a name that receives an argument when the function is called. Assigning to a name inside a function body makes that name local to the call, so a global name with the same spelling is not changed. Keyword arguments name the parameter they fill, and a parameter may have a default value.\n\n```python\ntotal = 10\n\ndef add_five(total):\n    total = total + 5\n    return total\n\nadd_five(1)   # returns 6; the global total is still 10\n```",
+      "source_ids": ["py-tutorial-more-on-functions", "py-tutorial-keyword-arguments", "py-ref-naming-binding", "py-faq-local-global"]
+    },
+    {
+      "id": "lesson-recursion-as-self-call",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v1",
+      "title": "A function that calls itself",
+      "body": "A recursive function calls itself on a simpler version of its problem. Each call has its own local names. Calls wait in order on the call stack until an inner call returns a value to the call that made it. Without a rule that stops the calls, they never finish.\n\n```python\ndef steps(n):\n    if n == 1:\n        return 0\n    return 1 + steps(n // 2)\n```\n\nWhile `steps(8)` runs, it waits for `steps(4)` to return.",
+      "source_ids": ["py-ref-calls", "py-tutorial-defining-functions"]
+    },
+    {
+      "id": "lesson-base-case",
+      "concept_id": "base-case",
+      "content_version": "v1",
+      "title": "The base case stops the recursion",
+      "body": "The base case is the branch that returns without making another recursive call. Without a base case, every call makes another call and the chain never ends. Python limits how deep the call stack may grow. When that depth is exceeded, Python raises `RecursionError`. `sys.getrecursionlimit()` reports the current limit.\n\n```python\ndef f(n):\n    if n == 0: return 1\n    return n * f(n - 1)\n```\n\nIn `f`, the test `n == 0` is the base case.",
+      "source_ids": ["py-lib-recursionerror", "py-lib-getrecursionlimit"]
+    },
+    {
+      "id": "lesson-recursive-case-and-trace",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v1",
+      "title": "The recursive case and tracing calls",
+      "body": "The recursive case reduces the problem so that each call moves closer to the base case. To trace a recursive function, start from the simplest call, find what it returns, and then use that value in the next call up.\n\n```python\ndef total_to(n):\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)\n```\n\nTo evaluate `total_to(3)`, you need `total_to(2)`, which needs `total_to(1)`, which needs `total_to(0)`.",
+      "source_ids": ["py-ref-calls"]
+    }
+  ],
+  "items": [
+    {
+      "id": "def-return-choice-01",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v1",
+      "family_id": "def-return-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "Which statement sends a value back to the caller of a function?",
+      "body": "",
+      "choices": ["print(total)", "return total", "total = total + 1"],
+      "answer_key": {"status": "candidate", "accepted": ["return total"]},
+      "hints": [
+        {"level": "nudge", "text": "Look for the keyword that ends a function call with a value."},
+        {"level": "targeted", "text": "print shows a value on screen; it does not send the value back."},
+        {"level": "worked_solution", "text": "return total sends total back to the caller."}
+      ],
+      "source_ids": ["py-tutorial-defining-functions"]
+    },
+    {
+      "id": "def-return-trace-01",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v1",
+      "family_id": "def-return-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def double(x):\n    return x * 2\nresult = double(7) + 1",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["15"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "Evaluate double(7) first."},
+        {"level": "targeted", "text": "double(7) returns 7 * 2."},
+        {"level": "worked_solution", "text": "double(7) is 14, so result is 14 + 1, which is 15."}
+      ],
+      "source_ids": ["py-tutorial-defining-functions", "py-ref-calls"]
+    },
+    {
+      "id": "def-return-transfer-01",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v1",
+      "family_id": "def-return-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def area(width, height):\n    return width * height\nresult = area(3, 4) - 2",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["10"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "Work out area(3, 4) first."},
+        {"level": "targeted", "text": "area(3, 4) returns 3 * 4, which is 12."},
+        {"level": "worked_solution", "text": "12 - 2 is 10, so result is 10."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    },
+    {
+      "id": "scope-local-trace-01",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v1",
+      "family_id": "scope-local-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "total = 10\ndef add_five(total):\n    total = total + 5\n    return total\nresult = add_five(1)",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["6"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "The parameter total is a new local name inside the function."},
+        {"level": "targeted", "text": "add_five(1) computes 1 + 5 inside its own call."},
+        {"level": "worked_solution", "text": "add_five(1) returns 6, so result is 6."}
+      ],
+      "source_ids": ["py-ref-naming-binding", "py-faq-local-global"]
+    },
+    {
+      "id": "scope-global-choice-01",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v1",
+      "family_id": "scope-global-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of the global name total?",
+      "body": "total = 10\ndef add_five(total):\n    total = total + 5\n    return total\nadd_five(1)",
+      "choices": ["1", "6", "10"],
+      "answer_key": {"status": "candidate", "accepted": ["10"]},
+      "check_expression": "total",
+      "hints": [
+        {"level": "nudge", "text": "Assignments inside add_five do not rebind the global name."},
+        {"level": "targeted", "text": "The total inside the function is local; the global total was set to 10 before the call."},
+        {"level": "worked_solution", "text": "The global total is still 10, so the answer is 10."}
+      ],
+      "source_ids": ["py-ref-naming-binding", "py-faq-local-global"]
+    },
+    {
+      "id": "scope-keyword-transfer-01",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v1",
+      "family_id": "scope-keyword-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def greet(name, punctuation=\"!\"):\n    return \"Hi \" + name + punctuation\nresult = greet(\"Ana\", punctuation=\"?\")",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["Hi Ana?"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "The keyword argument punctuation=\"?\" replaces the default \"!\"."},
+        {"level": "targeted", "text": "greet builds \"Hi \" + name + punctuation."},
+        {"level": "worked_solution", "text": "The result is \"Hi Ana?\"."}
+      ],
+      "source_ids": ["py-tutorial-more-on-functions", "py-tutorial-keyword-arguments"]
+    },
+    {
+      "id": "recursion-recognize-choice-01",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v1",
+      "family_id": "recursion-recognize-a",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "Which definition calls itself?",
+      "body": "",
+      "choices": ["def a(n): return n + 1", "def b(n): return b(n - 1) + 1", "def c(n): print(n)"],
+      "answer_key": {"status": "candidate", "accepted": ["def b(n): return b(n - 1) + 1"]},
+      "hints": [
+        {"level": "nudge", "text": "Which definition's body contains its own name?"},
+        {"level": "targeted", "text": "Look for a function whose body calls the function named in its def line."},
+        {"level": "worked_solution", "text": "def b(n) calls b(n - 1) in its return statement."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    },
+    {
+      "id": "recursion-explain-01",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v1",
+      "family_id": "recursion-explain-a",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "In your own words, what makes a function recursive, and what must stop its calls?",
+      "body": "",
+      "choices": [],
+      "rubric": {
+        "id": "recursion-explain-rubric",
+        "annotated_example": "A recursive function calls itself on a smaller version of the problem. A stopping condition returns without another self-call, so the chain can unwind.",
+        "common_mistakes": ["Saying only that the function repeats does not identify a self-call.", "Leaving out the stopping condition does not explain why calls finish."],
+        "criteria": [
+          {"id": "self-call", "description": "Says the function calls itself on a smaller or simpler version of the problem."},
+          {"id": "stopping", "description": "Says some condition must stop the calls, or they never end."}
+        ]
+      },
+      "hints": [
+        {"level": "nudge", "text": "Think about what each call does with a smaller input."},
+        {"level": "targeted", "text": "Say what makes the function call itself and what stops it."},
+        {"level": "worked_solution", "text": "A recursive function calls itself on a simpler version of the problem, and a stopping condition must end the calls."}
+      ],
+      "source_ids": ["py-ref-calls", "py-tutorial-defining-functions"]
+    },
+    {
+      "id": "recursion-halving-transfer-01",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v1",
+      "family_id": "recursion-halving-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def leaf_count(level):\n    if level == 0:\n        return 1\n    return 2 * leaf_count(level - 1)\nresult = leaf_count(4)",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["16"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "Start with leaf_count(0)."},
+        {"level": "targeted", "text": "Each level doubles the value returned by the smaller level."},
+        {"level": "worked_solution", "text": "The values from level 0 through 4 are 1, 2, 4, 8, and 16."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    },
+    {
+      "id": "base-case-trace-01",
+      "concept_id": "base-case",
+      "content_version": "v1",
+      "family_id": "base-case-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "What value does this function return for n = 3?",
+      "body": "def f(n):\n    if n == 0: return 1\n    return n * f(n - 1)",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["6"]},
+      "check_expression": "f(3)",
+      "hints": [
+        {"level": "nudge", "text": "Find the stopping condition."},
+        {"level": "targeted", "text": "Evaluate f(0), then f(1)."},
+        {"level": "worked_solution", "text": "f(0)=1, f(1)=1, f(2)=2, f(3)=6."}
+      ],
+      "source_ids": ["py-ref-calls", "py-lib-recursionerror"]
+    },
+    {
+      "id": "base-case-choice-01",
+      "concept_id": "base-case",
+      "content_version": "v1",
+      "family_id": "base-case-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "In a recursive function, which part stops the repeated calls?",
+      "body": "",
+      "choices": ["the recursive call", "the base case", "the function name"],
+      "answer_key": {"status": "candidate", "accepted": ["the base case"]},
+      "hints": [
+        {"level": "nudge", "text": "Think about what happens when the calls must stop."},
+        {"level": "targeted", "text": "The recursive call keeps going; something else must stop it."},
+        {"level": "worked_solution", "text": "The base case is the condition that returns without another call."}
+      ],
+      "source_ids": ["py-lib-recursionerror"]
+    },
+    {
+      "id": "base-case-explain-01",
+      "concept_id": "base-case",
+      "content_version": "v1",
+      "family_id": "base-case-explain-a",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "Explain what goes wrong if a recursive function has no base case.",
+      "body": "",
+      "choices": [],
+      "rubric": {
+        "id": "base-case-explain-rubric",
+        "annotated_example": "Without a base case, each call makes another call without a stopping return. Python eventually raises RecursionError when the recursion depth limit is reached.",
+        "common_mistakes": ["A missing base case does not simply return None.", "RecursionError is an observed runtime limit, not a successful stopping rule."],
+        "criteria": [
+          {"id": "unbounded", "description": "States that without a base case the calls never reach a stopping point."},
+          {"id": "error", "description": "Mentions that Python raises RecursionError once the recursion depth limit is exceeded."}
+        ]
+      },
+      "hints": [
+        {"level": "nudge", "text": "Ask what happens to each new call when no call ever returns without recursing."},
+        {"level": "targeted", "text": "Mention the stopping point and what Python does when the depth limit is exceeded."},
+        {"level": "worked_solution", "text": "Without a base case the calls never reach a stopping point, so the call stack grows until Python raises RecursionError."}
+      ],
+      "source_ids": ["py-lib-recursionerror", "py-lib-getrecursionlimit"]
+    },
+    {
+      "id": "base-case-transfer-01",
+      "concept_id": "base-case",
+      "content_version": "v1",
+      "family_id": "base-case-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def count_items(items):\n    if not items:\n        return 0\n    return 1 + count_items(items[1:])\nresult = count_items([5, 6, 7, 8])",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["4"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "Check what count_items([]) returns."},
+        {"level": "targeted", "text": "count_items([5, 6, 7, 8]) is 1 + count_items([6, 7, 8])."},
+        {"level": "worked_solution", "text": "Each call adds 1 and drops the first item, so the answer is 4."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    },
+    {
+      "id": "recursive-case-trace-01",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v1",
+      "family_id": "recursive-case-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def total_to(n):\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)\nresult = total_to(4)",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["10"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "Each call adds n and then calls itself with n - 1."},
+        {"level": "targeted", "text": "Work from the inside out: total_to(0), then total_to(1), total_to(2)."},
+        {"level": "worked_solution", "text": "total_to(0)=0, total_to(1)=1, total_to(2)=3, total_to(3)=6, total_to(4)=10."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    },
+    {
+      "id": "recursive-case-choice-01",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v1",
+      "family_id": "recursive-case-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "In a recursive case, what must be true so that the calls eventually reach the base case?",
+      "body": "",
+      "choices": ["the input moves closer to the base case", "the function prints its input", "the base case is removed"],
+      "answer_key": {"status": "candidate", "accepted": ["the input moves closer to the base case"]},
+      "hints": [
+        {"level": "nudge", "text": "Think about what must happen for the calls to stop."},
+        {"level": "targeted", "text": "The base case is reached only if each recursive call makes progress."},
+        {"level": "worked_solution", "text": "Each recursive call must move the input closer to the base case."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    },
+    {
+      "id": "recursive-case-design-01",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v1",
+      "family_id": "recursive-case-design-a",
+      "activity_type": "code_design",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "Write a recursive function sum_list(items) that returns the sum of a list of numbers. Do not use a loop.",
+      "body": "",
+      "choices": [],
+      "rubric": {
+        "id": "recursive-design-rubric",
+        "annotated_example": "def sum_list(items):\n    if not items:\n        return 0\n    return items[0] + sum_list(items[1:])\nThe empty list stops recursion, and each call receives a shorter list.",
+        "common_mistakes": ["Recursing on the same list does not move toward the empty base case.", "A branch with no return value cannot supply the sum to its caller."],
+        "criteria": [
+          {"id": "base-case", "description": "Handles the empty list with a base case that returns a value without recursing."},
+          {"id": "recursive-step", "description": "The recursive case combines the first item with a recursive call on the rest of the list."},
+          {"id": "progress", "description": "Each recursive call receives a shorter list, so the calls reach the base case."}
+        ]
+      },
+      "hints": [
+        {"level": "nudge", "text": "Start with the base case for an empty list."},
+        {"level": "targeted", "text": "The recursive case can add the first item to the sum of the rest."},
+        {"level": "worked_solution", "text": "Handle [] by returning 0; otherwise return items[0] + sum_list(items[1:])."}
+      ],
+      "source_ids": ["py-ref-calls", "py-tutorial-defining-functions"]
+    },
+    {
+      "id": "recursive-case-transfer-01",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v1",
+      "family_id": "recursive-case-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def reverse(text):\n    if len(text) <= 1:\n        return text\n    return reverse(text[1:]) + text[0]\nresult = reverse(\"abc\")",
+      "choices": [],
+      "answer_key": {"status": "candidate", "accepted": ["cba"]},
+      "check_expression": "result",
+      "hints": [
+        {"level": "nudge", "text": "What does reverse(\"c\") return?"},
+        {"level": "targeted", "text": "reverse(\"bc\") is reverse(\"c\") + \"b\"."},
+        {"level": "worked_solution", "text": "reverse(\"abc\") is \"cba\"."}
+      ],
+      "source_ids": ["py-ref-calls"]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 """Pilot scheduling rules, separate from storage and transport.
 
-The 24-hour interval gates an independent check, never access to practice.
+One-day and one-week intervals gate independent checks, never practice.
 This policy does not declare mastery or infer scores for ungraded answers.
 """
 
@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from aesop_lab.domain.models import (Activity, Attempt, EvidenceKind, HintLevel,
                                      Recommendation, ScoreStatus)
 
-DELAY = timedelta(hours=24)
 MINIMUM_MINUTES = 5
 
 
@@ -81,21 +80,26 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
                   if attempt.score_status is ScoreStatus.CORRECT and
                   attempt.hint_level is HintLevel.NONE and
                   attempt.occurred_at >= state.lesson_completed_at]
-    due_at = state.lesson_completed_at + DELAY
-
+    # An attempted earlier check unlocks the next interval regardless of score.
+    # Conditioning the week check on day-one success would hide poor retention.
+    completed_intervals = {item.check_delay_days for item in state.activities
+                           if item.held_out and attempts_by_item[item.id]}
     checks = [item for item in state.activities
               if qualifying and item.held_out and item.evidence_kind in
               (EvidenceKind.APPLICATION, EvidenceKind.TRANSFER) and
-              not attempts_by_item[item.id] and item.family_id not in seen_families]
-    next_check_at = due_at if checks else None
-    check_item = min(checks, key=lambda candidate: candidate.id) if (
-        checks and state.now >= due_at) else None
+              not attempts_by_item[item.id] and item.family_id not in seen_families and
+              (item.check_delay_days == 1 or
+               any(0 < interval < item.check_delay_days for interval in completed_intervals))]
+    check_item = min(checks, key=lambda candidate: (candidate.check_delay_days, candidate.id)) if checks else None
+    due_at = (state.lesson_completed_at + timedelta(days=check_item.check_delay_days)
+              if check_item else None)
+    next_check_at = due_at
     if available_time < MINIMUM_MINUTES:
         return ScheduleDecision(None, "Set aside at least five minutes for an activity.",
                                 next_check_at)
-    if mode == "recommended" and check_item is not None:
+    if mode == "recommended" and check_item is not None and state.now >= due_at:
         return _select(check_item, policy_version,
-                       "A held-out independent application check is due.",
+                       f"A held-out independent day-{check_item.check_delay_days} check is due.",
                        tuple(attempt.id for attempt in qualifying), due_at)
 
     practice = [item for item in state.activities if not item.held_out]
@@ -103,13 +107,13 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         # New items first; then rotate through the least practiced items.
         item = min(practice, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))
-        if state.now < due_at and checks:
-            reason = "Continue practice now; the independent check opens after 24 hours."
-        elif state.now < due_at and not qualifying:
+        if due_at is not None and state.now < due_at:
+            reason = "Continue practice now; the independent check opens at its scheduled time."
+        elif not qualifying and state.now < state.lesson_completed_at + timedelta(days=1):
             reason = "Continue practice now; a delayed check also requires unassisted evidence."
         elif not qualifying:
             reason = "Continue practice to build evidence before an independent check."
-        elif mode == "practice" and check_item is not None:
+        elif mode == "practice" and check_item is not None and state.now >= due_at:
             reason = "Continue practice by choice; an independent check remains available."
         else:
             reason = "Continue practice; no unused independent check is available."
@@ -117,10 +121,10 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
                                         tuple(attempt.id for attempt in state.attempts))
         return ScheduleDecision(recommendation, reason, next_check_at)
 
-    if state.now < due_at:
+    if due_at is not None and state.now < due_at:
         return ScheduleDecision(None, "No practice activity is available yet.",
                                 next_check_at)
-    if mode == "practice" and check_item is not None:
+    if mode == "practice" and check_item is not None and state.now >= due_at:
         return ScheduleDecision(None, "No practice activity is available; an independent check is due.",
                                 next_check_at)
     return ScheduleDecision(None, "No practice or unused independent check is available.")

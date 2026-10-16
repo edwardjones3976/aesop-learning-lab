@@ -98,6 +98,9 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
   let runningSince = null;
   const state = {
     phase: "loading",
+    mode: "recommended",
+    nextCheckAt: null,
+    developmentOnly: false,
     availableMinutes,
     activity: null,
     recommendation: null,
@@ -145,6 +148,9 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
   function getState() {
     return {
       phase: state.phase,
+      mode: state.mode,
+      nextCheckAt: state.nextCheckAt,
+      developmentOnly: state.developmentOnly,
       availableMinutes: state.availableMinutes,
       activity: state.activity ? structuredClone(state.activity) : null,
       recommendation: state.recommendation ? structuredClone(state.recommendation) : null,
@@ -212,7 +218,11 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       notify("error");
       return;
     }
-    const recommendationProblem = validateRecommendation(response.recommendation);
+    const recommendation = response.recommendation ?? (response.activity == null ? {
+      policyVersion: "pilot-v1", reason: response.reason,
+      evidenceAttemptIds: [],
+    } : null);
+    const recommendationProblem = validateRecommendation(recommendation);
     if (recommendationProblem) {
       state.phase = "load_error";
       state.activity = null;
@@ -223,10 +233,13 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       return;
     }
     state.recommendation = {
-      policyVersion: response.recommendation.policyVersion,
-      reason: response.recommendation.reason,
-      evidenceAttemptIds: response.recommendation.evidenceAttemptIds.map(String),
+      policyVersion: recommendation.policyVersion,
+      reason: recommendation.reason,
+      evidenceAttemptIds: recommendation.evidenceAttemptIds.map(String),
     };
+    state.mode = response.mode ?? state.mode;
+    state.nextCheckAt = response.nextCheckAt ?? null;
+    state.developmentOnly = response.developmentOnly === true;
     if (response.activity == null) {
       state.phase = "empty";
       state.activity = null;
@@ -253,7 +266,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     notify("load");
   }
 
-  async function load() {
+  async function load(mode = "recommended") {
     const token = ++loadToken;
     if (!Number.isInteger(state.availableMinutes) || state.availableMinutes < 1) {
       resetPracticeFields();
@@ -273,7 +286,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     state.status = "Loading the next activity.";
     notify("load-start");
     try {
-      const response = await api.nextSession({ availableMinutes: state.availableMinutes });
+      const response = await api.nextSession({ availableMinutes: state.availableMinutes, mode });
       if (token !== loadToken) return;
       applySession(response);
     } catch (error) {

@@ -17,7 +17,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 5
 
 
 class SQLiteStore:
@@ -78,57 +78,75 @@ class SQLiteStore:
                     assigned_at TEXT NOT NULL,
                     PRIMARY KEY (protocol_id, protocol_version, item_family_id)
                 );
-                CREATE TABLE IF NOT EXISTS self_reviews (
-                    id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL,
-                    rubric_id TEXT NOT NULL, rubric_version TEXT NOT NULL,
-                    occurred_at TEXT NOT NULL, judgments TEXT NOT NULL,
-                    confidence REAL,
-                    FOREIGN KEY (attempt_id) REFERENCES attempts(id)
-                );
-                CREATE TABLE IF NOT EXISTS answer_revisions (
-                    id TEXT PRIMARY KEY, review_id TEXT NOT NULL,
-                    occurred_at TEXT NOT NULL, answer TEXT NOT NULL,
-                    FOREIGN KEY (review_id) REFERENCES self_reviews(id)
-                );
                 CREATE INDEX IF NOT EXISTS attempts_by_activity
                     ON attempts(activity_id, content_version, occurred_at);
-                CREATE INDEX IF NOT EXISTS reviews_by_attempt
-                    ON self_reviews(attempt_id, occurred_at);
-                CREATE INDEX IF NOT EXISTS revisions_by_review
-                    ON answer_revisions(review_id, occurred_at);
             """)
             self.connection.execute("PRAGMA user_version = 1")
-        if current < 2:
-            self.connection.executescript("""
-                CREATE TABLE IF NOT EXISTS self_reviews (
-                    id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL,
-                    rubric_id TEXT NOT NULL, rubric_version TEXT NOT NULL,
-                    occurred_at TEXT NOT NULL, judgments TEXT NOT NULL,
-                    confidence REAL,
-                    FOREIGN KEY (attempt_id) REFERENCES attempts(id)
-                );
-                CREATE TABLE IF NOT EXISTS answer_revisions (
-                    id TEXT PRIMARY KEY, review_id TEXT NOT NULL,
-                    occurred_at TEXT NOT NULL, answer TEXT NOT NULL,
-                    FOREIGN KEY (review_id) REFERENCES self_reviews(id)
-                );
-                CREATE INDEX IF NOT EXISTS reviews_by_attempt
-                    ON self_reviews(attempt_id, occurred_at);
-                CREATE INDEX IF NOT EXISTS revisions_by_review
-                    ON answer_revisions(review_id, occurred_at);
-            """)
-            self.connection.execute("PRAGMA user_version = 2")
-        with self.connection:
-            self.connection.execute("""
+        if current < 3:
+            with self.connection:
+                self.connection.executescript("""
                 CREATE TABLE IF NOT EXISTS lesson_completions (
                     concept_id TEXT NOT NULL, content_version TEXT NOT NULL,
                     completed_at TEXT NOT NULL,
                     PRIMARY KEY (concept_id, content_version),
                     FOREIGN KEY (concept_id, content_version)
                         REFERENCES concepts(id, content_version)
-                )
-            """)
-            self.connection.execute("PRAGMA user_version = 3")
+                );
+                CREATE TABLE IF NOT EXISTS self_reviews (
+                    id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL,
+                    rubric_id TEXT NOT NULL, rubric_version TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, judgments TEXT NOT NULL,
+                    confidence REAL,
+                    FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+                );
+                CREATE TABLE IF NOT EXISTS answer_revisions (
+                    id TEXT PRIMARY KEY, review_id TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, answer TEXT NOT NULL,
+                    FOREIGN KEY (review_id) REFERENCES self_reviews(id)
+                );
+                CREATE INDEX IF NOT EXISTS reviews_by_attempt
+                    ON self_reviews(attempt_id, occurred_at);
+                CREATE INDEX IF NOT EXISTS revisions_by_review
+                    ON answer_revisions(review_id, occurred_at);
+                """)
+                self.connection.execute("PRAGMA user_version = 3")
+        if current < 4:
+            with self.connection:
+                self.connection.executescript("""
+                CREATE TABLE IF NOT EXISTS practice_drafts (
+                    id TEXT PRIMARY KEY,
+                    activity_id TEXT NOT NULL,
+                    content_version TEXT NOT NULL,
+                    first_answer TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL,
+                    submitted_attempt_id TEXT,
+                    response_json TEXT,
+                    FOREIGN KEY (activity_id, content_version)
+                        REFERENCES activities(id, content_version),
+                    FOREIGN KEY (submitted_attempt_id) REFERENCES attempts(id)
+                );
+                CREATE TABLE IF NOT EXISTS practice_hint_events (
+                    draft_id TEXT NOT NULL,
+                    level TEXT NOT NULL,
+                    viewed_at TEXT NOT NULL,
+                    PRIMARY KEY (draft_id, level),
+                    FOREIGN KEY (draft_id) REFERENCES practice_drafts(id)
+                );
+                CREATE INDEX IF NOT EXISTS open_drafts_by_activity
+                    ON practice_drafts(activity_id, content_version, submitted_attempt_id);
+                """)
+                self.connection.execute("PRAGMA user_version = 4")
+        if current < 5:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute("PRAGMA table_info(activities)")}
+                if "check_delay_days" not in columns:
+                    self.connection.execute(
+                        "ALTER TABLE activities ADD COLUMN check_delay_days INTEGER NOT NULL DEFAULT 0"
+                    )
+                    self.connection.execute(
+                        "UPDATE activities SET check_delay_days = 1 WHERE held_out = 1"
+                    )
+                self.connection.execute("PRAGMA user_version = 5")
 
     def record_lesson_completion(self, concept_id: str, version: str,
                                  completed_at: datetime) -> datetime:
@@ -169,10 +187,10 @@ class SQLiteStore:
     def add_activity(self, activity: Activity) -> None:
         values = (activity.id, activity.content_version, activity.concept_id,
                   activity.family_id, activity.activity_type.value,
-                  activity.evidence_kind.value, int(activity.held_out))
+                  activity.evidence_kind.value, int(activity.held_out), activity.check_delay_days)
         old = self.connection.execute(
             "SELECT id, content_version, concept_id, family_id, activity_type, "
-            "evidence_kind, held_out FROM activities WHERE id = ? AND content_version = ?",
+            "evidence_kind, held_out, check_delay_days FROM activities WHERE id = ? AND content_version = ?",
             values[:2],
         ).fetchone()
         if old is not None:
@@ -180,7 +198,7 @@ class SQLiteStore:
                 raise ValueError("content version is immutable")
             return
         with self.connection:
-            self.connection.execute("INSERT INTO activities VALUES (?, ?, ?, ?, ?, ?, ?)", values)
+            self.connection.execute("INSERT INTO activities VALUES (?, ?, ?, ?, ?, ?, ?, ?)", values)
 
     def get_concept(self, concept_id: str, version: str) -> Concept | None:
         row = self.connection.execute(
@@ -210,7 +228,8 @@ class SQLiteStore:
     def _activity(row: sqlite3.Row) -> Activity:
         return Activity(row["id"], row["concept_id"], row["content_version"],
                         row["family_id"], ActivityType(row["activity_type"]),
-                        EvidenceKind(row["evidence_kind"]), bool(row["held_out"]))
+                        EvidenceKind(row["evidence_kind"]), bool(row["held_out"]),
+                        row["check_delay_days"])
 
     def append_attempt(self, attempt: Attempt) -> None:
         with self.connection:
@@ -241,6 +260,48 @@ class SQLiteStore:
             OutsideStudy(row["outside_study"]) if row["outside_study"] else None,
             row["outside_study_detail"], row["active_seconds"]
         ) for row in rows)
+
+    def open_draft(self, concept_id: str) -> sqlite3.Row | None:
+        return self.connection.execute(
+            "SELECT d.* FROM practice_drafts d JOIN activities a ON "
+            "d.activity_id = a.id AND d.content_version = a.content_version "
+            "WHERE a.concept_id = ? AND d.submitted_attempt_id IS NULL "
+            "ORDER BY d.recorded_at, d.id LIMIT 1", (concept_id,),
+        ).fetchone()
+
+    def get_draft(self, draft_id: str) -> sqlite3.Row | None:
+        return self.connection.execute("SELECT * FROM practice_drafts WHERE id = ?", (draft_id,)).fetchone()
+
+    def save_draft(self, draft_id: str, activity_id: str, version: str,
+                   answer: str, recorded_at: datetime) -> None:
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO practice_drafts "
+                "(id, activity_id, content_version, first_answer, recorded_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (draft_id, activity_id, version, answer, recorded_at.isoformat()),
+            )
+
+    def hint_levels(self, draft_id: str) -> tuple[HintLevel, ...]:
+        rows = self.connection.execute(
+            "SELECT level FROM practice_hint_events WHERE draft_id = ? ORDER BY viewed_at, rowid",
+            (draft_id,),
+        ).fetchall()
+        return tuple(HintLevel(row[0]) for row in rows)
+
+    def save_hint(self, draft_id: str, level: HintLevel, viewed_at: datetime) -> None:
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO practice_hint_events VALUES (?, ?, ?)",
+                (draft_id, level.value, viewed_at.isoformat()),
+            )
+
+    def finish_draft(self, draft_id: str, response: dict[str, object]) -> None:
+        with self.connection:
+            self.connection.execute(
+                "UPDATE practice_drafts SET submitted_attempt_id = ?, response_json = ? WHERE id = ?",
+                (response["attemptId"], json.dumps(response), draft_id),
+            )
 
     def append_self_review(self, review: SelfReview) -> None:
         attempt = self.connection.execute(
@@ -280,6 +341,11 @@ class SQLiteStore:
             tuple(CriterionReview(item["criterionId"], ReviewRating(item["rating"]), item["evidence"])
                   for item in json.loads(row["judgments"])), row["confidence"],
         ) for row in rows)
+
+    def has_self_review(self, review_id: str) -> bool:
+        return self.connection.execute(
+            "SELECT 1 FROM self_reviews WHERE id = ?", (review_id,)
+        ).fetchone() is not None
 
     def append_revision(self, revision: AnswerRevision) -> None:
         review = self.connection.execute(
@@ -363,10 +429,26 @@ class SQLiteStore:
             "experimentAssignments": [dict(row) for row in assignments],
             "lessonCompletions": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
+            "practiceDrafts": [dict(row) for row in self.connection.execute(
+                "SELECT id, activity_id, content_version, first_answer, recorded_at, "
+                "submitted_attempt_id FROM practice_drafts ORDER BY recorded_at, id")],
+            "hintEvents": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM practice_hint_events ORDER BY viewed_at, draft_id")],
         }
+
+    def learner_content_versions(self) -> frozenset[str]:
+        """Versions referenced by learner events, excluding cached catalog rows."""
+        versions = self.connection.execute("""
+            SELECT content_version FROM attempts
+            UNION SELECT content_version FROM lesson_completions
+            UNION SELECT content_version FROM practice_drafts
+        """).fetchall()
+        return frozenset(row[0] for row in versions)
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM practice_hint_events")
+            self.connection.execute("DELETE FROM practice_drafts")
             self.connection.execute("DELETE FROM answer_revisions")
             self.connection.execute("DELETE FROM self_reviews")
             self.connection.execute("DELETE FROM attempts")

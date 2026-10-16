@@ -152,6 +152,67 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, "400 Bad Request")
         self.assertEqual(response["code"], "validation_error")
 
+    def test_open_review_revision_export_and_delete_are_persistent(self) -> None:
+        attempt = self.service.submit_attempt(answer("dev-z-explain", "The base case is zero; each call reduces n."))
+        self.assertEqual(attempt["scoreStatus"], "ungraded")
+        self.assertEqual(len(attempt["rubric"]["criteria"]), 2)
+        review = self.service.submit_self_review({
+            "attemptId": attempt["attemptId"], "rubricId": "dev-recursion-rubric",
+            "rubricVersion": "v1", "confidence": None,
+            "judgments": [
+                {"criterionId": "base", "rating": "shown", "evidence": "base case is zero"},
+                {"criterionId": "step", "rating": "shown", "evidence": "each call reduces n"},
+            ],
+        })
+        self.assertEqual(review["nextStep"], "independent_check")
+        revision = self.service.submit_revision({"reviewId": review["reviewId"],
+                                                 "answer": "The base case stops at zero."})
+        self.assertTrue(revision["revisionId"])
+        exported = self.service.export_data()
+        self.assertEqual(len(exported["selfReviews"]), 1)
+        self.assertEqual(len(exported["answerRevisions"]), 1)
+        self.assertEqual(exported["attempts"][0]["score_status"], "ungraded")
+        self.service.delete_data()
+        self.assertEqual(self.service.export_data()["attempts"], [])
+        self.assertIsNotNone(self.store.get_activity("dev-z-explain", "dev-v1"))
+
+    def test_wsgi_review_routes_and_local_browser_cors(self) -> None:
+        app = make_app(self.service)
+
+        def request(method: str, path: str, body: object = None):
+            data = json.dumps(body).encode() if body is not None else b""
+            captured = []
+            result = app({"REQUEST_METHOD": method, "PATH_INFO": path,
+                          "CONTENT_LENGTH": str(len(data)), "wsgi.input": BytesIO(data),
+                          "HTTP_ORIGIN": "http://127.0.0.1:8765"},
+                         lambda status, headers: captured.append((status, dict(headers))))
+            return captured[0], json.loads(b"".join(result))
+
+        (status, headers), _ = request("OPTIONS", "/api/v1/attempts")
+        self.assertEqual(status, "204 No Content")
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://127.0.0.1:8765")
+        (status, _), attempt = request("POST", "/api/v1/attempts",
+                                       answer("dev-z-explain", "The base case is zero."))
+        self.assertEqual(status, "201 Created")
+        (status, _), review = request("POST", "/api/v1/self-reviews", {
+            "attemptId": attempt["attemptId"], "rubricId": "dev-recursion-rubric",
+            "rubricVersion": "v1", "judgments": [
+                {"criterionId": "base", "rating": "shown", "evidence": "base case is zero"},
+                {"criterionId": "step", "rating": "unsure", "evidence": ""},
+            ],
+        })
+        self.assertEqual(status, "201 Created")
+        self.assertEqual(review["nextStep"], "targeted_retry")
+        (status, _), revision = request("POST", "/api/v1/answer-revisions",
+                                        {"reviewId": review["reviewId"], "answer": "Each call reduces n."})
+        self.assertEqual(status, "201 Created")
+        self.assertTrue(revision["revisionId"])
+        (_, _), exported = request("GET", "/api/v1/export")
+        self.assertEqual(len(exported["selfReviews"]), 1)
+        request("DELETE", "/api/v1/data")
+        (_, _), exported = request("GET", "/api/v1/export")
+        self.assertEqual(exported["attempts"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
