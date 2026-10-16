@@ -17,7 +17,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class SQLiteStore:
@@ -98,6 +98,26 @@ class SQLiteStore:
                     ON answer_revisions(review_id, occurred_at);
             """)
             self.connection.execute("PRAGMA user_version = 1")
+        if current < 2:
+            self.connection.executescript("""
+                CREATE TABLE IF NOT EXISTS self_reviews (
+                    id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL,
+                    rubric_id TEXT NOT NULL, rubric_version TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, judgments TEXT NOT NULL,
+                    confidence REAL,
+                    FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+                );
+                CREATE TABLE IF NOT EXISTS answer_revisions (
+                    id TEXT PRIMARY KEY, review_id TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, answer TEXT NOT NULL,
+                    FOREIGN KEY (review_id) REFERENCES self_reviews(id)
+                );
+                CREATE INDEX IF NOT EXISTS reviews_by_attempt
+                    ON self_reviews(attempt_id, occurred_at);
+                CREATE INDEX IF NOT EXISTS revisions_by_review
+                    ON answer_revisions(review_id, occurred_at);
+            """)
+            self.connection.execute("PRAGMA user_version = 2")
         with self.connection:
             self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS lesson_completions (
@@ -108,7 +128,7 @@ class SQLiteStore:
                         REFERENCES concepts(id, content_version)
                 )
             """)
-            self.connection.execute("PRAGMA user_version = 2")
+            self.connection.execute("PRAGMA user_version = 3")
 
     def record_lesson_completion(self, concept_id: str, version: str,
                                  completed_at: datetime) -> datetime:

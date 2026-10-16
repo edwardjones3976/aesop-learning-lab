@@ -32,7 +32,31 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.export_all()["selfReviews"], [])
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 2)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+
+    def test_v2_database_adds_lesson_completion_without_losing_reviews(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "learning.db"
+            now = datetime.now(timezone.utc)
+            with SQLiteStore(path) as store:
+                store.add_concept(Concept("c1", "Concept", "v1"))
+                store.add_activity(Activity("a1", "c1", "v1", "family-a",
+                                            ActivityType.EXPLANATION, EvidenceKind.EXPLANATION))
+                store.append_attempt(Attempt("t1", "a1", "v1", now, "Reason", HintLevel.NONE,
+                                             ScoreStatus.UNGRADED, "ungraded_pending_review", "assessment-v1",
+                                             "practice"))
+                review = SelfReview("r1", "t1", "rubric-1", "v1", now,
+                                    (CriterionReview("reason", ReviewRating.SHOWN, "Reason"),))
+                store.append_self_review(review)
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("DROP TABLE lesson_completions")
+                connection.execute("PRAGMA user_version = 2")
+                connection.commit()
+            with SQLiteStore(path) as store:
+                self.assertEqual(store.list_attempts("c1")[0].id, "t1")
+                self.assertEqual(store.list_self_reviews("t1"), (review,))
+                self.assertEqual(store.record_lesson_completion("c1", "v1", now), now)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 3)
 
     def test_reviews_and_revisions_are_append_only_exported_and_deleted(self) -> None:
         with TemporaryDirectory() as directory:
