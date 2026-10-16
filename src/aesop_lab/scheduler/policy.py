@@ -103,9 +103,9 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         # New items first; then rotate through the least practiced items.
         item = min(practice, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))
-        if state.now < due_at and qualifying:
+        if state.now < due_at and checks:
             reason = "Continue practice now; the independent check opens after 24 hours."
-        elif state.now < due_at:
+        elif state.now < due_at and not qualifying:
             reason = "Continue practice now; a delayed check also requires unassisted evidence."
         elif not qualifying:
             reason = "Continue practice to build evidence before an independent check."
