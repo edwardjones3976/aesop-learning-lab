@@ -50,6 +50,33 @@ class SQLiteStoreTests(unittest.TestCase):
                 self.assertEqual(store.export_all()["selfReviews"], [])
                 self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 5)
 
+    def test_lists_order_by_instant_not_offset_text(self) -> None:
+        from datetime import timedelta
+        plus5 = timezone(timedelta(hours=5))
+        earlier = datetime(2026, 1, 1, 6, 0, tzinfo=timezone.utc)   # text "...T06:00..+00:00"
+        later = datetime(2026, 1, 1, 10, 0, tzinfo=plus5)            # 05:00 UTC, text "...T10:00..+05:00"
+        self.assertLess(later, earlier)
+        with TemporaryDirectory() as directory, SQLiteStore(Path(directory) / "learning.db") as store:
+            store.add_concept(Concept("c1", "Concept", "v1"))
+            store.add_activity(Activity("a1", "c1", "v1", "family-a",
+                                        ActivityType.TRACE, EvidenceKind.APPLICATION))
+            for attempt_id, when in (("t-utc", earlier), ("t-plus5", later)):
+                store.append_attempt(Attempt(attempt_id, "a1", "v1", when, "2", HintLevel.NONE,
+                                             ScoreStatus.CORRECT, "reviewed_exact_key",
+                                             "assessment-v1", "practice"))
+            self.assertEqual([a.id for a in store.list_attempts("c1")], ["t-plus5", "t-utc"])
+            store.save_draft("d-utc", "a1", "v1", "x", earlier)
+            store.save_draft("d-plus5", "a1", "v1", "y", later)
+            self.assertEqual(store.open_draft("c1")["id"], "d-plus5")
+            store.save_hint("d-plus5", HintLevel.NUDGE, later)
+            store.save_hint("d-plus5", HintLevel.TARGETED, earlier)
+            self.assertEqual(store.hint_levels("d-plus5"),
+                             (HintLevel.NUDGE, HintLevel.TARGETED))
+            exported = store.export_all()
+            self.assertEqual([row["id"] for row in exported["attempts"]],
+                             ["t-plus5", "t-utc"])
+            self.assertEqual([row["id"] for row in exported["practiceDrafts"]],
+                             ["d-plus5", "d-utc"])
     def test_either_v2_branch_migrates_to_combined_schema(self) -> None:
         for absent_tables in (("lesson_completions",),
                               ("answer_revisions", "self_reviews")):

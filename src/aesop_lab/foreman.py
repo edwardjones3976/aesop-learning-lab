@@ -87,6 +87,18 @@ class Preview:
                 "hintAssisted": sum(not a.unassisted for a in attempts),
                 "needsReview": sum(a.score_status.value == "ungraded" for a in attempts),
                 "recentOutcome": attempts[-1].score_status.value if attempts else None,
+                "recordedAttempts": [
+                    {"id": attempt.id, "activityId": attempt.activity_id,
+                     "contentVersion": attempt.content_version,
+                     "evidenceKind": service.items[attempt.activity_id].spec.activity.evidence_kind.value,
+                     "occurredAt": attempt.occurred_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                     "firstAnswer": attempt.first_answer,
+                     "scoreStatus": attempt.score_status.value,
+                     "gradingMethod": attempt.grading_method,
+                     "hintLevel": attempt.hint_level.value,
+                     "assisted": not attempt.unassisted}
+                    for attempt in reversed(attempts)
+                ],
                 "evidence": summarize_evidence(
                     {item.spec.activity.id: item.spec.activity for item in service.items.values()},
                     attempts, completed),

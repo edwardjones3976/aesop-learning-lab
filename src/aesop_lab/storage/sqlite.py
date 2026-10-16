@@ -248,9 +248,11 @@ class SQLiteStore:
         rows = self.connection.execute(
             "SELECT t.* FROM attempts t JOIN activities a ON "
             "t.activity_id = a.id AND t.content_version = a.content_version "
-            "WHERE a.concept_id = ? ORDER BY t.occurred_at, t.id",
+            "WHERE a.concept_id = ?",
             (concept_id,),
         ).fetchall()
+        # Stored ISO text sorts wrongly across UTC offsets; order by instant.
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["occurred_at"]), row["id"]))
         return tuple(Attempt(
             row["id"], row["activity_id"], row["content_version"],
             datetime.fromisoformat(row["occurred_at"]), row["first_answer"],
@@ -262,12 +264,13 @@ class SQLiteStore:
         ) for row in rows)
 
     def open_draft(self, concept_id: str) -> sqlite3.Row | None:
-        return self.connection.execute(
+        rows = self.connection.execute(
             "SELECT d.* FROM practice_drafts d JOIN activities a ON "
             "d.activity_id = a.id AND d.content_version = a.content_version "
-            "WHERE a.concept_id = ? AND d.submitted_attempt_id IS NULL "
-            "ORDER BY d.recorded_at, d.id LIMIT 1", (concept_id,),
-        ).fetchone()
+            "WHERE a.concept_id = ? AND d.submitted_attempt_id IS NULL", (concept_id,),
+        ).fetchall()
+        return min(rows, default=None, key=lambda row: (
+            datetime.fromisoformat(row["recorded_at"]), row["id"]))
 
     def get_draft(self, draft_id: str) -> sqlite3.Row | None:
         return self.connection.execute("SELECT * FROM practice_drafts WHERE id = ?", (draft_id,)).fetchone()
@@ -284,7 +287,7 @@ class SQLiteStore:
 
     def hint_levels(self, draft_id: str) -> tuple[HintLevel, ...]:
         rows = self.connection.execute(
-            "SELECT level FROM practice_hint_events WHERE draft_id = ? ORDER BY viewed_at, rowid",
+            "SELECT level FROM practice_hint_events WHERE draft_id = ? ORDER BY rowid",
             (draft_id,),
         ).fetchall()
         return tuple(HintLevel(row[0]) for row in rows)
@@ -333,8 +336,9 @@ class SQLiteStore:
 
     def list_self_reviews(self, attempt_id: str) -> tuple[SelfReview, ...]:
         rows = self.connection.execute(
-            "SELECT * FROM self_reviews WHERE attempt_id = ? ORDER BY occurred_at, id", (attempt_id,)
+            "SELECT * FROM self_reviews WHERE attempt_id = ?", (attempt_id,)
         ).fetchall()
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["occurred_at"]), row["id"]))
         return tuple(SelfReview(
             row["id"], row["attempt_id"], row["rubric_id"], row["rubric_version"],
             datetime.fromisoformat(row["occurred_at"]),
@@ -367,8 +371,9 @@ class SQLiteStore:
 
     def list_revisions(self, review_id: str) -> tuple[AnswerRevision, ...]:
         rows = self.connection.execute(
-            "SELECT * FROM answer_revisions WHERE review_id = ? ORDER BY occurred_at, id", (review_id,)
+            "SELECT * FROM answer_revisions WHERE review_id = ?", (review_id,)
         ).fetchall()
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["occurred_at"]), row["id"]))
         return tuple(AnswerRevision(row["id"], row["review_id"],
                                     datetime.fromisoformat(row["occurred_at"]), row["answer"])
                      for row in rows)
@@ -401,9 +406,9 @@ class SQLiteStore:
 
     def list_assignments(self, protocol_id: str) -> tuple[ExperimentAssignment, ...]:
         rows = self.connection.execute(
-            "SELECT * FROM experiment_assignments WHERE protocol_id = ? "
-            "ORDER BY assigned_at, item_family_id", (protocol_id,)
+            "SELECT * FROM experiment_assignments WHERE protocol_id = ?", (protocol_id,)
         ).fetchall()
+        rows.sort(key=lambda row: (datetime.fromisoformat(row["assigned_at"]), row["item_family_id"]))
         return tuple(ExperimentAssignment(
             row["protocol_id"], row["protocol_version"], row["concept_id"],
             row["item_family_id"], row["condition_id"], row["seed"],
@@ -411,16 +416,15 @@ class SQLiteStore:
         ) for row in rows)
 
     def export_all(self) -> dict[str, object]:
-        attempts = self.connection.execute("SELECT * FROM attempts ORDER BY occurred_at, id").fetchall()
-        assignments = self.connection.execute(
-            "SELECT * FROM experiment_assignments ORDER BY assigned_at, item_family_id"
-        ).fetchall()
-        reviews = self.connection.execute(
-            "SELECT * FROM self_reviews ORDER BY occurred_at, id"
-        ).fetchall()
-        revisions = self.connection.execute(
-            "SELECT * FROM answer_revisions ORDER BY occurred_at, id"
-        ).fetchall()
+        def by_instant(query: str, timestamp: str, tie_break: str) -> list[sqlite3.Row]:
+            rows = self.connection.execute(query).fetchall()
+            rows.sort(key=lambda row: (datetime.fromisoformat(row[timestamp]), row[tie_break]))
+            return rows
+
+        attempts = by_instant("SELECT * FROM attempts", "occurred_at", "id")
+        assignments = by_instant("SELECT * FROM experiment_assignments", "assigned_at", "item_family_id")
+        reviews = by_instant("SELECT * FROM self_reviews", "occurred_at", "id")
+        revisions = by_instant("SELECT * FROM answer_revisions", "occurred_at", "id")
         return {
             "schemaVersion": SCHEMA_VERSION,
             "attempts": [dict(row) for row in attempts],
@@ -429,11 +433,11 @@ class SQLiteStore:
             "experimentAssignments": [dict(row) for row in assignments],
             "lessonCompletions": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM lesson_completions ORDER BY concept_id, content_version")],
-            "practiceDrafts": [dict(row) for row in self.connection.execute(
+            "practiceDrafts": [dict(row) for row in by_instant(
                 "SELECT id, activity_id, content_version, first_answer, recorded_at, "
-                "submitted_attempt_id FROM practice_drafts ORDER BY recorded_at, id")],
-            "hintEvents": [dict(row) for row in self.connection.execute(
-                "SELECT * FROM practice_hint_events ORDER BY viewed_at, draft_id")],
+                "submitted_attempt_id FROM practice_drafts", "recorded_at", "id")],
+            "hintEvents": [dict(row) for row in by_instant(
+                "SELECT * FROM practice_hint_events", "viewed_at", "draft_id")],
         }
 
     def learner_content_versions(self) -> frozenset[str]:
