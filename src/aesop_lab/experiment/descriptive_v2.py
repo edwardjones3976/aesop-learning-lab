@@ -200,8 +200,14 @@ def _classify_first(
             activity.family_id in prior_families or
             first.hint_level is not HintLevel.NONE):
         return "contaminated", None
-    if (first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT) or
+    if first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT):
+        return "ungraded", None
+    if (content_review_status == "reviewed" and
             first.grading_method != "reviewed_exact_key"):
+        return "ungraded", None
+    if (content_review_status == "draft" and
+            first.grading_method not in ("development_fixture_exact_key",
+                                         "reviewed_exact_key")):
         return "ungraded", None
     elapsed = first.occurred_at - exposure.completed_at
     elapsed_seconds = elapsed.total_seconds()

@@ -32,9 +32,10 @@ def exposure():
                       completed_at=NOW)
 
 
-def attempt(when=NOW + timedelta(days=7), status=ScoreStatus.CORRECT):
+def attempt(when=NOW + timedelta(days=7), status=ScoreStatus.CORRECT,
+            method="reviewed_exact_key"):
     return Attempt("v3-attempt", ITEM.id, "v6", when, "result", HintLevel.NONE,
-                   status, "reviewed_exact_key", "assessment-v1", "v3 held-out check")
+                   status, method, "assessment-v1", "v3 held-out check")
 
 
 class ProspectiveV3Tests(unittest.TestCase):
@@ -55,7 +56,8 @@ class ProspectiveV3Tests(unittest.TestCase):
         self.assertIn(arms.count("text"), (2, 3))
 
     def test_draft_candidate_matches_are_provisional_in_v3(self):
-        result = analyze_v3([assignment()], [exposure()], [attempt()],
+        result = analyze_v3([assignment()], [exposure()],
+                            [attempt(method="development_fixture_exact_key")],
                             {ITEM.id: ITEM}, learner_id=LEARNER,
                             now=NOW + timedelta(days=8))
         arm = result["arms"][assignment().condition_id]
@@ -64,6 +66,13 @@ class ProspectiveV3Tests(unittest.TestCase):
         self.assertEqual(arm["candidateKeyMatches"], 1)
         self.assertEqual(result["independentLearnersWithOutcome"], 0)
         self.assertEqual(result["status"], "insufficient_evidence")
+        reviewed = analyze_v3([assignment()], [exposure()],
+                              [attempt(method="development_fixture_exact_key")],
+                              {ITEM.id: ITEM}, learner_id=LEARNER,
+                              now=NOW + timedelta(days=8),
+                              content_review_status="reviewed")
+        self.assertEqual(reviewed["arms"][assignment().condition_id]["eligible"], 0)
+        self.assertEqual(reviewed["arms"][assignment().condition_id]["ungraded"], 1)
 
     def test_reviewed_on_time_primary_and_late_nonprimary_remain_separate(self):
         on_time = analyze_v3([assignment()], [exposure()], [attempt()],

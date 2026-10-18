@@ -143,7 +143,8 @@ class DescriptiveV2Tests(unittest.TestCase):
         self.assertEqual(seen["arms"][assignment().condition_id]["contaminated"], 1)
 
     def test_draft_candidate_match_is_provisional_and_never_primary_eligible(self):
-        report = analyze_v2([assignment()], [exposure()], [attempt()],
+        report = analyze_v2([assignment()], [exposure()],
+                            [attempt(method="development_fixture_exact_key")],
                             {ITEM.id: ITEM}, learner_id=LEARNER,
                             now=START + timedelta(days=8))
         arm = report["arms"][assignment().condition_id]
@@ -154,12 +155,21 @@ class DescriptiveV2Tests(unittest.TestCase):
         self.assertEqual(report["provisionalConceptObservationsTotal"], 1)
         self.assertEqual(arm["observations"][0]["candidateKeyStatus"], "correct")
         self.assertNotIn("reviewedScoreStatus", arm["observations"][0])
+        reviewed = analyze_v2([assignment()], [exposure()],
+                              [attempt(method="development_fixture_exact_key")],
+                              {ITEM.id: ITEM}, learner_id=LEARNER,
+                              now=START + timedelta(days=8),
+                              content_review_status="reviewed")
+        self.assertEqual(reviewed["arms"][assignment().condition_id]["ungraded"], 1)
+        self.assertEqual(reviewed["arms"][assignment().condition_id]["eligible"], 0)
 
     def test_late_independent_first_response_keeps_actual_delay_outside_primary(self):
         delay = timedelta(days=17, hours=3, minutes=5, seconds=0.25)
-        late = attempt(when=START + delay)
         for review in ("draft", "reviewed"):
             with self.subTest(review=review):
+                method = ("development_fixture_exact_key" if review == "draft"
+                          else "reviewed_exact_key")
+                late = attempt(when=START + delay, method=method)
                 report = analyze_v2([assignment()], [exposure(observed_seconds=600)],
                                     [late], {ITEM.id: ITEM}, learner_id=LEARNER,
                                     now=late.occurred_at, content_review_status=review)
