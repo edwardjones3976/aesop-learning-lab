@@ -34,6 +34,12 @@ function requireBoolean(value, path) {
   return value;
 }
 
+function requireTimestamp(value, path) {
+  requireString(value, path);
+  if (Number.isNaN(Date.parse(value))) throw contractError(path, 'expected a valid timestamp.');
+  return value;
+}
+
 export function normalizeEvidence(evidence, path = 'evidence') {
   const raw = requireRecord(evidence, path);
   const byKind = {};
@@ -65,16 +71,41 @@ export function normalizeEvidence(evidence, path = 'evidence') {
     const occurredAt = requireString(row.occurredAt, `${path}.delayedChecks[${index}].occurredAt`);
     if (Number.isNaN(Date.parse(occurredAt))) throw contractError(`${path}.delayedChecks[${index}].occurredAt`, 'expected a valid timestamp.');
   });
+  const contentQualityCandidates = requireArray(raw.contentQualityCandidates ?? [], `${path}.contentQualityCandidates`);
+  contentQualityCandidates.forEach((candidate, index) => {
+    const row = requireRecord(candidate, `${path}.contentQualityCandidates[${index}]`);
+    requireString(row.activityId, `${path}.contentQualityCandidates[${index}].activityId`);
+    requireString(row.reason, `${path}.contentQualityCandidates[${index}].reason`);
+    requireArray(row.attemptIds, `${path}.contentQualityCandidates[${index}].attemptIds`).forEach((id, n) =>
+      requireString(id, `${path}.contentQualityCandidates[${index}].attemptIds[${n}]`));
+  });
   return {
     byKind,
     delayedChecks,
     delayedOutcomeByDay,
     confidenceOutcomePairs: requireNumber(raw.confidenceOutcomePairs, `${path}.confidenceOutcomePairs`),
+    contentQualityCandidates,
   };
 }
 
 function validateSignals(signals, path) {
   const raw = requireRecord(signals, path);
+  const reviewSchedule = raw.reviewSchedule == null ? null : requireRecord(raw.reviewSchedule, `${path}.reviewSchedule`);
+  if (reviewSchedule) {
+    if (!['upcoming', 'due', 'overdue', 'none'].includes(reviewSchedule.status)) {
+      throw contractError(`${path}.reviewSchedule.status`, 'expected upcoming, due, overdue, or none.');
+    }
+    if (reviewSchedule.dueAt != null) requireTimestamp(reviewSchedule.dueAt, `${path}.reviewSchedule.dueAt`);
+    requireString(reviewSchedule.reason, `${path}.reviewSchedule.reason`);
+  }
+  const openDraft = raw.openDraft == null ? null : requireRecord(raw.openDraft, `${path}.openDraft`);
+  if (openDraft) {
+    requireString(openDraft.activityId, `${path}.openDraft.activityId`);
+    requireTimestamp(openDraft.savedAt, `${path}.openDraft.savedAt`);
+    if (!['none', 'nudge', 'targeted', 'worked_solution'].includes(openDraft.hintLevel)) {
+      throw contractError(`${path}.openDraft.hintLevel`, 'hint level is not recognized.');
+    }
+  }
   const recordedAttempts = requireArray(raw.recordedAttempts, `${path}.recordedAttempts`);
   recordedAttempts.forEach((attempt, index) => {
     const item = requireRecord(attempt, `${path}.recordedAttempts[${index}]`);
@@ -103,6 +134,8 @@ function validateSignals(signals, path) {
     recentOutcome: raw.recentOutcome == null ? null : requireString(raw.recentOutcome, `${path}.recentOutcome`),
     recordedAttempts,
     evidence: normalizeEvidence(raw.evidence, `${path}.evidence`),
+    reviewSchedule,
+    openDraft,
   };
 }
 
@@ -149,10 +182,15 @@ export function validateOverview(data) {
         }
       }
     }
-    if (requireString(experiment.status, 'overview.experiment.status') !== 'insufficient_evidence') {
+    if (!['insufficient_evidence', 'descriptive_only'].includes(requireString(experiment.status, 'overview.experiment.status'))) {
       throw contractError('overview.experiment.status', 'unsupported finding status.');
     }
     requireString(experiment.reason, 'overview.experiment.reason');
+    if (experiment.contentReviewStatus != null && !['draft', 'reviewed'].includes(experiment.contentReviewStatus)) {
+      throw contractError('overview.experiment.contentReviewStatus', 'expected draft or reviewed.');
+    }
+    if (protocol?.exposureDurationControlled != null) requireBoolean(protocol.exposureDurationControlled, 'overview.experiment.protocol.exposureDurationControlled');
+    if (protocol?.minimumPerArm != null) requireNumber(protocol.minimumPerArm, 'overview.experiment.protocol.minimumPerArm');
   }
   return {
     ...overview,
@@ -262,6 +300,7 @@ function validateDraft(draft, path) {
 
 export function validateSession(data) {
   const session = requireRecord(data, 'session');
+  if (session.nextCheckAt != null) requireTimestamp(session.nextCheckAt, 'session.nextCheckAt');
   if (session.lessonRequired) {
     requireBoolean(session.lessonRequired, 'session.lessonRequired');
     if (session.activity != null) throw contractError('session.activity', 'must be null when lesson is required.');
@@ -364,7 +403,37 @@ export function evidenceMarkup(evidence, recordedAttempts = []) {
   const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => `<li>Day ${esc(check.checkDelayDays)} · ${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(String(check.familiarityStatus ?? 'not_verified').replace('_', ' '))} · ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
   const intervalStatus = Object.entries(normalized.delayedOutcomeByDay).map(([day, status]) => `<li>Day ${esc(day)}: ${esc(status.replace('_', ' '))}</li>`).join('');
   const history = recordedAttempts.length ? recordedAttempts.map(attempt => `<li><details><summary>${esc(attempt.activityId)} · ${esc(attempt.evidenceKind)} · ${esc(attempt.scoreStatus)} · ${attempt.assisted ? 'assisted' : 'independent'} · ${esc(new Date(attempt.occurredAt).toLocaleString())}</summary><p>Content ${esc(attempt.contentVersion)} · Hint: ${esc(attempt.hintLevel.replace('_', ' '))} · Method: ${esc(attempt.gradingMethod)}</p><p>Pre-hint confidence: ${attempt.confidence == null ? 'not provided' : `${Math.round(attempt.confidence * 100)}%`} · Outside study: ${esc(attempt.outsideStudy ?? 'not recorded')}</p><pre class="code">${esc(attempt.firstAnswer)}</pre></details></li>`).join('') : '<li>No attempts recorded yet.</li>';
-  return `<details class="evidence-panel"><summary>Inspect learning evidence</summary><p class="muted">Observed answers by kind. Candidate-key matches are development feedback, not mastery.</p><div class="table-scroll"><table><thead><tr><th scope="col">Kind</th><th scope="col">Independent matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Ungraded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Delayed check status</strong></p><ul>${intervalStatus || '<li>Insufficient evidence: no delayed held-out answer yet.</li>'}</ul><p><strong>Delayed answers</strong></p><ul>${delayed}</ul><p><strong>Attempt history</strong></p><ul>${history}</ul><p class="muted">Independent scored answers with confidence recorded: ${normalized.confidenceOutcomePairs}. No calibrated estimate is available.</p></details>`;
+  const candidates = normalized.contentQualityCandidates.length ? normalized.contentQualityCandidates.map(row => `<li>${esc(row.activityId)}: ${esc(row.reason)} (${row.attemptIds.length} recorded attempts). Requires content review; repeated errors alone do not prove an item defect.</li>`).join('') : '<li>No content review candidates recorded.</li>';
+  return `<details class="evidence-panel"><summary>Inspect learning evidence</summary><p class="muted">Observed answers by kind. Candidate-key matches are development feedback, not mastery.</p><div class="table-scroll"><table><thead><tr><th scope="col">Kind</th><th scope="col">Independent matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Ungraded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Delayed check status</strong></p><ul>${intervalStatus || '<li>Insufficient evidence: no delayed held-out answer yet.</li>'}</ul><p><strong>Delayed answers</strong></p><ul>${delayed}</ul><p><strong>Content review candidates</strong></p><ul>${candidates}</ul><p><strong>Attempt history</strong></p><ul>${history}</ul><p class="muted">Independent scored answers with confidence recorded: ${normalized.confidenceOutcomePairs}. No calibrated estimate is available.</p></details>`;
+}
+
+export function evidenceSnapshot(evidence) {
+  const normalized = normalizeEvidence(evidence, 'signals.evidence');
+  const counts = Object.values(normalized.byKind);
+  return {
+    independent: counts.reduce((sum, row) => sum + row.unassistedCorrect, 0),
+    assisted: counts.reduce((sum, row) => sum + row.assistedCorrect, 0),
+    incorrect: counts.reduce((sum, row) => sum + row.incorrect, 0),
+    ungraded: counts.reduce((sum, row) => sum + row.ungraded, 0),
+    missingKinds: counts.filter(row => row.unassistedCorrect + row.assistedCorrect + row.incorrect + row.ungraded === 0).length,
+    delayedIndependent: normalized.delayedChecks.filter(row => !row.assisted).length,
+    delayedMissing: Object.values(normalized.delayedOutcomeByDay).filter(status => status === 'insufficient_evidence').length,
+  };
+}
+
+export function evidenceSummaryMarkup(evidence) {
+  const counts = evidenceSnapshot(evidence);
+  return `<section class="evidence-summary" aria-label="Observed learning evidence"><h3>What has been observed</h3><div class="evidence-summary-grid"><p><strong>${counts.independent}</strong>Independent candidate matches</p><p><strong>${counts.assisted}</strong>Assisted candidate matches</p><p><strong>${counts.delayedIndependent}</strong>Independent delayed answers</p><p><strong>${counts.missingKinds}</strong>Evidence categories without an answer</p></div><p class="muted">${counts.incorrect} incorrect · ${counts.ungraded} ungraded · ${counts.delayedMissing} delayed intervals without an observed answer. Delayed answers are a subset of the categories above, not extra attempts. Candidate-key matches do not establish mastery.</p></section>`;
+}
+
+export function reviewTimingMarkup(schedule, session = null, now = new Date()) {
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dueAt = schedule?.dueAt ?? session?.nextCheckAt ?? null;
+  let status = schedule?.status ?? (session?.activity?.heldOut ? 'due' : dueAt ? 'upcoming' : 'none');
+  if (dueAt && status === 'upcoming' && Date.parse(dueAt) <= now.getTime()) status = 'due';
+  const label = {upcoming:'Upcoming delayed review', due:'Delayed review due', overdue:'Delayed review overdue', none:'No delayed review scheduled'}[status];
+  const reason = schedule?.reason ?? session?.recommendation?.reason ?? session?.reason ?? 'A review time appears after sufficient practice evidence.';
+  return `<section class="review-timing" role="status" aria-label="Review timing"><strong>${label}</strong>${dueAt ? `<p>Review time: <time datetime="${esc(dueAt)}">${esc(new Date(dueAt).toLocaleString())}</time></p>` : ''}<p>${esc(reason)}</p></section>`;
 }
 
 if (typeof globalThis.document !== 'undefined') {
@@ -423,7 +492,12 @@ function showError(error) {
 }
 function concepts() {
   const path = state.overview?.pathRecommendation;
-  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}${path && c.id === path.conceptId ? ' · Suggested' : ''}</small></span></button>`).join('');
+  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => {
+    const schedule = c.signals.reviewSchedule;
+    const timing = schedule && schedule.status !== 'none' ? ` · Review ${esc(schedule.status)}` : '';
+    const draft = c.signals.openDraft ? ' · Saved first answer' : '';
+    return `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}" aria-current="${c.id === state.conceptId ? 'true' : 'false'}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}${timing}${draft}${path && c.id === path.conceptId ? ' · Suggested' : ''}</small></span></button>`;
+  }).join('');
   conceptsEl.querySelectorAll('[data-concept]').forEach(button => button.onclick = () => select(button.dataset.concept));
 }
 async function select(cid) {
@@ -471,8 +545,17 @@ function renderWorkspace() {
   const protocolId = finding?.protocol?.id ?? finding?.protocolId;
   const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
   const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} eligible delayed answers, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing or ineligible.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} eligible delayed answers, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing or ineligible.</p></div>` : '';
-  const experimentMarkup = finding ? `<div class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${armsMarkup}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></div>` : '';
-  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${experimentMarkup}<div class="signals"><div class="signal"><strong>${signals.attempts}</strong>attempts</div><div class="signal"><strong>${signals.unassistedCorrect}</strong>unassisted candidate matches</div><div class="signal"><strong>${signals.hintAssisted}</strong>hint-assisted attempts</div></div>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}<div class="divider"></div>`;
+  const limitations = [
+    finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
+    finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
+    finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
+    finding?.syntheticResultsAreLearningEvidence === false ? 'Synthetic test results are not learner evidence.' : null,
+  ].filter(Boolean);
+  const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B · text with diagram' : state.lesson.method?.conditionId === 'text' ? 'A · text' : null;
+  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>Limits on interpretation</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></section>` : '';
+  const draftMarkup = signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
+  const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
+  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${draftMarkup}${reviewMarkup}${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}<div class="divider"></div>`;
   content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
     const method = state.lesson.method;

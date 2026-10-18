@@ -6,8 +6,11 @@ import { fileURLToPath } from 'node:url';
 import {
   buildAttemptPayload,
   evidenceMarkup,
+  evidenceSnapshot,
+  evidenceSummaryMarkup,
   lessonMarkup,
   normalizeEvidence,
+  reviewTimingMarkup,
   validateAttemptResult,
   validateLesson,
   validateOverview,
@@ -72,6 +75,50 @@ test('missing evidence is identified before rendering instead of displayed as ze
   assert.match(html, /Inspect learning evidence/);
 });
 
+test('returning evidence keeps independent, assisted, delayed, and missing counts distinct', () => {
+  const evidence = emptyEvidence();
+  evidence.byKind.recognition.unassistedCorrect = 1;
+  evidence.byKind.recall.assistedCorrect = 1;
+  evidence.byKind.application.incorrect = 1;
+  evidence.delayedChecks.push({ attemptId: 'later', checkDelayDays: 1, evidenceKind: 'application',
+    scoreStatus: 'incorrect', assisted: false, familiarityStatus: 'not_verified',
+    occurredAt: '2026-01-02T12:00:00Z' });
+  evidence.delayedOutcomeByDay['1'] = 'observed';
+  assert.deepEqual(evidenceSnapshot(evidence), {
+    independent: 1, assisted: 1, incorrect: 1, ungraded: 0,
+    missingKinds: 2, delayedIndependent: 1, delayedMissing: 1,
+  });
+  const html = evidenceSummaryMarkup(evidence);
+  assert.match(html, /Independent candidate matches/);
+  assert.match(html, /Assisted candidate matches/);
+  assert.match(html, /Delayed answers are a subset/);
+});
+
+test('optional review schedule and saved draft validate without changing legacy overview', () => {
+  const payload = baseOverview([baseConcept('c1', 'One')], { conceptId: 'c1', action: 'resume', reason: 'Resume.' });
+  assert.equal(validateOverview(payload).concepts[0].signals.reviewSchedule, null);
+  payload.concepts[0].signals.reviewSchedule = { dueAt: '2026-01-02T12:00:00Z', status: 'due', reason: 'Check recall.' };
+  payload.concepts[0].signals.openDraft = { activityId: 'item-1', savedAt: '2026-01-01T12:00:00Z', hintLevel: 'nudge' };
+  const valid = validateOverview(payload).concepts[0].signals;
+  assert.equal(valid.reviewSchedule.status, 'due');
+  assert.equal(valid.openDraft.hintLevel, 'nudge');
+  payload.concepts[0].signals.reviewSchedule.dueAt = 'not a date';
+  assert.throws(() => validateOverview(payload), /reviewSchedule\.dueAt/);
+});
+
+test('review timing uses a controlled clock and escapes reason text', () => {
+  const schedule = { dueAt: '2026-01-02T12:00:00Z', status: 'upcoming', reason: '<review>' };
+  const before = reviewTimingMarkup(schedule, null, new Date('2026-01-01T12:00:00Z'));
+  assert.match(before, /Upcoming delayed review/);
+  const due = reviewTimingMarkup(schedule, null, new Date('2026-01-03T12:00:00Z'));
+  assert.match(due, /Delayed review due/);
+  assert.match(due, /&lt;review&gt;/);
+  assert.doesNotMatch(due, /<review>/);
+  const legacy = reviewTimingMarkup(null, { nextCheckAt: null, activity: { heldOut: true },
+    recommendation: { reason: 'Held-out check.' } }, new Date('2026-01-03T12:00:00Z'));
+  assert.match(legacy, /Delayed review due/);
+});
+
 test('null evidence.byKind is rejected with a contract path', () => {
   assert.throws(
     () => normalizeEvidence({ byKind: null }, 'signals.evidence'),
@@ -85,6 +132,19 @@ test('a delayed check without assistance status cannot be called independent', (
     evidenceKind: 'application', scoreStatus: 'correct',
     familiarityStatus: 'not_verified', occurredAt: '2026-01-02T12:00:00Z' });
   assert.throws(() => normalizeEvidence(evidence), /delayedChecks\[0\]\.assisted/);
+});
+
+test('content quality candidates remain review candidates and escape their reason', () => {
+  const evidence = emptyEvidence();
+  evidence.contentQualityCandidates = [{ activityId: 'item-1', attemptIds: ['a1', 'a2'],
+    reason: '<script>repeated misses</script>' }];
+  const html = evidenceMarkup(evidence);
+  assert.match(html, /Content review candidates/);
+  assert.match(html, /Requires content review/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  delete evidence.contentQualityCandidates[0].attemptIds;
+  assert.throws(() => normalizeEvidence(evidence), /contentQualityCandidates\[0\]\.attemptIds/);
 });
 
 test('attempt history preserves assistance and escapes the saved answer', () => {
