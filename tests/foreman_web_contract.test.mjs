@@ -76,7 +76,7 @@ test('missing evidence is identified before rendering instead of displayed as ze
   assert.match(html, /Inspect learning evidence/);
 });
 
-test('returning evidence keeps independent, assisted, delayed, and missing counts distinct', () => {
+test('returning evidence keeps unassisted, assisted, delayed, and missing counts distinct', () => {
   const evidence = emptyEvidence();
   evidence.byKind.recognition.unassistedCorrect = 1;
   evidence.byKind.recall.assistedCorrect = 1;
@@ -90,7 +90,8 @@ test('returning evidence keeps independent, assisted, delayed, and missing count
     missingKinds: 2, delayedIndependent: 1, delayedMissing: 1,
   });
   const html = evidenceSummaryMarkup(evidence);
-  assert.match(html, /Independent candidate matches/);
+  assert.match(html, /Unassisted candidate matches/);
+  assert.match(html, /Unassisted counts may include repeated families/);
   assert.match(html, /Assisted candidate matches/);
   assert.match(html, /Delayed answers are a subset/);
 });

@@ -99,6 +99,15 @@ class Preview:
             service = self.services[cid]
             attempts = tuple(a for a in self.store.list_attempts(cid)
                              if a.content_version == service.concept.content_version)
+            first_by_family = {}
+            for attempt in sorted(attempts, key=lambda a: (a.occurred_at, a.id)):
+                family = service.items[attempt.activity_id].spec.activity.family_id
+                first_by_family.setdefault(family, attempt)
+            independent_fresh = sum(
+                attempt.score_status.value == "correct" and attempt.unassisted
+                for family, attempt in first_by_family.items()
+                if family not in service.encountered_family_ids
+            )
             completed = self.store.lesson_completed_at(cid, service.concept.content_version)
             session = service.next_session(20) if completed else None
             next_check = session.get("nextCheckAt") if session else None
@@ -115,11 +124,14 @@ class Preview:
             return {
                 "attempts": len(attempts),
                 "unassistedCorrect": sum(a.score_status.value == "correct" and a.unassisted for a in attempts),
+                "freshUnassistedCorrect": independent_fresh,
+                "encounteredFamilyIds": sorted(service.encountered_family_ids),
                 "hintAssisted": sum(not a.unassisted for a in attempts),
                 "needsReview": sum(a.score_status.value == "ungraded" for a in attempts),
                 "recentOutcome": attempts[-1].score_status.value if attempts else None,
                 "recordedAttempts": [
                     {"id": attempt.id, "activityId": attempt.activity_id,
+                     "familyId": service.items[attempt.activity_id].spec.activity.family_id,
                      "contentVersion": attempt.content_version,
                      "evidenceKind": service.items[attempt.activity_id].spec.activity.evidence_kind.value,
                      "occurredAt": attempt.occurred_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -174,13 +186,13 @@ class Preview:
                             "reason": session["recommendation"]["reason"]}
         for concept in concepts:
             if (concept["lessonComplete"] and
-                    concept["signals"]["unassistedCorrect"] == 0):
+                    concept["signals"]["freshUnassistedCorrect"] == 0):
                 return {"conceptId": concept["id"], "action": "practice",
-                        "reason": "Build one independent candidate-key match before moving on."}
+                        "reason": "Build one unassisted candidate-key match on a new item family before moving on."}
         for concept in concepts:
             if not concept["lessonComplete"] and all(
                 by_id[parent]["lessonComplete"] and
-                by_id[parent]["signals"]["unassistedCorrect"] > 0
+                by_id[parent]["signals"]["freshUnassistedCorrect"] > 0
                 for parent in self.pack.prerequisites_of(concept["id"])):
                 return {"conceptId": concept["id"], "action": "lesson",
                         "reason": "Read the next lesson in prerequisite order."}
@@ -286,10 +298,10 @@ class Preview:
         if learner_reason is not None and (not isinstance(learner_reason, str) or
                                            len(learner_reason) > 500):
             raise ApiError("validation_error", "An override note must be at most 500 characters.")
+        normalized_note = learner_reason.strip() or None if learner_reason is not None else None
         path = self.overview()["pathRecommendation"]
-        recommended = (service.next_session(20, "recommended")
-                       if path["conceptId"] == cid and
-                       path["action"] in ("practice", "delayed_check") else None)
+        recommended = (self._service(path["conceptId"]).next_session(20, "recommended")
+                       if path["action"] in ("practice", "delayed_check") else None)
         selected = service.next_session(20, "practice")
         event_id = str(uuid4())
         self.store.record_override(event_id, cid, service.concept.content_version,
@@ -297,7 +309,7 @@ class Preview:
                                    recommended_activity_id=((recommended or {}).get("activity") or {}).get("id"),
                                    recommended_reason=path["reason"],
                                    selected_activity_id=(selected.get("activity") or {}).get("id"),
-                                   learner_reason=learner_reason.strip() if learner_reason else None,
+                                   learner_reason=normalized_note,
                                    recommended_concept_id=path["conceptId"],
                                    recommended_action=path["action"],
                                    selected_concept_id=cid)

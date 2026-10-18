@@ -119,8 +119,9 @@ class LearningService:
             family = self.items[attempt.activity_id].spec.activity.family_id
             first_by_family.setdefault(family, attempt)
         independent_by_kind = {}
-        for attempt in first_by_family.values():
-            if attempt.score_status is ScoreStatus.CORRECT and attempt.unassisted:
+        for family, attempt in first_by_family.items():
+            if (family not in self.encountered_family_ids and
+                    attempt.score_status is ScoreStatus.CORRECT and attempt.unassisted):
                 kind = self.items[attempt.activity_id].spec.activity.evidence_kind.value
                 independent_by_kind[kind] = independent_by_kind.get(kind, 0) + 1
         missing = None

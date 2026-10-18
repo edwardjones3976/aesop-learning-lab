@@ -99,6 +99,23 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertEqual(recorded["selected_concept_id"], self.concept)
         self.assertEqual(recorded["learner_reason"], "One more")
 
+    def test_blank_override_note_and_other_concepts_recommendation_persist(self):
+        first = self.concept
+        selected = self.preview.pack.learning_order()[1]
+        self.preview.lesson(selected)
+        self.preview.complete_lesson(selected)
+        displayed = self.preview.overview()["pathRecommendation"]
+        self.assertEqual(displayed["conceptId"], first)
+        self.assertEqual(displayed["action"], "practice")
+        expected = self.preview.session(first)["activity"]["id"]
+        self.preview.override({"conceptId": selected, "mode": "practice",
+                               "reason": "learner_choice", "learnerReason": "   "})
+        saved = self.preview.store.export_all()["recommendationOverrides"][0]
+        self.assertIsNone(saved["learner_reason"])
+        self.assertEqual(saved["recommended_activity_id"], expected)
+        self.assertEqual(saved["recommended_concept_id"], first)
+        self.assertEqual(saved["selected_concept_id"], selected)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

@@ -82,8 +82,9 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
     item_by_id = {item.id: item for item in state.activities}
     for attempt in sorted(state.attempts, key=lambda a: (a.occurred_at, a.id)):
         first_by_family.setdefault(item_by_id[attempt.activity_id].family_id, attempt)
-    qualifying = [attempt for attempt in first_by_family.values()
-                  if attempt.score_status is ScoreStatus.CORRECT and
+    qualifying = [attempt for family, attempt in first_by_family.items()
+                  if family not in state.encountered_family_ids and
+                  attempt.score_status is ScoreStatus.CORRECT and
                   attempt.hint_level is HintLevel.NONE and
                   attempt.occurred_at >= state.lesson_completed_at]
     # An attempted earlier check unlocks the next interval regardless of score.
@@ -152,9 +153,9 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         if target_kind is not None and assisted and not repeated_item:
             # Gradually reduce scaffolding through a new prompt, rather than
             # treating a second view of the same answer as independent recall.
-            unseen = [item for item in candidates if not attempts_by_item[item.id]]
+            unseen = [item for item in candidates if item.family_id not in seen_families]
             if not unseen:
-                unseen = [item for item in practice if not attempts_by_item[item.id]]
+                unseen = [item for item in practice if item.family_id not in seen_families]
                 scored_unseen = [item for item in unseen if item.activity_type in
                                  (ActivityType.CHOICE, ActivityType.TRACE)]
                 if scored_unseen:
@@ -164,8 +165,10 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
             else:
                 adaptation_reason = ("No unused prompt remains. Repeating a previously assisted "
                                      "item is practice, not fresh independent evidence.")
-        # New items first; then rotate through the least practiced items.
-        item = min(candidates or practice, key=lambda candidate:
+        # A different item in an exposed family is still repeated practice.
+        pool = candidates or practice
+        fresh = [candidate for candidate in pool if candidate.family_id not in seen_families]
+        item = min(fresh or pool, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))
         if due_at is not None and state.now < due_at:
             reason = "Continue practice now; the independent check opens at its scheduled time."

@@ -40,8 +40,17 @@ class PersonalPilotJourneyTests(unittest.TestCase):
             for cid in concepts:
                 lesson = preview.lesson(cid)
                 self.assertGreater(len(lesson["body"]), 1400)
+                self.assertIn("## How it works", lesson["body"])
+                self.assertIn("## Common misconceptions", lesson["body"])
+                self.assertIn("```python", lesson["body"])
                 self.assertEqual(lesson["method"]["protocolVersion"], "v4")
                 preview.complete_lesson(cid)
+                exposure = next(row for row in preview.store.list_exposures()
+                                if row["concept_id"] == cid)
+                self.assertTrue(exposure["encountered_family_ids"])
+                initial_activity = preview.session(cid)["activity"]
+                self.assertNotIn(initial_activity["familyId"],
+                                 preview.services[cid].encountered_family_ids)
                 first_activity, first_result = answer(preview, cid,
                     assisted=(cid == concepts[0]), wrong=(cid == concepts[0]))
                 if cid == concepts[0]:

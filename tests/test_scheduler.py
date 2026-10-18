@@ -84,6 +84,14 @@ class SchedulerTests(unittest.TestCase):
         self.assertIsNone(decision.next_check_at)
         self.assertNotEqual(decision.recommendation.activity_id, CHECK.id)
 
+    def test_answer_from_studied_family_cannot_unlock_unfamiliar_check(self) -> None:
+        prior = (attempt("studied", PRACTICE_A),)
+        decision = recommend(state(LESSON_TIME + timedelta(days=2), prior,
+                                   (PRACTICE_A, PRACTICE_B, CHECK),
+                                   frozenset({PRACTICE_A.family_id})), 20, "pilot-v4")
+        self.assertIsNone(decision.next_check_at)
+        self.assertNotEqual(decision.recommendation.activity_id, CHECK.id)
+
     def test_all_repeatedly_missed_items_are_skipped_when_clean_prompt_exists(self) -> None:
         third = activity("practice-c", "family-e")
         prior = (attempt("a1", PRACTICE_A, correct=False),
