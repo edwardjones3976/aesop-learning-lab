@@ -106,6 +106,18 @@ test('optional review schedule and saved draft validate without changing legacy 
   assert.throws(() => validateOverview(payload), /reviewSchedule\.dueAt/);
 });
 
+test('descriptive protocol requires independent learner counts per arm', () => {
+  const payload = baseOverview([baseConcept('c1', 'One')],
+    { conceptId: 'c1', action: 'lesson', reason: 'Begin.' });
+  payload.experiment = { protocol: { id: 'text-vs-labeled-diagram', version: 'v2' },
+    status: 'insufficient_evidence', reason: 'One learner.', analysisUnit: 'independent_learner',
+    arms: Object.fromEntries(['text', 'diagram'].map(arm => [arm,
+      { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 1, independentLearners: 0 }])) };
+  assert.equal(validateOverview(payload).experiment.analysisUnit, 'independent_learner');
+  delete payload.experiment.arms.text.independentLearners;
+  assert.throws(() => validateOverview(payload), /arms\.text\.independentLearners/);
+});
+
 test('review timing uses a controlled clock and escapes reason text', () => {
   const schedule = { dueAt: '2026-01-02T12:00:00Z', status: 'upcoming', reason: '<review>' };
   const before = reviewTimingMarkup(schedule, null, new Date('2026-01-01T12:00:00Z'));
@@ -293,6 +305,8 @@ test('experiment lesson condition controls optional labeled diagram', () => {
     sources: [], method: { conditionId: 'text', protocolId: 'pilot-1', protocolVersion: '1' },
     diagram: null, experimentNotice: 'Assignment is stable.' };
   assert.equal(validateLesson(base).method.conditionId, 'text');
+  assert.equal(validateLesson({ ...base, method: { ...base.method, studyTargetMinutes: 10 } }).method.studyTargetMinutes, 10);
+  assert.throws(() => validateLesson({ ...base, method: { ...base.method, studyTargetMinutes: 0 } }), /studyTargetMinutes/);
   assert.equal(validateLesson({ ...base, method: { ...base.method, conditionId: 'diagram' }, diagram: 'input → output' }).diagram, 'input → output');
   assert.throws(() => validateLesson({ ...base, diagram: 'leaked diagram' }), /lesson\.diagram: a diagram requires/);
   assert.throws(() => validateLesson({ ...base, method: { ...base.method, conditionId: 'unknown' } }), /lesson\.method\.conditionId/);

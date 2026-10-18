@@ -109,16 +109,29 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         adaptation_reason = None
         errors = [a for a in state.attempts if a.score_status is ScoreStatus.INCORRECT]
         assisted = [a for a in state.attempts if a.hint_level is not HintLevel.NONE]
-        if len(errors) >= 2:
+        by_id = {item.id: item for item in state.activities}
+        repeated_item = next((item_id for item_id in sorted(attempts_by_item)
+                              if sum(a.score_status is ScoreStatus.INCORRECT
+                                     for a in attempts_by_item[item_id]) >= 2), None)
+        if repeated_item:
+            # One learner cannot establish that an item is defective. Avoid
+            # repeatedly drilling that same prompt or labeling a misconception.
+            target_kind = by_id[repeated_item].evidence_kind
+            adaptation_reason = ("Repeated misses on one item may reflect a concept gap "
+                                 "or unclear wording; try a different item and flag the "
+                                 "original for content review.")
+        elif len(errors) >= 2:
             target_kind = next((item.evidence_kind for item in practice
-                                if sum(next(activity for activity in state.activities
-                                            if activity.id == a.activity_id).evidence_kind
-                                       is item.evidence_kind for a in errors) >= 2), None)
+                                if sum(by_id[a.activity_id].evidence_kind is item.evidence_kind
+                                       for a in errors) >= 2), None)
             if target_kind:
                 adaptation_reason = f"Two incorrect answers on {target_kind.value} practice suggest targeted remediation."
-        if target_kind is None and len(assisted) >= 2:
-            target_kind = EvidenceKind.RECALL
-            adaptation_reason = "Two hint-assisted attempts suggest an unassisted recall check with less scaffolding."
+        if target_kind is None and assisted:
+            last_assisted = max(assisted, key=lambda a: (a.occurred_at, a.id))
+            target_kind = by_id[last_assisted.activity_id].evidence_kind
+            adaptation_reason = ("A hint-assisted answer is recorded. Try a fresh "
+                                 "first answer in this skill before requesting support; "
+                                 "lower hint use alone does not prove understanding.")
         recall_success = any(a.score_status is ScoreStatus.CORRECT and a.unassisted and
                              next(i for i in state.activities if i.id == a.activity_id).evidence_kind is EvidenceKind.RECALL
                              for a in state.attempts)
@@ -129,6 +142,14 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
             target_kind = EvidenceKind.APPLICATION
             adaptation_reason = "Independent recall is recorded, but independent application has not yet been shown."
         candidates = [item for item in practice if item.evidence_kind is target_kind] if target_kind else []
+        if repeated_item:
+            candidates = [item for item in candidates if item.id != repeated_item]
+        if target_kind is not None and assisted and not repeated_item:
+            # Gradually reduce scaffolding through a new prompt, rather than
+            # treating a second view of the same answer as independent recall.
+            unseen = [item for item in candidates if not attempts_by_item[item.id]]
+            if unseen:
+                candidates = unseen
         # New items first; then rotate through the least practiced items.
         item = min(candidates or practice, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))

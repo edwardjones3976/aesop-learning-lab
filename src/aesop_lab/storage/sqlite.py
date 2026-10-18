@@ -525,6 +525,8 @@ class SQLiteStore:
             SELECT content_version FROM attempts
             UNION SELECT content_version FROM lesson_completions
             UNION SELECT content_version FROM practice_drafts
+            UNION SELECT content_version FROM experiment_exposures
+            UNION SELECT content_version FROM recommendation_overrides
         """).fetchall()
         return frozenset(row[0] for row in versions)
 

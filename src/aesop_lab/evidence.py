@@ -16,6 +16,7 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
              for kind in EvidenceKind}
     delayed: list[dict[str, object]] = []
     confidence_pairs = 0
+    misses_by_item: dict[str, list[str]] = {}
     for attempt in attempts:
         activity = activities.get(attempt.activity_id)
         if activity is None or activity.content_version != attempt.content_version:
@@ -26,6 +27,7 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
             row["unassistedCorrect" if attempt.unassisted else "assistedCorrect"] += 1
         elif attempt.score_status is ScoreStatus.INCORRECT:
             row["incorrect"] += 1
+            misses_by_item.setdefault(activity.id, []).append(attempt.id)
         else:
             row["ungraded"] += 1
         if (attempt.confidence is not None and attempt.unassisted and
@@ -57,5 +59,10 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
         "delayedOutcome": "observed" if delayed else "insufficient_evidence",
         "delayedOutcomeByDay": interval_outcomes,
         "confidenceOutcomePairs": confidence_pairs,
+        "contentQualityCandidates": [
+            {"activityId": item_id, "attemptIds": ids,
+             "reason": "Repeated misses on one item warrant a wording/key check; this is not proof of a defective item or learner misconception."}
+            for item_id, ids in sorted(misses_by_item.items()) if len(ids) >= 2
+        ],
         "interpretation": "Development candidate-key observations only; no mastery or learning-effect claim.",
     }

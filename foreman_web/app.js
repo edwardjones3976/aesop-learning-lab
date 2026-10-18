@@ -180,7 +180,13 @@ export function validateOverview(data) {
         for (const count of ['assigned', 'exposed', 'eligible', 'correct', 'missing']) {
           requireNumber(row[count], `overview.experiment.arms.${arm}.${count}`);
         }
+        if (experiment.analysisUnit === 'independent_learner') {
+          requireNumber(row.independentLearners, `overview.experiment.arms.${arm}.independentLearners`);
+        }
       }
+    }
+    if (experiment.analysisUnit != null && experiment.analysisUnit !== 'independent_learner') {
+      throw contractError('overview.experiment.analysisUnit', 'unsupported analysis unit.');
     }
     if (!['insufficient_evidence', 'descriptive_only'].includes(requireString(experiment.status, 'overview.experiment.status'))) {
       throw contractError('overview.experiment.status', 'unsupported finding status.');
@@ -222,6 +228,9 @@ export function validateLesson(data) {
     }
     requireString(method.protocolId, 'lesson.method.protocolId');
     requireString(method.protocolVersion, 'lesson.method.protocolVersion');
+    if (method.studyTargetMinutes != null && (!Number.isSafeInteger(method.studyTargetMinutes) || method.studyTargetMinutes < 1)) {
+      throw contractError('lesson.method.studyTargetMinutes', 'expected a positive whole number.');
+    }
   }
   if (lesson.diagram != null && typeof lesson.diagram !== 'string') {
     throw contractError('lesson.diagram', 'expected text or null.');
@@ -544,22 +553,25 @@ function renderWorkspace() {
   const finding = state.overview.experiment;
   const protocolId = finding?.protocol?.id ?? finding?.protocolId;
   const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
-  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} eligible delayed answers, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing or ineligible.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} eligible delayed answers, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing or ineligible.</p></div>` : '';
+  const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'correlated concept observations' : 'eligible delayed answers';
+  const armDetail = arm => finding?.analysisUnit === 'independent_learner' ? `; ${finding.arms[arm].independentLearners} independent learner${finding.arms[arm].independentLearners === 1 ? '' : 's'}` : '';
+  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing or ineligible${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing or ineligible${armDetail('diagram')}.</p></div>` : '';
   const limitations = [
     finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
     finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
     finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
+    finding?.protocol?.minimumIndependentLearnersPerArm != null ? `A stronger comparison needs at least ${finding.protocol.minimumIndependentLearnersPerArm} independent learners per arm, verified exposure, and reviewed content. One person's concept results remain correlated.` : null,
     finding?.syntheticResultsAreLearningEvidence === false ? 'Synthetic test results are not learner evidence.' : null,
   ].filter(Boolean);
   const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B · text with diagram' : state.lesson.method?.conditionId === 'text' ? 'A · text' : null;
   const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>Limits on interpretation</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></section>` : '';
-  const draftMarkup = signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
+  const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
   const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
   const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${draftMarkup}${reviewMarkup}${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}<div class="divider"></div>`;
   content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
     const method = state.lesson.method;
-    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p><small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
+    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p>${method.studyTargetMinutes ? `<p>Comparison study target: about ${esc(method.studyTargetMinutes)} minutes with this lesson before practice in either method. You may continue sooner or later; study time is not verified.</p>` : ''}<small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
     const diagramMarkup = state.lesson.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled concept diagram</figcaption><pre>${esc(state.lesson.diagram)}</pre></figure>` : '';
     content.innerHTML = intro + `<span class="pill">Short lesson</span><h2>${esc(state.lesson.title)}</h2>${methodMarkup}<article class="lesson-body">${lessonMarkup(state.lesson.body)}</article>${diagramMarkup}${state.lesson.experimentNotice ? `<p class="muted">${esc(state.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've read this lesson →</button></div>`;
     document.querySelector('#complete').onclick = async () => { try { await api('/api/v2/lesson-completions',{conceptId:state.conceptId}); await refresh(); } catch(e){showError(e)} };

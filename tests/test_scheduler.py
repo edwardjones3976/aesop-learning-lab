@@ -49,6 +49,23 @@ class SchedulerTests(unittest.TestCase):
         self.assertIn(decision.recommendation.activity_id, (PRACTICE_A.id, PRACTICE_B.id))
         self.assertIn("Two incorrect answers on application", decision.reason)
 
+    def test_repeated_misses_on_one_prompt_choose_another_and_flag_quality(self) -> None:
+        prior = (attempt("wrong-1", PRACTICE_A, correct=False),
+                 attempt("wrong-2", PRACTICE_A, correct=False))
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior),
+                             20, "pilot-v3")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIn("unclear wording", decision.reason)
+        self.assertIn("content review", decision.reason)
+
+    def test_hint_assisted_answer_leads_to_fresh_independent_prompt(self) -> None:
+        prior = (attempt("assisted", PRACTICE_A, hint=HintLevel.NUDGE),)
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior),
+                             20, "pilot-v3")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIn("fresh first answer", decision.reason)
+        self.assertIsNone(decision.next_check_at)
+
     def test_distinct_week_check_waits_for_day_one_and_seven_days(self) -> None:
         activities = (PRACTICE_A, CHECK, WEEK_CHECK)
         day_six = LESSON_TIME + timedelta(days=6)
