@@ -10,12 +10,12 @@ from aesop_lab.api.service import ApiError
 from aesop_lab.content import load_pack
 from aesop_lab.foreman import Preview
 from aesop_lab.foreman import PACK_PATH as ORIGINAL_PACK_PATH
-from aesop_lab.foreman import ADAPTIVE_PACK_PATH, REVISED_PACK_PATH, WEEK_PACK_PATH, V5_PACK_PATH
+from aesop_lab.foreman import ADAPTIVE_PACK_PATH, REVISED_PACK_PATH, WEEK_PACK_PATH, V5_PACK_PATH, V6_PACK_PATH
 from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class ForemanPreviewTests(unittest.TestCase):
-    def test_v6_cannot_complete_experimental_exposure_without_opening_lesson(self):
+    def test_v7_cannot_complete_experimental_exposure_without_opening_lesson(self):
         path = Path(self.temp.name) / "unopened.db"
         preview = Preview(path)
         self.addCleanup(preview.store.close)
@@ -28,17 +28,17 @@ class ForemanPreviewTests(unittest.TestCase):
         preview.complete_lesson(cid)
         self.assertIsNotNone(preview.store.list_exposures()[0]["completed_at"])
 
-    def test_v6_five_concepts_assignment_confidence_and_restart(self):
+    def test_v7_five_concepts_assignment_confidence_and_restart(self):
         clock = [datetime(2026, 10, 15, 12, tzinfo=timezone.utc)]
         path = Path(self.temp.name) / "adaptive.db"
         preview = Preview(path, now=lambda: clock[0])
         self.addCleanup(preview.store.close)
-        self.assertEqual(preview.overview()["packVersion"], "m2-draft.6")
+        self.assertEqual(preview.overview()["packVersion"], "m2-draft.7")
         methods = {}
         for cid in preview.pack.learning_order():
             lesson = preview.lesson(cid)
             method = lesson["method"]
-            self.assertEqual(method["protocolVersion"], "v3")
+            self.assertEqual(method["protocolVersion"], "v4")
             self.assertIn(method["conditionId"], ("text", "diagram"))
             self.assertEqual(bool(lesson["diagram"]), method["conditionId"] == "diagram")
             self.assertGreater(len(lesson["body"]), 1000)
@@ -164,16 +164,16 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertTrue(legacy.lesson(concept.id)["completed"])
         exported = legacy.store.export_all()
         self.assertEqual(exported["lessonCompletions"][0]["content_version"], "v1")
-        self.assertEqual(legacy.delete_data()["packVersion"], "m2-draft.6")
+        self.assertEqual(legacy.delete_data()["packVersion"], "m2-draft.7")
         self.assertEqual(legacy.store.export_all()["lessonCompletions"], [])
-        self.assertEqual(legacy.overview()["packVersion"], "m2-draft.6")
+        self.assertEqual(legacy.overview()["packVersion"], "m2-draft.7")
 
-    def test_fresh_learner_keeps_v6_on_restart_and_mixed_history_is_rejected(self):
-        self.assertEqual(self.preview.overview()["packVersion"], "m2-draft.6")
-        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v6"}))
+    def test_fresh_learner_keeps_v7_on_restart_and_mixed_history_is_rejected(self):
+        self.assertEqual(self.preview.overview()["packVersion"], "m2-draft.7")
+        self.assertEqual(self.preview.store.learner_content_versions(), frozenset({"v7"}))
         restarted = Preview(self.path)
         try:
-            self.assertEqual(restarted.overview()["packVersion"], "m2-draft.6")
+            self.assertEqual(restarted.overview()["packVersion"], "m2-draft.7")
         finally:
             restarted.store.close()
         old = load_pack(ORIGINAL_PACK_PATH)
@@ -222,6 +222,38 @@ class ForemanPreviewTests(unittest.TestCase):
             self.assertEqual(resumed.pack.pack_version, "m2-draft.5")
             self.assertEqual(resumed.lesson(cid)["method"], original)
             self.assertEqual(resumed.overview()["experiment"]["protocol"]["version"], "v2")
+        finally:
+            resumed.store.close()
+
+    def test_existing_v6_assignment_stays_on_protocol_v3_and_v6_pack(self):
+        path = Path(self.temp.name) / "prior-v6.db"
+        viewed = Preview(path)
+        viewed._activate_pack(V6_PACK_PATH)
+        cid = viewed.pack.learning_order()[0]
+        original = viewed.lesson(cid)["method"]
+        self.assertEqual(original["protocolVersion"], "v3")
+        self.assertEqual(viewed.store.learner_content_versions(), frozenset({"v6"}))
+        viewed.store.close()
+        resumed = Preview(path)
+        try:
+            self.assertEqual(resumed.pack.pack_version, "m2-draft.6")
+            self.assertEqual(resumed.lesson(cid)["method"], original)
+            self.assertEqual(resumed.overview()["experiment"]["protocol"]["version"], "v3")
+        finally:
+            resumed.store.close()
+
+    def test_v6_assignment_only_interruption_stays_on_v6_pack(self):
+        path = Path(self.temp.name) / "assigned-v6.db"
+        viewed = Preview(path)
+        viewed._activate_pack(V6_PACK_PATH)
+        cid = viewed.pack.learning_order()[0]
+        original = viewed._method_for(cid)
+        self.assertEqual(viewed.store.list_exposures(), ())
+        viewed.store.close()
+        resumed = Preview(path)
+        try:
+            self.assertEqual(resumed.pack.pack_version, "m2-draft.6")
+            self.assertEqual(resumed.lesson(cid)["method"], original)
         finally:
             resumed.store.close()
 

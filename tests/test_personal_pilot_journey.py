@@ -10,7 +10,7 @@ from aesop_lab.foreman import Preview
 
 
 class PersonalPilotJourneyTests(unittest.TestCase):
-    def test_new_v6_learner_returns_for_two_distinct_delayed_checks(self):
+    def test_new_v7_learner_returns_for_two_distinct_delayed_checks(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "synthetic-learner.db"
             clock = [datetime(2026, 1, 1, 12, tzinfo=timezone.utc)]
@@ -36,11 +36,11 @@ class PersonalPilotJourneyTests(unittest.TestCase):
             preview = Preview(path, now=lambda: clock[0])
             concepts = preview.pack.learning_order()
             self.assertEqual(len(concepts), 5)
-            self.assertEqual(preview.pack.pack_version, "m2-draft.6")
+            self.assertEqual(preview.pack.pack_version, "m2-draft.7")
             for cid in concepts:
                 lesson = preview.lesson(cid)
                 self.assertGreater(len(lesson["body"]), 1400)
-                self.assertEqual(lesson["method"]["protocolVersion"], "v3")
+                self.assertEqual(lesson["method"]["protocolVersion"], "v4")
                 preview.complete_lesson(cid)
                 first_activity, first_result = answer(preview, cid,
                     assisted=(cid == concepts[0]), wrong=(cid == concepts[0]))
@@ -87,7 +87,7 @@ class PersonalPilotJourneyTests(unittest.TestCase):
                 self.assertTrue(all(row["actualDelayDays"] >= row["checkDelayDays"]
                                     for row in evidence["delayedChecks"]))
                 finding = preview.overview()["experiment"]
-                self.assertEqual(finding["protocol"]["version"], "v3")
+                self.assertEqual(finding["protocol"]["version"], "v4")
                 self.assertEqual(finding["status"], "insufficient_evidence")
                 self.assertLessEqual(finding["independentLearnersTotal"], 1)
                 self.assertEqual(sum(arm["eligible"] for arm in finding["arms"].values()), 0)
