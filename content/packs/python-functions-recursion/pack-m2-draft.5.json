@@ -6,7 +6,7 @@
   "status": "draft",
   "author": "Codex (v5 content corrections)",
   "review": {
-    "note": "New immutable v5 draft corrects reviewed content concerns; independent non-author review remains required. All keys remain candidates.",
+    "note": "Immutable v5 draft corrects content and held-out novelty concerns before learner use; independent non-author review remains required. All keys remain candidates.",
     "receipts": []
   },
   "sources": [
@@ -482,7 +482,7 @@
       "activity_type": "explanation",
       "evidence_kind": "explanation",
       "held_out": false,
-      "prompt": "In your own words, what makes a function recursive, and what must stop its calls?",
+      "prompt": "In your own words, what makes a function recursive, how should each call move toward a stopping condition, and what stops the calls?",
       "body": "",
       "choices": [],
       "rubric": {
@@ -960,42 +960,44 @@
       "id": "scope-week-01-v5",
       "concept_id": "parameters-and-local-scope",
       "content_version": "v5",
-      "family_id": "scope-combined-default-local-week-v4",
+      "family_id": "scope-caller-local-default-week-v5",
       "activity_type": "trace",
       "evidence_kind": "application",
       "held_out": true,
       "check_delay_days": 7,
       "prompt": "After this code runs, what is the value of result?",
-      "body": "bonus = 20\ndef fee(total, bonus=2):\n    total = total + bonus\n    bonus = bonus + 1\n    return total + bonus\nresult = fee(5, bonus=4) + bonus",
+      "body": "def mark(word, suffix='!'):\n    word = '[' + word + ']'\n    return word + suffix\nnote = 'map'\nresult = mark(note) + ':' + note",
       "choices": [],
       "answer_key": {
         "status": "candidate",
         "accepted": [
-          "34"
+          "[map]!:map",
+          "'[map]!:map'",
+          "\"[map]!:map\""
         ]
       },
       "check_expression": "result",
       "hints": [
         {
           "level": "nudge",
-          "text": "Track the local bonus inside the call separately from the global bonus."
+          "text": "Keep the caller's note separate from the function's local word, and check whether suffix is supplied."
         },
         {
           "level": "targeted",
-          "text": "The keyword argument sets local bonus to 4; the function then rebinds its local names before returning."
+          "text": "mark(note) uses the default suffix '!'; inside the call, only the local word is rebound to '[map]'."
         },
         {
           "level": "worked_solution",
-          "text": "The call's total becomes 9 and its local bonus becomes 5, so it returns 14. The global bonus remains 20; result is 14 + 20 = 34."
+          "text": "mark(note) receives 'map' as local word and returns '[map]!' with the default suffix. The caller's note remains 'map', so result is '[map]!:map'."
         }
       ],
       "source_ids": [
-        "py-tutorial-keyword-arguments",
+        "py-tutorial-more-on-functions",
         "py-ref-naming-binding"
       ],
-      "learning_objective": "Apply scope and parameter reasoning in a previously unseen arrangement.",
+      "learning_objective": "Trace an omitted default argument and a locally rebound parameter without changing the caller's binding.",
       "difficulty": "advanced",
-      "explanation": "The call's total becomes 9 and its local bonus becomes 5, so it returns 14. The global bonus remains 20; result is 14 + 20 = 34."
+      "explanation": "mark(note) receives 'map' as local word and returns '[map]!' with the default suffix. The caller's note remains 'map', so result is '[map]!:map'."
     },
     {
       "id": "recursion-week-01-v5",

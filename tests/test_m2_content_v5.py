@@ -85,12 +85,35 @@ class M2ContentV5Tests(unittest.TestCase):
             checks = [item for item in self.pack.items_for(concept.id) if item.activity.held_out]
             self.assertEqual({item.activity.check_delay_days for item in checks}, {1, 7})
 
+    def test_scope_week_uses_omitted_default_and_preserves_caller_binding(self):
+        week = self.items["scope-week-01-v5"]
+        self.assertEqual(week.activity.family_id, "scope-caller-local-default-week-v5")
+        self.assertTrue(week.activity.held_out)
+        self.assertEqual(week.activity.check_delay_days, 7)
+        self.assertIn("result = mark(note) + ':' + note", week.body)
+        self.assertNotIn("mark(note,", week.body)
+        self.assertIn("locally rebound parameter", week.learning_objective)
+        self.assertIn("caller's note remains 'map'", week.explanation)
+        self.assertEqual(week.explanation, week.hints[-1].text)
+        self.assertFalse({week.activity.family_id} &
+                         {item.activity.family_id for item in self.pack.items if not item.activity.held_out})
+        self.assertFalse({week.activity.family_id} &
+                         {family for lesson in self.pack.lessons for family in lesson.encountered_family_ids})
+
+    def test_recursion_explanation_prompt_matches_its_ungraded_rubric(self):
+        item = self.items["recursion-explain-01-v5"]
+        self.assertIsNone(item.answer_key)
+        self.assertIn("move toward a stopping condition", item.prompt)
+        self.assertEqual({c.id for c in item.rubric.criteria}, {"self-call", "stopping"})
+        self.assertIn("smaller or simpler", next(c.description for c in item.rubric.criteria
+                                                  if c.id == "self-call"))
+
     def test_unmodified_families_remain_stable_across_versions(self):
         old_by_base = {item.id.removesuffix("-v4"): item for item in self.old.items}
         for item in self.pack.items:
             old = old_by_base[item.id.removesuffix("-v5")]
             with self.subTest(item=item.id):
-                if item.id == "recursion-week-01-v5":
+                if item.id in ("recursion-week-01-v5", "scope-week-01-v5"):
                     self.assertNotEqual(item.activity.family_id, old.activity.family_id)
                 else:
                     self.assertEqual(item.activity.family_id, old.activity.family_id)
