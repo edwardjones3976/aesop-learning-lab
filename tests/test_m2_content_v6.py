@@ -103,6 +103,19 @@ class M2ContentV6Tests(unittest.TestCase):
         self.assertEqual(self.items["scope-local-trace-01-v6"].activity.family_id,
                          self.items["scope-global-choice-01-v6"].activity.family_id)
 
+    def test_reverse_misconception_matches_the_alternative_recursive_rule(self):
+        item = next(raw for raw in self.raw["items"]
+                    if raw["id"] == "recursive-case-transfer-01-v6")
+        mistake = item["common_mistakes"][0]
+        self.assertIn("return text[0] + reverse(text[1:])", mistake)
+        self.assertIn('"abc" for "abc", not "cba"', mistake)
+        namespace = {}
+        exec("def reverse(text):\n"
+             "    if len(text) <= 1:\n"
+             "        return text\n"
+             "    return text[0] + reverse(text[1:])", namespace)
+        self.assertEqual(namespace["reverse"]("abc"), "abc")
+
     def test_lessons_remain_substantive_with_versioned_example_families(self):
         for lesson in self.pack.lessons:
             with self.subTest(lesson=lesson.id):

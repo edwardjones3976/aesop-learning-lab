@@ -957,7 +957,7 @@
       "difficulty": "advanced",
       "explanation": "reverse(\"c\") returns \"c\" at the base case. reverse(\"bc\") returns \"c\" + \"b\" = \"cb\"; reverse(\"abc\") returns \"cb\" + \"a\" = \"cba\".",
       "common_mistakes": [
-        "Putting text[0] before the smaller reversed result would produce \"acb\" for \"abc\", not \"cba\"."
+        "If every recursive case uses return text[0] + reverse(text[1:]), the function preserves the original order: \"abc\" for \"abc\", not \"cba\"."
       ]
     },
     {
