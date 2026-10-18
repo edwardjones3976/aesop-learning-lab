@@ -21,12 +21,20 @@ class SQLiteStoreTests(unittest.TestCase):
                 store.record_exposure("c1", "v4", "p", "v1", "text", at, ("example-a",))
                 store.record_exposure("c1", "v4", "p", "v1", "text", at, ("example-a",))
                 store.complete_exposure("c1", "v4", "p", "v1", at)
-                store.record_override("o1", "c1", "v4", "practice", "learner_choice", at)
+                store.record_override("o1", "c1", "v4", "practice", "learner_choice", at,
+                                      recommended_activity_id="review", recommended_reason="Due now",
+                                      selected_activity_id="practice", learner_reason="More time")
             with SQLiteStore(path) as store:
                 exported = store.export_all()
                 self.assertEqual(len(exported["experimentExposures"]), 1)
                 self.assertEqual(exported["experimentExposures"][0]["condition_id"], "text")
                 self.assertEqual(len(exported["recommendationOverrides"]), 1)
+                self.assertEqual(exported["recommendationOverrides"][0]["recommended_activity_id"],
+                                 "review")
+                self.assertEqual(exported["recommendationOverrides"][0]["selected_activity_id"],
+                                 "practice")
+                self.assertEqual(exported["recommendationOverrides"][0]["learner_reason"],
+                                 "More time")
                 store.delete_all()
                 self.assertEqual(store.export_all()["experimentExposures"], [])
                 self.assertEqual(store.export_all()["recommendationOverrides"], [])
@@ -45,7 +53,7 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 check = store.get_activity("old-check", "v2")
                 self.assertEqual(check.check_delay_days, 1)
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 9)
 
     def test_v1_database_adds_review_tables_without_losing_attempts(self) -> None:
         with TemporaryDirectory() as directory:
@@ -66,7 +74,7 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.export_all()["selfReviews"], [])
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 9)
 
     def test_lists_order_by_instant_not_offset_text(self) -> None:
         from datetime import timedelta
@@ -108,7 +116,7 @@ class SQLiteStoreTests(unittest.TestCase):
                     connection.execute("PRAGMA user_version = 2")
                     connection.commit()
                 with SQLiteStore(path) as store:
-                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
+                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 9)
                     self.assertEqual(store.export_all()["selfReviews"], [])
                     self.assertEqual(store.export_all()["lessonCompletions"], [])
                     self.assertEqual(store.get_concept("c1", "v1").title, "Concept")
@@ -134,7 +142,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.list_self_reviews("t1"), (review,))
                 self.assertEqual(store.record_lesson_completion("c1", "v1", now), now)
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 9)
 
     def test_merged_master_v3_upgrades_without_losing_learner_records(self) -> None:
         with TemporaryDirectory() as directory:
@@ -155,7 +163,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 connection.execute("PRAGMA user_version = 3")
                 connection.commit()
             with SQLiteStore(path) as store:
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 8)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 9)
                 self.assertEqual(store.lesson_completed_at("c1", "v1"), now)
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertIn("check_delay_days", {row[1] for row in

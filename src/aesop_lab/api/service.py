@@ -11,7 +11,7 @@ from aesop_lab.assessment.engine import assess, build_attempt
 from aesop_lab.assessment.errors import AssessmentError
 from aesop_lab.assessment.items import ItemSpec
 from aesop_lab.assessment.review import build_self_review
-from aesop_lab.domain.models import AnswerRevision, Concept, CriterionReview, HintLevel, OutsideStudy, ReviewRating
+from aesop_lab.domain.models import AnswerRevision, Concept, CriterionReview, HintLevel, OutsideStudy, ReviewRating, ScoreStatus
 from aesop_lab.scheduler import LearnerState, recommend
 from aesop_lab.storage.sqlite import SQLiteStore
 
@@ -30,6 +30,7 @@ class CatalogItem:
     learning_objective: str | None = None
     difficulty: str | None = None
     explanation: str | None = None
+    common_mistakes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.prompt.strip():
@@ -109,8 +110,28 @@ class LearningService:
             raise ApiError("validation_error", "availableMinutes must be a positive whole number.")
         if mode not in ("recommended", "practice"):
             raise ApiError("validation_error", "mode must be recommended or practice.")
-        decision = recommend(self._state(), available_minutes, self.policy_version, mode)
+        learner_state = self._state()
+        decision = recommend(learner_state, available_minutes, self.policy_version, mode)
         selected = decision.recommendation
+        selected_item = self.items[selected.activity_id] if selected else None
+        first_by_family = {}
+        for attempt in sorted(learner_state.attempts, key=lambda a: (a.occurred_at, a.id)):
+            family = self.items[attempt.activity_id].spec.activity.family_id
+            first_by_family.setdefault(family, attempt)
+        independent_by_kind = {}
+        for attempt in first_by_family.values():
+            if attempt.score_status is ScoreStatus.CORRECT and attempt.unassisted:
+                kind = self.items[attempt.activity_id].spec.activity.evidence_kind.value
+                independent_by_kind[kind] = independent_by_kind.get(kind, 0) + 1
+        missing = None
+        if selected_item:
+            kind = selected_item.spec.activity.evidence_kind.value
+            if selected_item.spec.activity.held_out:
+                missing = "No first independent response to this held-out family has been recorded."
+            else:
+                count = independent_by_kind.get(kind, 0)
+                missing = (f"{count} distinct first-attempt families have an independent "
+                           f"candidate-key match in {kind}; this activity gathers another observation.")
         result: dict[str, object] = {
             "mode": mode,
             "nextCheckAt": _iso(decision.next_check_at),
@@ -118,6 +139,8 @@ class LearningService:
             "recommendation": ({
                 "policyVersion": selected.policy_version, "reason": selected.reason,
                 "evidenceAttemptIds": list(selected.evidence_attempt_ids),
+                "aim": selected_item.learning_objective or f"Practice {kind} independently.",
+                "evidenceGap": missing,
             } if selected else None),
             "developmentOnly": self.development_only,
         }

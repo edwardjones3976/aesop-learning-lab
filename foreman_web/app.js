@@ -184,6 +184,9 @@ export function validateOverview(data) {
         for (const count of ['assigned', 'exposed', 'eligible', 'correct', 'missing']) {
           requireNumber(row[count], `overview.experiment.arms.${arm}.${count}`);
         }
+        for (const count of ['provisional', 'candidateKeyMatches', 'late', 'early', 'contaminated', 'ungraded', 'exposureIncomparable']) {
+          if (row[count] != null) requireNumber(row[count], `overview.experiment.arms.${arm}.${count}`);
+        }
         if (experiment.analysisUnit === 'independent_learner') {
           requireNumber(row.independentLearners, `overview.experiment.arms.${arm}.independentLearners`);
         }
@@ -342,6 +345,8 @@ export function validateSession(data) {
   }
   const recommendation = session.recommendation == null ? null : requireRecord(session.recommendation, 'session.recommendation');
   if (activity) requireString(recommendation?.reason, 'session.recommendation.reason');
+  if (recommendation?.aim != null) requireString(recommendation.aim, 'session.recommendation.aim');
+  if (recommendation?.evidenceGap != null) requireString(recommendation.evidenceGap, 'session.recommendation.evidenceGap');
   return {
     lessonRequired: false,
     activity,
@@ -545,7 +550,8 @@ async function select(cid) {
   } catch (error) { showError(error); }
 }
 async function chooseMorePractice() {
-  await api('/api/v2/overrides', { conceptId: state.conceptId, mode: 'practice', reason: 'learner_choice' });
+  const learnerReason = document.querySelector('#override-note')?.value.trim() || null;
+  await api('/api/v2/overrides', { conceptId: state.conceptId, mode: 'practice', reason: 'learner_choice', learnerReason });
   state.result = null; state.review = null; state.answer = ''; state.mode = 'practice';
   state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
   await refresh();
@@ -583,7 +589,16 @@ function renderWorkspace() {
   const protocolId = finding?.protocol?.id ?? finding?.protocolId;
   const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
   const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'correlated concept observations' : 'eligible delayed answers';
-  const armDetail = arm => finding?.analysisUnit === 'independent_learner' ? `; ${finding.arms[arm].independentLearners} independent learner${finding.arms[arm].independentLearners === 1 ? '' : 's'}` : '';
+  const armDetail = arm => {
+    if (finding?.analysisUnit !== 'independent_learner') return '';
+    const row = finding.arms[arm];
+    return `; ${row.independentLearners} independent learner${row.independentLearners === 1 ? '' : 's'}` +
+      (row.provisional ? `; ${row.provisional} provisional draft-key check${row.provisional === 1 ? '' : 's'} (${row.candidateKeyMatches} candidate match${row.candidateKeyMatches === 1 ? '' : 'es'})` : '') +
+      (row.late ? `; ${row.late} late check${row.late === 1 ? '' : 's'} reported outside the primary window` : '') +
+      (row.contaminated ? `; ${row.contaminated} familiar or assisted check${row.contaminated === 1 ? '' : 's'}` : '') +
+      (row.early ? `; ${row.early} early check${row.early === 1 ? '' : 's'}` : '') +
+      (row.exposureIncomparable ? `; ${row.exposureIncomparable} exposure${row.exposureIncomparable === 1 ? '' : 's'} without verified comparability` : '');
+  };
   const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing or ineligible${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing or ineligible${armDetail('diagram')}.</p></div>` : '';
   const limitations = [
     finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
@@ -597,6 +612,7 @@ function renderWorkspace() {
   const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
   const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
   const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${draftMarkup}${reviewMarkup}${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}<div class="divider"></div>`;
+  const overrideNote = '<label class="muted" for="override-note">Why choose more practice? (optional)</label><input id="override-note" class="answer" maxlength="500" placeholder="Your reason, if you want to record it">';
   content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
     const method = state.lesson.method;
@@ -612,7 +628,7 @@ function renderWorkspace() {
     content.innerHTML = intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>${solutionMarkup(r)}` +
       (r.rubric && !state.review ? `<div class="activity-card"><span class="label">SELF REVIEW · ORIGINAL ANSWER</span><pre class="code">${esc(state.answer)}</pre><p class="muted">For each criterion, quote the part of your first answer that supports a shown or partial rating.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Evidence for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save self review →</button></div></div>` : '') +
       (state.review ? `<div class="activity-card"><span class="label">COMPARE AND REVISE</span><p>${esc(state.review.nextStep.replace('_',' '))}</p><pre class="code">${esc(state.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((state.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
-      `<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
+      `${overrideNote}<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
     if (r.rubric && !state.review) document.querySelector('#review').onclick = async () => {
       try {
         const judgments = [...document.querySelectorAll('.review-row')].map(row => ({criterionId:row.dataset.criterion,rating:row.querySelector('.rating').value,evidence:row.querySelector('.evidence').value}));
@@ -629,14 +645,14 @@ function renderWorkspace() {
   }
   const s = state.session, a = s.activity;
   if (!a) {
-    content.innerHTML = intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
+    content.innerHTML = intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
     document.querySelector('#more').onclick = () => chooseMorePractice().catch(showError);
     return;
   }
   const saved = Boolean(s.draft);
   const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
   const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
-  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>`;
+  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${s.recommendation?.aim ? `<p><strong>Aim:</strong> ${esc(s.recommendation.aim)}</p>` : ''}${s.recommendation?.evidenceGap ? `<p><strong>Evidence still needed:</strong> ${esc(s.recommendation.evidenceGap)}</p>` : ''}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>${!saved && state.mode === 'recommended' ? `${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>` : ''}`;
   drawAnswer(a, saved);
   if (!saved) {
     document.querySelector('#confidence').value = state.confidence == null ? '' : String(state.confidence);
@@ -649,6 +665,8 @@ function renderWorkspace() {
       await refresh();
     } catch(error){showError(error)}
   };
+  const overrideButton = document.querySelector('#more');
+  if (overrideButton) overrideButton.onclick = () => chooseMorePractice().catch(showError);
   if (saved) drawAfterSave(a, s.draft);
 }
 function drawAnswer(a, saved) {

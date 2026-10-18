@@ -22,9 +22,11 @@ PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack.json"
 REVISED_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.2.json"
 WEEK_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.3.json"
 ADAPTIVE_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.4.json"
-CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.5.json"
+V5_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.5.json"
+CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.6.json"
 PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH,
-                   "v4": ADAPTIVE_PACK_PATH, "v5": CURRENT_PACK_PATH}
+                   "v4": ADAPTIVE_PACK_PATH, "v5": V5_PACK_PATH,
+                   "v6": CURRENT_PACK_PATH}
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -49,7 +51,7 @@ def _catalog_item(item) -> CatalogItem:
         hints=HintLadder(tuple(Hint(h.level, h.text) for h in item.hints)),
     )
     return CatalogItem(spec, item.prompt, item.body, item.learning_objective,
-                       item.difficulty, item.explanation)
+                       item.difficulty, item.explanation, item.common_mistakes)
 
 
 class Preview:
@@ -60,7 +62,7 @@ class Preview:
         # A process can stop between saving a fixed assignment and its first
         # exposure. Even that partial enrollment must keep its original pack.
         for assignment in self.store.list_assignments("text-vs-labeled-diagram"):
-            assigned_version = {"v1": "v4", "v2": "v5"}.get(assignment.protocol_version)
+            assigned_version = {"v1": "v4", "v2": "v5", "v3": "v6"}.get(assignment.protocol_version)
             if assigned_version is None:
                 versions.add("unknown")
             else:
@@ -85,7 +87,7 @@ class Preview:
                     lesson.encountered_family_ids for lesson in self.pack.lessons
                     if lesson.concept_id == concept.id)),
                 now=self.now,
-                policy_version=("pilot-v3" if concept.content_version == "v5" else
+                policy_version=("pilot-v4" if concept.content_version in ("v5", "v6") else
                                 "pilot-v2" if concept.content_version in ("v3", "v4") else "pilot-v1"),
             ) for concept in self.pack.concepts
         }
@@ -131,7 +133,7 @@ class Preview:
                 ],
                 "evidence": summarize_evidence(
                     {item.spec.activity.id: item.spec.activity for item in service.items.values()},
-                    attempts, completed),
+                    attempts, completed, service.encountered_family_ids),
                 "reviewSchedule": {"dueAt": next_check, "status": review_status,
                                    "reason": (f"Held-out independent review for {cid} "
                                               "is scheduled from the recorded lesson completion."
@@ -222,12 +224,14 @@ class Preview:
 
     def _method_for(self, cid: str) -> dict | None:
         version = self.pack.concept(cid).content_version
-        if version not in ("v4", "v5"):
+        if version not in ("v4", "v5", "v6"):
             return None
         if version == "v4":
             from aesop_lab.experiment import PROTOCOL as protocol, assign_condition as assign
-        else:
+        elif version == "v5":
             from aesop_lab.experiment.descriptive_v2 import DESCRIPTIVE_V2 as protocol, assign_condition_v2 as assign
+        else:
+            from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, assign_condition_v3 as assign
         assignment = next((a for a in self.store.list_assignments(protocol.id)
                            if a.concept_id == cid and a.protocol_version == protocol.version), None)
         if assignment is None:
@@ -236,18 +240,20 @@ class Preview:
             self.store.save_assignment(assignment)
         method = {"conditionId": assignment.condition_id, "protocolId": protocol.id,
                   "protocolVersion": protocol.version}
-        if version == "v5":
+        if version in ("v5", "v6"):
             method["studyTargetMinutes"] = protocol.target_exposure_minutes
         return method
 
     def experiment_findings(self) -> dict:
         version = self.pack.concepts[0].content_version
-        if version not in ("v4", "v5"):
+        if version not in ("v4", "v5", "v6"):
             return {"status": "insufficient_evidence", "reason": "This content version predates the fixed comparison."}
         if version == "v4":
             from aesop_lab.experiment import PROTOCOL as protocol, Exposure, analyze
-        else:
+        elif version == "v5":
             from aesop_lab.experiment.descriptive_v2 import DESCRIPTIVE_V2 as protocol, ExposureV2 as Exposure, analyze_v2 as analyze
+        else:
+            from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, ExposureV3 as Exposure, analyze_v3 as analyze
         exposures = tuple(Exposure(
             row["concept_id"], row["content_version"], row["condition_id"],
             datetime.fromisoformat(row["exposed_at"]),
@@ -261,7 +267,7 @@ class Preview:
         activities = {item.activity.id: item.activity for item in self.pack.items}
         assignments = tuple(a for a in self.store.list_assignments(protocol.id)
                             if a.protocol_version == protocol.version)
-        if version == "v5":
+        if version in ("v5", "v6"):
             return analyze(assignments, exposures, attempts, activities,
                            learner_id=self.store.learner_id(), now=self.now())
         return analyze(assignments, exposures, attempts, activities, now=self.now())
@@ -271,10 +277,21 @@ class Preview:
         service = self._service(cid)
         if body.get("mode") != "practice" or body.get("reason") != "learner_choice":
             raise ApiError("validation_error", "Choose a valid practice override.")
+        learner_reason = body.get("learnerReason")
+        if learner_reason is not None and (not isinstance(learner_reason, str) or
+                                           len(learner_reason) > 500):
+            raise ApiError("validation_error", "An override note must be at most 500 characters.")
+        recommended = service.next_session(20, "recommended")
+        selected = service.next_session(20, "practice")
         event_id = str(uuid4())
         self.store.record_override(event_id, cid, service.concept.content_version,
-                                   "practice", "learner_choice", self.now())
-        return {"id": event_id, "saved": True}
+                                   "practice", "learner_choice", self.now(),
+                                   recommended_activity_id=(recommended.get("activity") or {}).get("id"),
+                                   recommended_reason=(recommended.get("recommendation") or {}).get("reason"),
+                                   selected_activity_id=(selected.get("activity") or {}).get("id"),
+                                   learner_reason=learner_reason.strip() if learner_reason else None)
+        return {"id": event_id, "saved": True,
+                "selectedActivityId": (selected.get("activity") or {}).get("id")}
 
     def session(self, cid: str, mode: str = "recommended", available_minutes: int = 20) -> dict:
         service = self._service(cid)
@@ -359,8 +376,7 @@ class Preview:
                         "gradingMethod": existing.grading_method,
                         "assisted": not existing.unassisted,
                         "nextReason": result.reason, "developmentOnly": True}
-            if item.spec.answer_key and item.explanation:
-                response["explanation"] = item.explanation
+            self._add_scored_solution(response, item)
             if item.spec.rubric:
                 rubric = item.spec.rubric
                 response["rubric"] = {"id": rubric.id, "version": rubric.version,
@@ -375,10 +391,24 @@ class Preview:
             "confidence": draft["confidence"], "outsideStudy": body.get("outsideStudy"),
             "outsideStudyDetail": body.get("outsideStudyDetail"), "activeSeconds": body.get("activeSeconds", 0),
         }, attempt_id=draft["id"])
-        if item.spec.answer_key and item.explanation:
-            response["explanation"] = item.explanation
+        self._add_scored_solution(response, item)
         self.store.finish_draft(draft["id"], response)
         return response
+
+    @staticmethod
+    def _add_scored_solution(response: dict, item: CatalogItem) -> None:
+        # Never expose candidate keys through lesson or session payloads.
+        # This helper is called only after the locked first answer is graded.
+        if item.spec.answer_key is None:
+            return
+        if item.explanation:
+            response["explanation"] = item.explanation
+        response["solution"] = {
+            "kind": "candidate_key",
+            "answer": item.spec.answer_key.accepted[0],
+            "reasoning": item.explanation or "Candidate key supplied without a reviewed explanation.",
+            "misconception": " ".join(item.common_mistakes) if item.common_mistakes else None,
+        }
 
     def _service(self, cid) -> LearningService:
         if not isinstance(cid, str) or cid not in self.services:

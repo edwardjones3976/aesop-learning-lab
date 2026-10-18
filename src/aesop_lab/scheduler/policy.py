@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from aesop_lab.domain.models import (Activity, Attempt, EvidenceKind, HintLevel,
+from aesop_lab.domain.models import (Activity, ActivityType, Attempt, EvidenceKind, HintLevel,
                                      Recommendation, ScoreStatus)
 
 MINIMUM_MINUTES = 5
@@ -76,7 +76,13 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
     seen_families = set(state.encountered_family_ids)
     seen_families.update(item.family_id for item in state.activities
                          if attempts_by_item[item.id])
-    qualifying = [attempt for attempt in state.attempts
+    # A later unassisted answer to a family already attempted with help (or
+    # answered incorrectly) is practice, not fresh independent evidence.
+    first_by_family: dict[str, Attempt] = {}
+    item_by_id = {item.id: item for item in state.activities}
+    for attempt in sorted(state.attempts, key=lambda a: (a.occurred_at, a.id)):
+        first_by_family.setdefault(item_by_id[attempt.activity_id].family_id, attempt)
+    qualifying = [attempt for attempt in first_by_family.values()
                   if attempt.score_status is ScoreStatus.CORRECT and
                   attempt.hint_level is HintLevel.NONE and
                   attempt.occurred_at >= state.lesson_completed_at]
@@ -110,9 +116,9 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
         errors = [a for a in state.attempts if a.score_status is ScoreStatus.INCORRECT]
         assisted = [a for a in state.attempts if a.hint_level is not HintLevel.NONE]
         by_id = {item.id: item for item in state.activities}
-        repeated_item = next((item_id for item_id in sorted(attempts_by_item)
-                              if sum(a.score_status is ScoreStatus.INCORRECT
-                                     for a in attempts_by_item[item_id]) >= 2), None)
+        repeated_items = {item_id for item_id, prior in attempts_by_item.items()
+                          if sum(a.score_status is ScoreStatus.INCORRECT for a in prior) >= 2}
+        repeated_item = min(repeated_items) if repeated_items else None
         if repeated_item:
             # One learner cannot establish that an item is defective. Avoid
             # repeatedly drilling that same prompt or labeling a misconception.
@@ -132,24 +138,32 @@ def recommend(state: LearnerState, available_time: int, policy_version: str,
             adaptation_reason = ("A hint-assisted answer is recorded. Try a fresh "
                                  "first answer in this skill before requesting support; "
                                  "lower hint use alone does not prove understanding.")
-        recall_success = any(a.score_status is ScoreStatus.CORRECT and a.unassisted and
-                             next(i for i in state.activities if i.id == a.activity_id).evidence_kind is EvidenceKind.RECALL
-                             for a in state.attempts)
-        application_success = any(a.score_status is ScoreStatus.CORRECT and a.unassisted and
-                                  next(i for i in state.activities if i.id == a.activity_id).evidence_kind is EvidenceKind.APPLICATION
-                                  for a in state.attempts)
+        recall_success = any(item_by_id[a.activity_id].evidence_kind is EvidenceKind.RECALL
+                             for a in qualifying)
+        application_success = any(item_by_id[a.activity_id].evidence_kind is EvidenceKind.APPLICATION
+                                  for a in qualifying)
         if target_kind is None and recall_success and not application_success:
             target_kind = EvidenceKind.APPLICATION
             adaptation_reason = "Independent recall is recorded, but independent application has not yet been shown."
         candidates = [item for item in practice if item.evidence_kind is target_kind] if target_kind else []
         if repeated_item:
-            candidates = [item for item in candidates if item.id != repeated_item]
+            clean = [item for item in candidates if item.id not in repeated_items]
+            candidates = clean or [item for item in practice if item.id not in repeated_items]
         if target_kind is not None and assisted and not repeated_item:
             # Gradually reduce scaffolding through a new prompt, rather than
             # treating a second view of the same answer as independent recall.
             unseen = [item for item in candidates if not attempts_by_item[item.id]]
+            if not unseen:
+                unseen = [item for item in practice if not attempts_by_item[item.id]]
+                scored_unseen = [item for item in unseen if item.activity_type in
+                                 (ActivityType.CHOICE, ActivityType.TRACE)]
+                if scored_unseen:
+                    unseen = scored_unseen
             if unseen:
                 candidates = unseen
+            else:
+                adaptation_reason = ("No unused prompt remains. Repeating a previously assisted "
+                                     "item is practice, not fresh independent evidence.")
         # New items first; then rotate through the least practiced items.
         item = min(candidates or practice, key=lambda candidate:
                    (len(attempts_by_item[candidate.id]), candidate.id))

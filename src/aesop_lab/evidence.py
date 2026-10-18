@@ -9,7 +9,8 @@ from aesop_lab.domain.models import Activity, Attempt, EvidenceKind, ScoreStatus
 
 
 def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attempt, ...],
-                       lesson_completed_at: datetime | None) -> dict[str, object]:
+                       lesson_completed_at: datetime | None,
+                       encountered_family_ids: frozenset[str] = frozenset()) -> dict[str, object]:
     """Summarize observed attempts without promoting draft keys to mastery claims."""
     kinds = {kind.value: {"attempts": 0, "unassistedCorrect": 0,
                           "assistedCorrect": 0, "incorrect": 0, "ungraded": 0}
@@ -17,7 +18,8 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
     delayed: list[dict[str, object]] = []
     confidence_pairs = 0
     misses_by_item: dict[str, list[str]] = {}
-    for attempt in attempts:
+    earlier_families = set(encountered_family_ids)
+    for attempt in sorted(attempts, key=lambda a: (a.occurred_at, a.id)):
         activity = activities.get(attempt.activity_id)
         if activity is None or activity.content_version != attempt.content_version:
             continue
@@ -33,30 +35,38 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
         if (attempt.confidence is not None and attempt.unassisted and
                 attempt.score_status is not ScoreStatus.UNGRADED):
             confidence_pairs += 1
-        if (activity.held_out and lesson_completed_at is not None and
-                attempt.occurred_at >= lesson_completed_at + timedelta(days=activity.check_delay_days)):
+        if activity.held_out and lesson_completed_at is not None:
+            due_at = lesson_completed_at + timedelta(days=activity.check_delay_days)
+            elapsed_days = (attempt.occurred_at - lesson_completed_at).total_seconds() / 86400
             delayed.append({
                 "attemptId": attempt.id,
                 "activityId": activity.id,
                 "evidenceKind": activity.evidence_kind.value,
                 "checkDelayDays": activity.check_delay_days,
+                "dueAt": due_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "actualDelayDays": round(elapsed_days, 3),
+                "timingStatus": "early" if attempt.occurred_at < due_at else "on_or_after_due",
                 "occurredAt": attempt.occurred_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "scoreStatus": attempt.score_status.value,
                 "assisted": not attempt.unassisted,
                 "independentSuccess": attempt.unassisted and attempt.score_status is ScoreStatus.CORRECT,
-                "familiarityStatus": "not_verified",
+                "familiarityStatus": ("familiar" if activity.family_id in earlier_families
+                                      else "unfamiliar"),
             })
+        earlier_families.add(activity.family_id)
     delayed.sort(key=lambda row: (str(row["occurredAt"]), str(row["attemptId"])))
     expected_intervals = sorted({activity.check_delay_days for activity in activities.values()
                                  if activity.held_out})
     interval_outcomes = {
-        str(day): "observed" if any(row["checkDelayDays"] == day for row in delayed)
+        str(day): "observed" if any(row["checkDelayDays"] == day and
+                                   row["timingStatus"] == "on_or_after_due" for row in delayed)
         else "insufficient_evidence" for day in expected_intervals
     }
     return {
         "byKind": kinds,
         "delayedChecks": delayed,
-        "delayedOutcome": "observed" if delayed else "insufficient_evidence",
+        "delayedOutcome": ("observed" if any(row["timingStatus"] == "on_or_after_due"
+                                             for row in delayed) else "insufficient_evidence"),
         "delayedOutcomeByDay": interval_outcomes,
         "confidenceOutcomePairs": confidence_pairs,
         "contentQualityCandidates": [

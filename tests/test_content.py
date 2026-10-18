@@ -208,6 +208,11 @@ class ValidatorRejectsBrokenPacksTests(unittest.TestCase):
         del raw_item(raw, "recursion-recognize-choice-01")["answer_key"]
         self.assertIn("answer_key_missing", codes(raw))
 
+    def test_optional_common_mistakes_must_be_nonempty_strings(self) -> None:
+        raw = raw_pack()
+        raw_item(raw, "recursion-recognize-choice-01")["common_mistakes"] = [""]
+        self.assertIn("wrong_type", codes(raw))
+
     def test_explanations_cannot_carry_a_key(self) -> None:
         raw = raw_pack()
         raw_item(raw, "recursion-explain-01")["answer_key"] = {"status": "candidate", "accepted": ["yes"]}

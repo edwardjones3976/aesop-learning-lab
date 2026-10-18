@@ -115,6 +115,14 @@ test('descriptive protocol requires independent learner counts per arm', () => {
     arms: Object.fromEntries(['text', 'diagram'].map(arm => [arm,
       { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 1, independentLearners: 0 }])) };
   assert.equal(validateOverview(payload).experiment.analysisUnit, 'independent_learner');
+  payload.experiment.arms.text.provisional = 1;
+  payload.experiment.arms.text.candidateKeyMatches = 1;
+  payload.experiment.arms.text.late = 1;
+  assert.equal(validateOverview(payload).experiment.arms.text.provisional, 1);
+  payload.experiment.arms.text.late = null;
+  payload.experiment.arms.text.provisional = 'one';
+  assert.throws(() => validateOverview(payload), /arms\.text\.provisional/);
+  payload.experiment.arms.text.provisional = 1;
   delete payload.experiment.arms.text.independentLearners;
   assert.throws(() => validateOverview(payload), /arms\.text\.independentLearners/);
 });

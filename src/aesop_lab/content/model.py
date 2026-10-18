@@ -91,6 +91,7 @@ class ItemContent:
     learning_objective: str | None = None
     difficulty: str | None = None
     explanation: str | None = None
+    common_mistakes: tuple[str, ...] = ()
 
     @property
     def id(self) -> str:

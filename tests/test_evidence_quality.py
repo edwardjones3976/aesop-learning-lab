@@ -8,6 +8,23 @@ from aesop_lab.evidence import summarize_evidence
 
 
 class EvidenceQualityTests(unittest.TestCase):
+    def test_delayed_timing_and_familiarity_are_observations_not_mastery(self):
+        item = Activity("week", "concept", "v5", "week-family", ActivityType.TRACE,
+                        EvidenceKind.APPLICATION, True, 7)
+        at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        answer = Attempt("late", item.id, "v5", at + timedelta(days=10), "x",
+                         HintLevel.NONE, ScoreStatus.CORRECT,
+                         "development_fixture_exact_key", "assessment-v1", "delayed_check")
+        summary = summarize_evidence({item.id: item}, (answer,), at)
+        observed = summary["delayedChecks"][0]
+        self.assertEqual(observed["dueAt"], "2026-01-08T00:00:00Z")
+        self.assertEqual(observed["actualDelayDays"], 10)
+        self.assertEqual(observed["timingStatus"], "on_or_after_due")
+        self.assertEqual(observed["familiarityStatus"], "unfamiliar")
+        contaminated = summarize_evidence({item.id: item}, (answer,), at,
+                                           frozenset({"week-family"}))
+        self.assertEqual(contaminated["delayedChecks"][0]["familiarityStatus"], "familiar")
+
     def test_repeated_miss_candidate_keeps_original_attempts(self):
         item = Activity("question", "concept", "v5", "family", ActivityType.CHOICE,
                         EvidenceKind.RECOGNITION)
