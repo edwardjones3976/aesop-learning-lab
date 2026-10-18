@@ -91,7 +91,7 @@ DESCRIPTIVE_V2 = DescriptiveProtocolV2(
     content_version="v5",
     primary_family_by_concept=(
         ("function-definition-and-return", "def-return-shipping-week-v4"),
-        ("parameters-and-local-scope", "scope-combined-default-local-week-v4"),
+        ("parameters-and-local-scope", "scope-caller-local-default-week-v5"),
         ("recursion-as-self-call", "recursion-nested-wrap-week-v5"),
         ("base-case", "base-case-threshold-halving-week-v4"),
         ("recursive-case-and-trace", "recursive-case-week-a"),

@@ -51,6 +51,10 @@ class DescriptiveV2Tests(unittest.TestCase):
         self.assertEqual(DESCRIPTIVE_V2.content_version, "v5")
         self.assertEqual(DESCRIPTIVE_V2.primary_families["recursion-as-self-call"],
                          "recursion-nested-wrap-week-v5")
+        self.assertEqual(DESCRIPTIVE_V2.primary_families["parameters-and-local-scope"],
+                         "scope-caller-local-default-week-v5")
+        self.assertNotEqual(DESCRIPTIVE_V2.primary_families["parameters-and-local-scope"],
+                            V1_PROTOCOL.primary_families["parameters-and-local-scope"])
         public = DESCRIPTIVE_V2.public()
         self.assertEqual(public["analysisUnit"], "independent_learner")
         self.assertEqual(public["targetExposureMinutes"], 10)
