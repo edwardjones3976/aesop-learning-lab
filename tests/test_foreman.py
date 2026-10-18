@@ -72,9 +72,32 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertEqual(override["learner_reason"], "More independent practice")
         self.assertTrue(override["recommended_reason"])
         self.assertTrue(override["selected_activity_id"])
+        self.assertEqual(override["selected_concept_id"], first)
         self.assertEqual({cid: reopened.lesson(cid)["method"]["conditionId"]
                           for cid in methods}, methods)
         self.assertEqual(len(reopened.store.export_all()["experimentExposures"]), 5)
+
+    def test_override_records_the_displayed_path_not_a_local_practice_surrogate(self):
+        self.preview.complete_lesson(self.concept)
+        activity = self.preview.session(self.concept)["activity"]
+        key = next(item.answer_key.accepted[0] for item in self.preview.pack.items
+                   if item.id == activity["id"])
+        draft_id = str(uuid4())
+        self.preview.first_answer({"conceptId": self.concept, "activityId": activity["id"],
+                                   "draftId": draft_id, "answer": key})
+        self.preview.submit({"draftId": draft_id})
+        displayed = self.preview.overview()["pathRecommendation"]
+        self.assertEqual(displayed["action"], "lesson")
+        self.assertNotEqual(displayed["conceptId"], self.concept)
+        self.preview.override({"conceptId": self.concept, "mode": "practice",
+                               "reason": "learner_choice", "learnerReason": "One more"})
+        recorded = self.preview.store.export_all()["recommendationOverrides"][0]
+        self.assertEqual(recorded["recommended_concept_id"], displayed["conceptId"])
+        self.assertEqual(recorded["recommended_action"], displayed["action"])
+        self.assertEqual(recorded["recommended_reason"], displayed["reason"])
+        self.assertIsNone(recorded["recommended_activity_id"])
+        self.assertEqual(recorded["selected_concept_id"], self.concept)
+        self.assertEqual(recorded["learner_reason"], "One more")
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

@@ -281,15 +281,21 @@ class Preview:
         if learner_reason is not None and (not isinstance(learner_reason, str) or
                                            len(learner_reason) > 500):
             raise ApiError("validation_error", "An override note must be at most 500 characters.")
-        recommended = service.next_session(20, "recommended")
+        path = self.overview()["pathRecommendation"]
+        recommended = (service.next_session(20, "recommended")
+                       if path["conceptId"] == cid and
+                       path["action"] in ("practice", "delayed_check") else None)
         selected = service.next_session(20, "practice")
         event_id = str(uuid4())
         self.store.record_override(event_id, cid, service.concept.content_version,
                                    "practice", "learner_choice", self.now(),
-                                   recommended_activity_id=(recommended.get("activity") or {}).get("id"),
-                                   recommended_reason=(recommended.get("recommendation") or {}).get("reason"),
+                                   recommended_activity_id=((recommended or {}).get("activity") or {}).get("id"),
+                                   recommended_reason=path["reason"],
                                    selected_activity_id=(selected.get("activity") or {}).get("id"),
-                                   learner_reason=learner_reason.strip() if learner_reason else None)
+                                   learner_reason=learner_reason.strip() if learner_reason else None,
+                                   recommended_concept_id=path["conceptId"],
+                                   recommended_action=path["action"],
+                                   selected_concept_id=cid)
         return {"id": event_id, "saved": True,
                 "selectedActivityId": (selected.get("activity") or {}).get("id")}
 

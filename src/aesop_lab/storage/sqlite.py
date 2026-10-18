@@ -18,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 class SQLiteStore:
@@ -190,6 +190,16 @@ class SQLiteStore:
                         self.connection.execute(
                             f"ALTER TABLE recommendation_overrides ADD COLUMN {name} TEXT")
                 self.connection.execute("PRAGMA user_version = 9")
+        if current < 10:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute(
+                    "PRAGMA table_info(recommendation_overrides)")}
+                for name in ("recommended_concept_id", "recommended_action",
+                             "selected_concept_id"):
+                    if name not in columns:
+                        self.connection.execute(
+                            f"ALTER TABLE recommendation_overrides ADD COLUMN {name} TEXT")
+                self.connection.execute("PRAGMA user_version = 10")
 
     def learner_id(self) -> str:
         row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
@@ -228,16 +238,21 @@ class SQLiteStore:
                         *, recommended_activity_id: str | None = None,
                         recommended_reason: str | None = None,
                         selected_activity_id: str | None = None,
-                        learner_reason: str | None = None) -> None:
+                        learner_reason: str | None = None,
+                        recommended_concept_id: str | None = None,
+                        recommended_action: str | None = None,
+                        selected_concept_id: str | None = None) -> None:
         with self.connection:
             self.connection.execute(
                 "INSERT INTO recommendation_overrides "
                 "(id, concept_id, content_version, mode, reason, occurred_at, "
-                "recommended_activity_id, recommended_reason, selected_activity_id, learner_reason) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "recommended_activity_id, recommended_reason, selected_activity_id, learner_reason, "
+                "recommended_concept_id, recommended_action, selected_concept_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (event_id, concept_id, version, mode, reason, at.isoformat(),
                  recommended_activity_id, recommended_reason, selected_activity_id,
-                 learner_reason),
+                 learner_reason, recommended_concept_id, recommended_action,
+                 selected_concept_id),
             )
 
     def record_lesson_completion(self, concept_id: str, version: str,
