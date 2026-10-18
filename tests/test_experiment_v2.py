@@ -95,7 +95,8 @@ class DescriptiveV2Tests(unittest.TestCase):
                                     ScoreStatus.CORRECT, "reviewed_exact_key",
                                     "assessment-v1", "held-out v2 check"))
         result = analyze_v2(assignments, exposures, attempts, activities,
-                            learner_id=LEARNER, now=START + timedelta(days=8))
+                            learner_id=LEARNER, now=START + timedelta(days=8),
+                            content_review_status="reviewed")
         self.assertEqual(result["conceptObservationsTotal"], 5)
         self.assertEqual(result["independentLearnersTotal"], 1)
         self.assertEqual(result["independentLearnersWithOutcome"], 1)
@@ -103,10 +104,12 @@ class DescriptiveV2Tests(unittest.TestCase):
         self.assertEqual(result["status"], "insufficient_evidence")
         self.assertTrue(all(arm["interval95"] is None for arm in result["arms"].values()))
 
-    def test_first_assisted_or_early_family_encounter_stays_missing(self):
-        for first in (attempt(hint=HintLevel.NUDGE),
-                      attempt(when=START + timedelta(days=1))):
-            with self.subTest(first=first):
+    def test_first_assisted_or_early_family_encounter_is_classified_separately(self):
+        for first, classification in (
+            (attempt(hint=HintLevel.NUDGE), "contaminated"),
+            (attempt(when=START + timedelta(days=1)), "early"),
+        ):
+            with self.subTest(classification=classification):
                 result = analyze_v2([assignment()], [exposure()],
                                     [first, attempt(attempt_id="later",
                                                     when=START + timedelta(days=8))],
@@ -114,7 +117,8 @@ class DescriptiveV2Tests(unittest.TestCase):
                                     now=START + timedelta(days=9))
                 arm = result["arms"][assignment().condition_id]
                 self.assertEqual(arm["eligible"], 0)
-                self.assertEqual(arm["missing"], 1)
+                self.assertEqual(arm[classification], 1)
+                self.assertEqual(arm["missing"], 0)
 
     def test_ungraded_and_seen_family_do_not_count_but_incorrect_independent_does(self):
         reviewed = analyze_v2([assignment()], [exposure()],
@@ -131,11 +135,82 @@ class DescriptiveV2Tests(unittest.TestCase):
                                        method="ungraded_pending_review")],
                               {ITEM.id: ITEM}, learner_id=LEARNER,
                               now=START + timedelta(days=8))
-        self.assertEqual(ungraded["arms"][assignment().condition_id]["missing"], 1)
+        self.assertEqual(ungraded["arms"][assignment().condition_id]["ungraded"], 1)
         seen = analyze_v2([assignment()], [exposure(encountered_family_ids=(FAMILY,))],
                           [attempt()], {ITEM.id: ITEM}, learner_id=LEARNER,
                           now=START + timedelta(days=8))
         self.assertEqual(seen["arms"][assignment().condition_id]["eligible"], 0)
+        self.assertEqual(seen["arms"][assignment().condition_id]["contaminated"], 1)
+
+    def test_draft_candidate_match_is_provisional_and_never_primary_eligible(self):
+        report = analyze_v2([assignment()], [exposure()], [attempt()],
+                            {ITEM.id: ITEM}, learner_id=LEARNER,
+                            now=START + timedelta(days=8))
+        arm = report["arms"][assignment().condition_id]
+        self.assertEqual((arm["provisional"], arm["candidateKeyMatches"]), (1, 1))
+        self.assertEqual((arm["eligible"], arm["correct"], arm["independentLearners"]),
+                         (0, 0, 0))
+        self.assertEqual(report["conceptObservationsTotal"], 0)
+        self.assertEqual(report["provisionalConceptObservationsTotal"], 1)
+        self.assertEqual(arm["observations"][0]["candidateKeyStatus"], "correct")
+        self.assertNotIn("reviewedScoreStatus", arm["observations"][0])
+
+    def test_late_independent_first_response_keeps_actual_delay_outside_primary(self):
+        delay = timedelta(days=17, hours=3, minutes=5, seconds=0.25)
+        late = attempt(when=START + delay)
+        for review in ("draft", "reviewed"):
+            with self.subTest(review=review):
+                report = analyze_v2([assignment()], [exposure(observed_seconds=600)],
+                                    [late], {ITEM.id: ITEM}, learner_id=LEARNER,
+                                    now=late.occurred_at, content_review_status=review)
+                arm = report["arms"][assignment().condition_id]
+                self.assertEqual((arm["late"], arm["eligible"], arm["missing"]),
+                                 (1, 0, 0))
+                self.assertEqual(arm["exposureIncomparable"], 1)
+                self.assertEqual(arm["observations"][0]["elapsedSeconds"],
+                                 delay.total_seconds())
+                self.assertEqual(arm["observations"][0]["classification"], "late")
+                self.assertEqual(arm["observations"][0]["exposureComparability"],
+                                 "unverified")
+                self.assertEqual(report["lateConceptObservationsTotal"], 1)
+                key = ("candidateKeyStatus" if review == "draft" else
+                       "reviewedScoreStatus")
+                self.assertEqual(arm["observations"][0][key], "correct")
+                self.assertEqual(arm["lateCandidateKeyMatches" if review == "draft"
+                                     else "lateReviewedCorrect"], 1)
+
+    def test_preregistered_primary_window_boundaries_are_unchanged(self):
+        cases = (
+            (timedelta(days=7) - timedelta(microseconds=1), "early"),
+            (timedelta(days=7), "eligible"),
+            (timedelta(days=14), "eligible"),
+            (timedelta(days=14) + timedelta(microseconds=1), "late"),
+        )
+        for delay, expected in cases:
+            with self.subTest(delay=delay):
+                first = attempt(when=START + delay)
+                result = analyze_v2([assignment()], [exposure()], [first],
+                                    {ITEM.id: ITEM}, learner_id=LEARNER,
+                                    now=START + delay,
+                                    content_review_status="reviewed")
+                arm = result["arms"][assignment().condition_id]
+                self.assertEqual(arm[expected], 1)
+                self.assertEqual(arm["observations"][0]["classification"], expected)
+
+    def test_missing_and_mismatched_exposure_are_not_silent_outcomes(self):
+        no_attempt = analyze_v2([assignment()], [exposure()], [], {},
+                                learner_id=LEARNER, now=START + timedelta(days=8))
+        self.assertEqual(no_attempt["arms"][assignment().condition_id]["missing"], 1)
+        wrong_start = exposure(exposed_at=START - timedelta(minutes=1),
+                               completed_at=START)
+        mismatch = analyze_v2([assignment()], [wrong_start], [attempt()],
+                              {ITEM.id: ITEM}, learner_id=LEARNER,
+                              now=START + timedelta(days=8))
+        arm = mismatch["arms"][assignment().condition_id]
+        self.assertEqual(arm["exposureIncomparable"], 1)
+        self.assertEqual(arm["missing"], 0)
+        self.assertEqual(arm["observations"][0]["classification"],
+                         "exposure_incomparable")
 
     def test_foreign_assignment_and_wrong_learner_are_rejected(self):
         v1 = ExperimentAssignment(V1_PROTOCOL.id, V1_PROTOCOL.version, CONCEPT, CONCEPT,

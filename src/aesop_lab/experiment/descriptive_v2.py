@@ -45,7 +45,7 @@ class DescriptiveProtocolV2:
                 "by SHA-256 of protocol ID, version, seed, learner ID, and concept ID. "
                 "Alternate arms in that order and choose the starting arm with a "
                 "separate learner-specific SHA-256 bit. Save first assignments; "
-                "never reassign or migrate v1 enrollments."
+                "never reassign or migrate earlier-protocol enrollments."
             ),
             "conditions": {
                 "text": "The same text explanation plus retrieval practice",
@@ -70,14 +70,19 @@ class DescriptiveProtocolV2:
             "analysisRule": (
                 "Report concept observations and unique learner counts separately. "
                 "Never use multiple concepts from one learner as independent samples "
-                "or compute a concept-level confidence interval. Draft keys, unverified "
+                "or compute a concept-level confidence interval. Candidate-key matches "
+                "from draft content are provisional, never eligible primary outcomes. "
+                "Late independent first responses remain descriptive observations "
+                "outside the unchanged day-7-to-14 primary window. Unverified "
                 "exposure duration, and too few independent learners require "
                 "insufficient_evidence. No method winner is inferred."
             ),
             "missingDataRule": (
-                "Missing, early, late, assisted, ungraded, and previously seen checks "
-                "remain missing primary outcomes, not incorrect answers. An incorrect "
-                "independent first response is an observed incorrect outcome."
+                "No first response is missing; assisted or previously seen checks are "
+                "contaminated; ungraded, early, and late responses are separate "
+                "nonprimary categories. Exposure comparability is reported separately. "
+                "An independently reviewed incorrect first response in the primary "
+                "window is an observed incorrect outcome."
             ),
             "prospectiveOnly": True,
             "requiresIndependentContentReview": True,
@@ -147,50 +152,65 @@ def assign_condition_v2(
 ) -> str:
     """Deterministic balanced-within-learner assignment for *new* enrollment."""
 
-    if concept_id not in DESCRIPTIVE_V2.primary_families:
-        raise ValueError("concept is outside fixed v2 protocol")
+    return _assign_condition(DESCRIPTIVE_V2, concept_id, learner_id, seed)
+
+
+def _assign_condition(
+    protocol: DescriptiveProtocolV2, concept_id: str, learner_id: str, seed: int,
+) -> str:
+
+    if concept_id not in protocol.primary_families:
+        raise ValueError("concept is outside fixed protocol")
     if not isinstance(learner_id, str) or not learner_id:
         raise ValueError("persisted learner ID is required")
     if type(seed) is not int:
         raise ValueError("seed must be an integer")
 
     def digest(suffix: str) -> bytes:
-        payload = (f"{DESCRIPTIVE_V2.id}\0{DESCRIPTIVE_V2.version}\0{seed}\0"
+        payload = (f"{protocol.id}\0{protocol.version}\0{seed}\0"
                    f"{learner_id}\0{suffix}")
         return sha256(payload.encode("utf-8")).digest()
 
-    order = sorted(DESCRIPTIVE_V2.primary_families,
+    order = sorted(protocol.primary_families,
                    key=lambda cid: (digest(cid), cid))
     starting_bit = digest("starting-arm")[0] & 1
     return "diagram" if (order.index(concept_id) + starting_bit) % 2 else "text"
 
 
-def _qualifies(
+def _classify_first(
     first: Attempt, activity: Activity, exposure: ExposureV2,
-    prior_families: set[str], now: datetime,
-) -> bool:
+    prior_families: set[str], now: datetime, content_review_status: str,
+    protocol: DescriptiveProtocolV2,
+) -> tuple[str, float | None]:
+    """Classify first-family response without moving the primary time window."""
+
     if exposure.completed_at is None or first.occurred_at > now:
-        return False
+        return "invalid", None
     if (first.activity_id != activity.id or
             first.content_version != activity.content_version or
             activity.content_version != exposure.content_version or
             activity.concept_id != exposure.concept_id or
-            activity.family_id != DESCRIPTIVE_V2.primary_families[exposure.concept_id]):
-        return False
+            activity.family_id != protocol.primary_families[exposure.concept_id]):
+        return "invalid", None
     if (not activity.held_out or
-            activity.check_delay_days != DESCRIPTIVE_V2.primary_delay_days or
+            activity.check_delay_days != protocol.primary_delay_days or
             activity.evidence_kind not in (EvidenceKind.APPLICATION, EvidenceKind.TRANSFER)):
-        return False
+        return "contaminated", None
     if (activity.family_id in exposure.encountered_family_ids or
-            activity.family_id in prior_families):
-        return False
-    if (first.hint_level is not HintLevel.NONE or
-            first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT) or
+            activity.family_id in prior_families or
+            first.hint_level is not HintLevel.NONE):
+        return "contaminated", None
+    if (first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT) or
             first.grading_method != "reviewed_exact_key"):
-        return False
+        return "ungraded", None
     elapsed = first.occurred_at - exposure.completed_at
-    return (timedelta(days=DESCRIPTIVE_V2.primary_delay_days) <= elapsed <=
-            timedelta(days=DESCRIPTIVE_V2.primary_window_days))
+    elapsed_seconds = elapsed.total_seconds()
+    if elapsed < timedelta(days=protocol.primary_delay_days):
+        return "early", elapsed_seconds
+    if elapsed > timedelta(days=protocol.primary_window_days):
+        return "late", elapsed_seconds
+    return ("eligible" if content_review_status == "reviewed" else
+            "provisional"), elapsed_seconds
 
 
 def analyze_v2(
@@ -205,48 +225,83 @@ def analyze_v2(
 ) -> dict:
     """Summarize one local learner without pseudoreplication or efficacy claims."""
 
+    return _analyze(
+        assignments, exposures, attempts, activities, learner_id=learner_id,
+        now=now, content_review_status=content_review_status,
+        protocol=DESCRIPTIVE_V2, exposure_type=ExposureV2,
+    )
+
+
+def _analyze(
+    assignments: Sequence[ExperimentAssignment],
+    exposures: Sequence[ExposureV2],
+    attempts: Sequence[Attempt],
+    activities: Mapping[str, Activity],
+    *,
+    learner_id: str,
+    now: datetime,
+    content_review_status: str,
+    protocol: DescriptiveProtocolV2,
+    exposure_type: type,
+) -> dict:
+
     if not isinstance(learner_id, str) or not learner_id:
         raise ValueError("persisted learner ID is required")
     if not _aware(now):
         raise ValueError("now needs a timezone")
     if content_review_status not in ("draft", "reviewed"):
         raise ValueError("content review status must be draft or reviewed")
-    if any(not isinstance(exposure, ExposureV2) for exposure in exposures):
-        raise ValueError("v1 or foreign exposure cannot be analyzed as v2")
+    if any(not isinstance(exposure, exposure_type) for exposure in exposures):
+        raise ValueError(f"v1 or foreign exposure cannot be analyzed as {protocol.version}")
     by_concept = {exposure.concept_id: exposure for exposure in exposures}
     if len(by_concept) != len(exposures):
-        raise ValueError("duplicate v2 exposure for concept")
+        raise ValueError(f"duplicate {protocol.version} exposure for concept")
     arms = {name: {"assigned": 0, "exposed": 0, "eligible": 0,
-                   "correct": 0, "missing": 0, "correctRate": None,
+                   "correct": 0, "missing": 0, "contaminated": 0,
+                   "early": 0, "late": 0, "ungraded": 0, "invalid": 0,
+                   "provisional": 0, "candidateKeyMatches": 0,
+                   "lateReviewedCorrect": 0, "lateCandidateKeyMatches": 0,
+                   "exposureIncomparable": 0, "observations": [], "correctRate": None,
                    "interval95": None, "independentLearners": 0,
                    "observedExposureSeconds": []}
             for name in ("text", "diagram")}
     seen: set[str] = set()
     for assignment in assignments:
         if (assignment.protocol_id, assignment.protocol_version) != (
-                DESCRIPTIVE_V2.id, DESCRIPTIVE_V2.version):
-            raise ValueError("v1 or foreign assignment cannot be analyzed as v2")
+                protocol.id, protocol.version):
+            raise ValueError(f"v1 or foreign assignment cannot be analyzed as {protocol.version}")
         if assignment.concept_id in seen:
-            raise ValueError("duplicate v2 assignment for concept")
+            raise ValueError(f"duplicate {protocol.version} assignment for concept")
         seen.add(assignment.concept_id)
-        if (assignment.concept_id not in DESCRIPTIVE_V2.primary_families or
+        if (assignment.concept_id not in protocol.primary_families or
                 assignment.item_family_id != assignment.concept_id or
-                assignment.seed != DESCRIPTIVE_V2.seed or
-                assignment.condition_id != assign_condition_v2(
-                    assignment.concept_id, learner_id)):
-            raise ValueError("assignment does not match fixed v2 seed or learner")
+                assignment.seed != protocol.seed or
+                assignment.condition_id != _assign_condition(
+                    protocol, assignment.concept_id, learner_id, protocol.seed)):
+            raise ValueError(f"assignment does not match fixed {protocol.version} seed or learner")
         arm = arms[assignment.condition_id]
         arm["assigned"] += 1
         exposure = by_concept.get(assignment.concept_id)
-        if (exposure is None or exposure.completed_at is None or
-                exposure.condition_id != assignment.condition_id or
-                exposure.exposed_at < assignment.assigned_at):
+        if exposure is None or exposure.completed_at is None:
             arm["missing"] += 1
+            arm["observations"].append({"conceptId": assignment.concept_id,
+                                        "classification": "missing",
+                                        "exposureComparability": "unavailable"})
+            continue
+        if (exposure.condition_id != assignment.condition_id or
+                exposure.exposed_at < assignment.assigned_at):
+            arm["exposureIncomparable"] += 1
+            arm["observations"].append({"conceptId": assignment.concept_id,
+                                        "classification": "exposure_incomparable",
+                                        "exposureComparability": "mismatched"})
             continue
         arm["exposed"] += 1
+        # A duration number alone does not establish equal, attentive exposure.
+        # The current self-paced protocol has no controlled exposure verification.
+        arm["exposureIncomparable"] += 1
         if exposure.observed_seconds is not None:
             arm["observedExposureSeconds"].append(exposure.observed_seconds)
-        family = DESCRIPTIVE_V2.primary_families[assignment.concept_id]
+        family = protocol.primary_families[assignment.concept_id]
         relevant = sorted((attempt for attempt in attempts
                            if (activity := activities.get(attempt.activity_id)) is not None
                            and activity.concept_id == assignment.concept_id
@@ -256,22 +311,45 @@ def analyze_v2(
         # response cannot replace an early, assisted, or incorrect one.
         if not relevant:
             arm["missing"] += 1
+            arm["observations"].append({"conceptId": assignment.concept_id,
+                                        "classification": "missing",
+                                        "exposureComparability": "unverified"})
             continue
         first = relevant[0]
         prior_families = {activity.family_id for attempt in attempts
                           if attempt.occurred_at < first.occurred_at
                           and (activity := activities.get(attempt.activity_id)) is not None}
-        if not _qualifies(first, activities[first.activity_id], exposure, prior_families, now):
-            arm["missing"] += 1
-            continue
-        arm["eligible"] += 1
-        arm["correct"] += int(first.score_status is ScoreStatus.CORRECT)
+        classification, elapsed_seconds = _classify_first(
+            first, activities[first.activity_id], exposure, prior_families,
+            now, content_review_status, protocol)
+        arm[classification] += 1
+        observation = {"conceptId": assignment.concept_id,
+                       "firstAttemptId": first.id,
+                       "classification": classification,
+                       "exposureComparability": "unverified"}
+        if elapsed_seconds is not None:
+            observation["elapsedSeconds"] = elapsed_seconds
+            observation["elapsedDays"] = round(elapsed_seconds / 86400, 3)
+        if classification in ("eligible", "provisional", "late"):
+            if content_review_status == "reviewed":
+                observation["reviewedScoreStatus"] = first.score_status.value
+            else:
+                observation["candidateKeyStatus"] = first.score_status.value
+        if classification == "eligible":
+            arm["correct"] += int(first.score_status is ScoreStatus.CORRECT)
+        elif classification == "provisional":
+            arm["candidateKeyMatches"] += int(first.score_status is ScoreStatus.CORRECT)
+        elif classification == "late":
+            field = ("lateReviewedCorrect" if content_review_status == "reviewed"
+                     else "lateCandidateKeyMatches")
+            arm[field] += int(first.score_status is ScoreStatus.CORRECT)
+        arm["observations"].append(observation)
     for arm in arms.values():
         arm["correctRate"] = (round(arm["correct"] / arm["eligible"], 4)
                               if arm["eligible"] else None)
         arm["independentLearners"] = int(arm["eligible"] > 0)
     return {
-        "protocol": DESCRIPTIVE_V2.public(),
+        "protocol": protocol.public(),
         "status": "insufficient_evidence",
         "reason": (
             "One local learner supplies at most one independent learner unit per arm; "
@@ -289,6 +367,8 @@ def analyze_v2(
         "independentLearnersEnrolled": int(bool(seen)),
         "independentLearnersWithOutcome": int(any(arm["eligible"] for arm in arms.values())),
         "conceptObservationsTotal": sum(arm["eligible"] for arm in arms.values()),
+        "provisionalConceptObservationsTotal": sum(arm["provisional"] for arm in arms.values()),
+        "lateConceptObservationsTotal": sum(arm["late"] for arm in arms.values()),
         "contentReviewStatus": content_review_status,
         "evidenceOrigin": "local_records_unverified",
         "arms": arms,
