@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 from uuid import UUID, uuid4
 
 from aesop_lab.api.service import ApiError, CatalogItem, LearningService
+from aesop_lab.api.personal_comparison import PersonalComparison, CONCEPT_ID as PERSONAL_CONCEPT_ID
 from aesop_lab.assessment import AnswerKey, Hint, HintLadder, ItemSpec, Rubric, RubricCriterion, assess
 from aesop_lab.content import load_pack
 from aesop_lab.domain.models import ExperimentAssignment, HintLevel
@@ -72,6 +73,20 @@ class Preview:
             self.store.close()
             raise RuntimeError("Learner records span incompatible content versions; resolve them before opening this preview")
         self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else CURRENT_PACK_PATH)
+
+    def personal_comparison(self) -> PersonalComparison:
+        prior = bool(self.store.list_attempts(PERSONAL_CONCEPT_ID)) or bool(
+            self.store.connection.execute(
+                "SELECT 1 FROM lesson_completions WHERE concept_id = ? LIMIT 1",
+                (PERSONAL_CONCEPT_ID,)).fetchone()) or bool(
+            self.store.connection.execute(
+                "SELECT 1 FROM experiment_exposures WHERE concept_id = ? LIMIT 1",
+                (PERSONAL_CONCEPT_ID,)).fetchone()) or bool(
+            self.store.connection.execute(
+                "SELECT 1 FROM practice_drafts d JOIN activities a "
+                "ON a.id = d.activity_id AND a.content_version = d.content_version "
+                "WHERE a.concept_id = ? LIMIT 1", (PERSONAL_CONCEPT_ID,)).fetchone())
+        return PersonalComparison(self.store, self.now, prior_concept_exposure=prior)
 
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
@@ -493,6 +508,8 @@ def make_handler(preview: Preview, *, port: int = PORT):
                                                                int(raw_minutes)))
                     if path == "/api/v2/export":
                         return self._json(200, preview.store.export_all())
+                    if path == "/api/v2/personal-comparison":
+                        return self._json(200, preview.personal_comparison().report())
                     files = {"/": ("index.html", "text/html"),
                              "/app.js": ("app.js", "text/javascript"),
                              "/theme-init.js": ("theme-init.js", "text/javascript"),
@@ -525,6 +542,12 @@ def make_handler(preview: Preview, *, port: int = PORT):
                               "/api/v2/self-reviews": lambda: preview._service(body.get("conceptId")).submit_self_review(body),
                               "/api/v2/revisions": lambda: preview._service(body.get("conceptId")).submit_revision(body),
                               "/api/v2/overrides": lambda: preview.override(body),
+                              "/api/v2/personal-comparison/enroll": lambda: preview.personal_comparison().enroll(),
+                              "/api/v2/personal-comparison/start": lambda: preview.personal_comparison().start_exposure(body.get("unitId")),
+                              "/api/v2/personal-comparison/complete": lambda: preview.personal_comparison().complete_exposure(body.get("unitId"), body.get("outsideStudy")),
+                              "/api/v2/personal-comparison/open": lambda: preview.personal_comparison().open_question(body.get("unitId"), body.get("phase")),
+                              "/api/v2/personal-comparison/hint": lambda: preview.personal_comparison().hint(body.get("unitId")),
+                              "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy")),
                               "/api/v2/delete": preview.delete_data}
                     if path in routes:
                         return self._json(200, routes[path]())

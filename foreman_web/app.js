@@ -484,10 +484,65 @@ export function reviewTimingMarkup(schedule, session = null, now = new Date()) {
   return `<section class="review-timing" role="status" aria-label="Review timing"><strong>${label}</strong>${dueAt ? `<p>Review time: <time datetime="${esc(dueAt)}">${esc(new Date(dueAt).toLocaleString())}</time></p>` : ''}<p>${esc(reason)}</p></section>`;
 }
 
+export function personalComparisonMarkup(report, openedHint = '', now = new Date()) {
+  const h = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if (!report || typeof report !== 'object' || !report.protocol || !Array.isArray(report.units)) {
+    throw new Error('The personal comparison report is incomplete.');
+  }
+  const protocol = report.protocol;
+  const intro = `<div class="section-kicker">PERSONAL COMPARISON · DRAFT</div><h2>Compare two ways to study</h2>
+    <p class="lede">Study worked Python examples in text or with a labeled diagram, solve different questions, then return for unfamiliar checks after seven days.</p>
+    <section class="experiment-summary" aria-label="Comparison limits"><strong>${h(report.status.replaceAll('_', ' '))}</strong>
+      <p>${h(report.reason)}</p><p>${h(report.uncertainty)}</p>
+      <small>${h(protocol.id)} · ${h(protocol.version)} · ${h(protocol.contentVersion)} · ${h(protocol.analysisUnit)} · ${h(protocol.contentReviewStatus)} keys. This is one learner's descriptive pilot, not a test of which method works better for people.</small></section>`;
+  const units = report.units.length ? `<section class="comparison-report"><h3>Your four units</h3><div class="table-scroll"><table><thead><tr><th scope="col">Unit</th><th scope="col">Method</th><th scope="col">Practice</th><th scope="col">Delayed check</th><th scope="col">Delay</th></tr></thead><tbody>${report.units.map(u => `<tr><th scope="row">${h(u.name)}</th><td>${h(u.condition === 'diagram' ? 'Text with diagram' : 'Text')}</td><td>${u.practiceAnswered ? (u.practiceAssisted ? 'Assisted' : 'Independent') + (u.practiceCandidateMatch ? ' · candidate match' : ' · no candidate match') : 'Missing'}</td><td>${h(u.classification)}${u.delayedAnswered ? (u.delayedCandidateMatch ? ' · candidate match' : ' · no candidate match') : ''}</td><td>${u.actualDelayDays == null ? '—' : `${h(u.actualDelayDays)} days`}</td></tr>`).join('')}</tbody></table></div>
+    <p class="muted">Candidate-key matches are feedback, not verified mastery. Missing, late, contaminated, and provisional delayed answers remain distinct.</p></section>` : '';
+  const arms = report.enrolled ? `<details class="evidence-panel"><summary>Descriptive counts by method</summary><div class="table-scroll"><table><thead><tr><th scope="col">Method</th><th scope="col">Assigned</th><th scope="col">Delayed answered</th><th scope="col">Candidate matches</th><th scope="col">Provisional</th><th scope="col">Missing</th><th scope="col">Late</th><th scope="col">Contaminated</th><th scope="col">Outside study unknown</th></tr></thead><tbody>${['text','diagram'].map(arm => { const c = report.arms?.[arm] ?? {}; const d = report.descriptive?.[arm] ?? {}; return `<tr><th scope="row">${arm === 'diagram' ? 'Text with diagram' : 'Text'}</th><td>${h(c.assigned)}</td><td>${h(d.observed)}</td><td>${h(d.candidateMatches)}</td><td>${h(c.provisional)}</td><td>${h(c.missing)}</td><td>${h(c.late)}</td><td>${h(c.contaminated)}</td><td>${h(c.outsideStudyUnknown)}</td></tr>`; }).join('')}</tbody></table></div><p class="muted">These are dependent observations from one learner. They do not supply independent learners or a meaningful confidence interval.</p></details>` : '';
+  const feedback = report.feedback ? `<section class="feedback" aria-label="Last answer feedback"><h3>Last ${h(report.feedback.phase)} answer</h3><p>${report.feedback.candidateMatch ? 'Matches' : 'Does not match'} the draft candidate key${report.feedback.assisted ? ' · assisted practice' : ' · independent answer'}.</p><details class="solution-panel"><summary>Reveal candidate answer and reasoning</summary><p>Candidate answer: <strong>${h(report.feedback.answer)}</strong></p><ol>${(report.feedback.steps ?? []).map(step => `<li>${h(step)}</li>`).join('')}</ol><p class="muted">The first answer remains recorded separately.</p></details></section>` : '';
+  if (!report.enrolled) return intro + (report.priorConceptExposure
+    ? '<div class="empty"><h3>This comparison cannot start for this learner</h3><p>This concept already has learner history. A prospective assignment must begin before its lesson or practice. Existing history stays intact.</p></div>'
+    : '<div class="activity-card"><h3>Start the four-unit comparison</h3><p>Assignment is fixed at enrollment. Each pair includes one text and one diagram unit; order is balanced. Your choices and study time remain under your control.</p><button class="button" id="comparison-enroll" type="button">Enroll in draft comparison</button></div>');
+  const next = report.next;
+  let activity = '';
+  if (next?.stage === 'study' && report.instruction) {
+    const unit = report.units.find(u => u.id === next.unitId);
+    const instruction = report.instruction;
+    activity = `<section class="activity-card"><span class="pill">${h(unit?.condition === 'diagram' ? 'Text with labeled diagram' : 'Text')} · worked example</span><h3>${h(unit?.name)}</h3>
+      ${unit?.exposureStartedAt ? `<p class="muted">Opened ${h(new Date(unit.exposureStartedAt).toLocaleString())}. Time spent is not verified.</p>` : '<button class="button" id="comparison-start" type="button">Open worked example</button>'}
+      ${unit?.exposureStartedAt ? `<div class="comparison-study"><p>Trace the code, the returned value, and the unchanged global name.</p><pre class="code">${h(instruction.workedCode)}</pre><p><strong>Worked answer:</strong> ${h(instruction.workedAnswer)}</p><h4>Step by step</h4><ol>${instruction.steps.map(step => `<li>${h(step)}</li>`).join('')}</ol>${instruction.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled diagram</figcaption><pre>${h(instruction.diagram)}</pre></figure>` : ''}<h4>Common misconceptions</h4><ul>${instruction.misconceptions.map(item => `<li>${h(item)}</li>`).join('')}</ul><p class="muted">Suggested study target: about ${h(instruction.studyTargetMinutes)} minutes. Attentive study is not verified.</p><p class="sources"><a href="${h(instruction.source)}" target="_blank" rel="noopener noreferrer">Python documentation source</a></p>${comparisonOutsideStudy()}<button class="button" id="comparison-complete" type="button">I studied this worked example →</button></div>` : ''}</section>`;
+  } else if ((next?.stage === 'practice' || next?.stage === 'delayed') && !report.question) {
+    activity = `<div class="activity-card"><span class="pill">${next.stage === 'delayed' ? 'Unfamiliar delayed assessment' : 'Practice'}</span><h3>${next.stage === 'delayed' ? 'A delayed check is ready' : 'A different practice question is ready'}</h3><p>Opening the question records its item family as encountered. Answer it without support for independent evidence.</p><button class="button" id="comparison-open" type="button">Open ${next.stage === 'delayed' ? 'delayed check' : 'practice question'}</button></div>`;
+  } else if ((next?.stage === 'practice' || next?.stage === 'delayed') && report.question) {
+    const q = report.question;
+    const assistedPractice = q.phase === 'practice' && (q.hintOpened || Boolean(openedHint));
+    const unit = report.units.find(u => u.id === next.unitId);
+    const viewedAt = q.phase === 'delayed' ? unit?.delayedFirstViewedAt : null;
+    const elapsedMs = viewedAt ? new Date(now).getTime() - Date.parse(viewedAt) : 0;
+    const viewWarning = viewedAt && elapsedMs > 30 * 60 * 1000
+      ? '<p class="error" role="alert">More than 30 minutes have passed since this delayed question was first opened. A submitted answer will be classified contaminated.</p>' : '';
+    activity = `<section class="activity-card"><span class="pill">${q.phase === 'delayed' ? (viewedAt ? 'Previously opened delayed check' : 'Unfamiliar delayed assessment') : 'New practice question'}</span>${viewWarning}<h3>${h(q.prompt)}</h3><pre class="code">${h(q.code)}</pre><p class="muted">Item family ${h(q.familyId)}. ${assistedPractice ? 'A hint was opened, so this answer will be assisted practice.' : 'Answer before using support for an independent first answer.'} Enter the returned value and unchanged global value as number, number.</p><label for="comparison-answer">Your first answer</label><input id="comparison-answer" class="answer" type="text" maxlength="100" autocomplete="off" placeholder="number, number" aria-describedby="comparison-answer-note"><p id="comparison-answer-note" class="muted">Your first submitted answer is locked. The candidate answer appears only after submission.</p>${comparisonOutsideStudy()}${assistedPractice ? `<p class="hint" role="status">${h(openedHint || 'Track the local keyword parameter inside the call, then the unchanged global name.')} This practice answer will be classified assisted.</p>` : ''}${q.hintAvailable ? '<p class="muted">Open a hint only while the answer field is blank. After a hint, your later answer is assisted practice.</p>' : ''}<div class="button-row">${q.hintAvailable ? '<button class="button secondary" id="comparison-hint" type="button">Open practice hint</button>' : ''}<button class="button" id="comparison-answer-submit" type="button">Submit first answer →</button></div></section>`;
+  } else if (next?.stage === 'waiting') {
+    const due = report.units.filter(u => u.exposureCompletedAt && !u.delayedAnswered).map(u => new Date(Date.parse(u.exposureCompletedAt) + 7 * 86400000));
+    const soonest = due.length ? new Date(Math.min(...due)) : null;
+    activity = `<div class="empty"><h3>Waiting for an unfamiliar check</h3><p>The next delayed question opens at least seven days after the worked example. Return then for an independent answer.</p>${soonest ? `<p>Next possible check: <time datetime="${h(soonest.toISOString())}">${h(soonest.toLocaleString())}</time></p>` : ''}<button class="button secondary" id="comparison-refresh" type="button">Check again</button></div>`;
+  }
+  return intro + feedback + activity + units + arms;
+}
+
+function comparisonOutsideStudy() {
+  return '<label class="comparison-outside" for="comparison-outside-study">Outside study since this example (optional)</label><select id="comparison-outside-study" class="answer"><option value="unknown">Unknown or prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select>';
+}
+
+export function comparisonHintBlockReason(answer) {
+  return String(answer ?? '').trim()
+    ? 'You have typed an answer. Submit it as your independent first answer, or clear the field before opening a hint. After a hint, a later answer is assisted practice.'
+    : null;
+}
+
 if (typeof globalThis.document !== 'undefined') {
 const content = document.querySelector('#content');
 const conceptsEl = document.querySelector('#concepts');
-const state = { overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', started: Date.now(), confidence: null, outsideStudy: 'unknown', outsideStudyDetail: '' };
+const state = { overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', view: 'path', comparison: null, comparisonHint: '', started: Date.now(), confidence: null, outsideStudy: 'unknown', outsideStudyDetail: '' };
 const preferenceKey = 'aesop.foreman.preferences.v1';
 let preferences = { minutes: 20, textSize: 'regular', theme: 'system', focus: false };
 try {
@@ -534,7 +589,7 @@ function showError(error) {
   const el = document.createElement('div'); el.className = 'error'; el.role = 'alert'; el.textContent = error.message || String(error);
   const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'button secondary';
   retry.textContent = 'Try loading again';
-  retry.onclick = async () => { try { if (state.conceptId) await refresh(); else await boot(); } catch (next) { showError(next); } };
+  retry.onclick = async () => { try { if (state.view === 'comparison') await refreshComparison(); else if (state.conceptId) await refresh(); else await boot(); } catch (next) { showError(next); } };
   el.append(retry);
   content.replaceChildren(el);
 }
@@ -550,6 +605,7 @@ function concepts() {
 }
 async function select(cid) {
   try {
+    state.view = 'path'; updateViewNavigation();
     state.conceptId = cid; state.answer = ''; state.result = null; state.review = null; state.mode = 'recommended'; state.started = Date.now(); state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
     await refresh();
   } catch (error) { showError(error); }
@@ -578,6 +634,70 @@ async function refresh() {
   if (state.session.draft) { state.answer = state.session.draft.firstAnswer; state.confidence = state.session.draft.confidence; }
   concepts(); render();
 }
+function updateViewNavigation() {
+  document.querySelector('#regular-path').setAttribute('aria-current', state.view === 'path' ? 'page' : 'false');
+  document.querySelector('#personal-comparison').setAttribute('aria-current', state.view === 'comparison' ? 'page' : 'false');
+}
+async function refreshComparison(report) {
+  state.comparison = report ?? await api('/api/v2/personal-comparison');
+  content.innerHTML = personalComparisonMarkup(state.comparison, state.comparisonHint);
+  const next = state.comparison.next;
+  const comparisonError = error => {
+    content.querySelector('.comparison-action-error')?.remove();
+    const message = document.createElement('p');
+    message.className = 'error comparison-action-error';
+    message.role = 'alert';
+    message.tabIndex = -1;
+    message.textContent = error.message || String(error);
+    content.prepend(message);
+    message.focus();
+  };
+  const act = async (action, body = {}) => {
+    try {
+      const updated = await api(`/api/v2/personal-comparison/${action}`, body);
+      state.comparisonHint = '';
+      await refreshComparison(updated);
+    } catch (error) { comparisonError(error); }
+  };
+  const bind = (id, action, body) => {
+    const node = document.querySelector(id);
+    if (node) node.onclick = () => act(action, typeof body === 'function' ? body() : body);
+  };
+  bind('#comparison-enroll', 'enroll', {});
+  bind('#comparison-start', 'start', () => ({unitId: next.unitId}));
+  bind('#comparison-complete', 'complete', () => ({unitId: next.unitId, outsideStudy: document.querySelector('#comparison-outside-study').value}));
+  bind('#comparison-open', 'open', () => ({unitId: next.unitId, phase: next.stage}));
+  document.querySelector('#comparison-refresh')?.addEventListener('click', () => refreshComparison().catch(showError));
+  document.querySelector('#comparison-hint')?.addEventListener('click', async () => {
+    try {
+      const answerInput = document.querySelector('#comparison-answer');
+      const blocked = comparisonHintBlockReason(answerInput?.value);
+      if (blocked) { comparisonError(new Error(blocked)); answerInput.focus(); return; }
+      const result = await api('/api/v2/personal-comparison/hint', {unitId: next.unitId});
+      state.comparisonHint = result.hint;
+      await refreshComparison();
+      document.querySelector('#comparison-answer')?.focus();
+    } catch (error) { comparisonError(error); }
+  });
+  document.querySelector('#comparison-answer-submit')?.addEventListener('click', async () => {
+    const input = document.querySelector('#comparison-answer');
+    const answer = input.value.trim();
+    if (!/^\d+\s*,\s*\d+$/.test(answer)) {
+      input.setCustomValidity('Enter two non-negative whole numbers as number, number.');
+      input.reportValidity(); input.focus();
+      return;
+    }
+    input.setCustomValidity('');
+    await act('answer', {unitId: next.unitId, phase: state.comparison.question.phase,
+      answer, outsideStudy: document.querySelector('#comparison-outside-study').value});
+  });
+}
+document.querySelector('#regular-path').onclick = async () => {
+  try { state.view = 'path'; updateViewNavigation(); await refresh(); } catch (error) { showError(error); }
+};
+document.querySelector('#personal-comparison').onclick = async () => {
+  try { state.view = 'comparison'; updateViewNavigation(); await refreshComparison(); } catch (error) { showError(error); }
+};
 function render() {
   try {
     renderWorkspace();

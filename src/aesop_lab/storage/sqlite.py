@@ -18,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 
 class SQLiteStore:
@@ -200,6 +200,42 @@ class SQLiteStore:
                         self.connection.execute(
                             f"ALTER TABLE recommendation_overrides ADD COLUMN {name} TEXT")
                 self.connection.execute("PRAGMA user_version = 10")
+        if current < 11:
+            with self.connection:
+                self.connection.executescript("""
+                CREATE TABLE IF NOT EXISTS personal_assignments (
+                    protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                    content_version TEXT NOT NULL, unit_id TEXT NOT NULL,
+                    pair INTEGER NOT NULL, position INTEGER NOT NULL,
+                    condition_id TEXT NOT NULL, assigned_at TEXT NOT NULL,
+                    PRIMARY KEY (protocol_id, protocol_version, unit_id)
+                );
+                CREATE TABLE IF NOT EXISTS personal_exposures (
+                    protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                    content_version TEXT NOT NULL, unit_id TEXT NOT NULL,
+                    condition_id TEXT NOT NULL, started_at TEXT NOT NULL,
+                    completed_at TEXT, encountered_family_ids TEXT NOT NULL,
+                    hint_opened_at TEXT, outside_study TEXT,
+                    PRIMARY KEY (protocol_id, protocol_version, unit_id)
+                );
+                CREATE TABLE IF NOT EXISTS personal_responses (
+                    protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                    content_version TEXT NOT NULL, unit_id TEXT NOT NULL,
+                    phase TEXT NOT NULL, family_id TEXT NOT NULL,
+                    first_answer TEXT NOT NULL, assisted INTEGER NOT NULL,
+                    candidate_match INTEGER NOT NULL, occurred_at TEXT NOT NULL,
+                    outside_study TEXT,
+                    PRIMARY KEY (protocol_id, protocol_version, unit_id, phase)
+                );
+                CREATE TABLE IF NOT EXISTS personal_question_views (
+                    protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                    content_version TEXT NOT NULL, unit_id TEXT NOT NULL,
+                    phase TEXT NOT NULL, family_id TEXT NOT NULL,
+                    first_viewed_at TEXT NOT NULL,
+                    PRIMARY KEY (protocol_id, protocol_version, unit_id, phase)
+                );
+                """)
+                self.connection.execute("PRAGMA user_version = 11")
 
     def learner_id(self) -> str:
         row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
@@ -538,6 +574,14 @@ class SQLiteStore:
             "selfReviews": [dict(row) for row in reviews],
             "answerRevisions": [dict(row) for row in revisions],
             "experimentAssignments": [dict(row) for row in assignments],
+            "personalAssignments": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_assignments ORDER BY assigned_at, position")],
+            "personalExposures": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_exposures ORDER BY started_at, unit_id")],
+            "personalResponses": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_responses ORDER BY occurred_at, unit_id, phase")],
+            "personalQuestionViews": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_question_views ORDER BY first_viewed_at, unit_id, phase")],
             "learnerIdentity": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM learner_identity")],
             "experimentExposures": [dict(row) for row in self.connection.execute(
@@ -566,6 +610,10 @@ class SQLiteStore:
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM personal_responses")
+            self.connection.execute("DELETE FROM personal_question_views")
+            self.connection.execute("DELETE FROM personal_exposures")
+            self.connection.execute("DELETE FROM personal_assignments")
             self.connection.execute("DELETE FROM learner_identity")
             self.connection.execute("DELETE FROM recommendation_overrides")
             self.connection.execute("DELETE FROM experiment_exposures")
