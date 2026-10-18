@@ -70,6 +70,10 @@ export function normalizeEvidence(evidence, path = 'evidence') {
     requireString(row.familiarityStatus, `${path}.delayedChecks[${index}].familiarityStatus`);
     const occurredAt = requireString(row.occurredAt, `${path}.delayedChecks[${index}].occurredAt`);
     if (Number.isNaN(Date.parse(occurredAt))) throw contractError(`${path}.delayedChecks[${index}].occurredAt`, 'expected a valid timestamp.');
+    if (row.dueAt != null) requireTimestamp(row.dueAt, `${path}.delayedChecks[${index}].dueAt`);
+    if (row.actualDelayDays != null && (typeof row.actualDelayDays !== 'number' || !Number.isFinite(row.actualDelayDays) || row.actualDelayDays < 0)) {
+      throw contractError(`${path}.delayedChecks[${index}].actualDelayDays`, 'expected a non-negative number.');
+    }
   });
   const contentQualityCandidates = requireArray(raw.contentQualityCandidates ?? [], `${path}.contentQualityCandidates`);
   contentQualityCandidates.forEach((candidate, index) => {
@@ -253,8 +257,10 @@ export function validateLesson(data) {
 
 function validateActivity(activity, path) {
   const row = requireRecord(activity, path);
-  if (Object.hasOwn(row, 'explanation')) {
-    throw contractError(`${path}.explanation`, 'must not be sent before the answer is scored.');
+  for (const hidden of ['explanation', 'solution', 'answerKey', 'correctAnswer', 'modelAnswer']) {
+    if (Object.hasOwn(row, hidden)) {
+      throw contractError(`${path}.${hidden}`, 'must not be sent before the answer is scored.');
+    }
   }
   const type = requireString(row.type, `${path}.type`);
   if (!ACTIVITY_TYPES.has(type)) throw contractError(`${path}.type`, 'activity type is not recognized.');
@@ -326,6 +332,14 @@ export function validateSession(data) {
       }
     }
   }
+  if (activity) {
+    const revealed = new Set(draft?.hintLevels ?? []);
+    for (const hint of activity.hints) {
+      if (!revealed.has(hint.level) && hint.text != null) {
+        throw contractError(`session.activity.hints.${hint.level}.text`, 'unrequested hint text must not be sent.');
+      }
+    }
+  }
   const recommendation = session.recommendation == null ? null : requireRecord(session.recommendation, 'session.recommendation');
   if (activity) requireString(recommendation?.reason, 'session.recommendation.reason');
   return {
@@ -350,6 +364,14 @@ export function validateAttemptResult(data) {
   requireString(result.nextReason, 'attempt.nextReason');
   if (result.explanation != null) requireString(result.explanation, 'attempt.explanation');
   requireBoolean(result.assisted, 'attempt.assisted');
+  if (result.solution != null) {
+    const solution = requireRecord(result.solution, 'attempt.solution');
+    if (status === 'ungraded') throw contractError('attempt.solution', 'ungraded answers cannot have a scored solution.');
+    if (solution.kind !== 'candidate_key') throw contractError('attempt.solution.kind', 'expected a candidate key.');
+    requireString(solution.answer, 'attempt.solution.answer');
+    requireString(solution.reasoning, 'attempt.solution.reasoning');
+    if (solution.misconception != null) requireString(solution.misconception, 'attempt.solution.misconception');
+  }
   if (result.rubric != null) {
     const rubric = requireRecord(result.rubric, 'attempt.rubric');
     requireString(rubric.id, 'attempt.rubric.id');
@@ -362,6 +384,13 @@ export function validateAttemptResult(data) {
     });
   }
   return result;
+}
+
+export function solutionMarkup(result) {
+  const validated = validateAttemptResult(result);
+  if (!validated.solution) return '';
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return `<details class="solution-panel"><summary>Reveal candidate answer and reasoning</summary><p class="muted">This is a draft candidate key shown after your first answer was saved and scored. It is not a mastery judgment.</p><p><strong>Candidate answer</strong></p><pre class="code">${esc(validated.solution.answer)}</pre><p><strong>Reasoning:</strong> ${esc(validated.solution.reasoning)}</p>${validated.solution.misconception ? `<p><strong>Common misconception:</strong> ${esc(validated.solution.misconception)}</p>` : ''}</details>`;
 }
 
 export function buildAttemptPayload(draftId, activeSeconds, confidence, outsideStudy, outsideStudyDetail = '') {
@@ -409,7 +438,7 @@ export function evidenceMarkup(evidence, recordedAttempts = []) {
   const normalized = normalizeEvidence(evidence, 'signals.evidence');
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const rows = Object.entries(normalized.byKind).map(([kind, count]) => `<tr><th scope="row">${esc(kind)}</th><td>${count.unassistedCorrect}</td><td>${count.assistedCorrect}</td><td>${count.incorrect}</td><td>${count.ungraded}</td></tr>`).join('');
-  const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => `<li>Day ${esc(check.checkDelayDays)} · ${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(String(check.familiarityStatus ?? 'not_verified').replace('_', ' '))} · ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
+  const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => `<li>Target delay ${esc(check.checkDelayDays)} day${check.checkDelayDays === 1 ? '' : 's'}${check.actualDelayDays != null ? ` · Actual delay ${esc(Number(check.actualDelayDays.toFixed(2)))} days` : ''}${check.dueAt ? ` · Due <time datetime="${esc(check.dueAt)}">${esc(new Date(check.dueAt).toLocaleString())}</time>` : ''} · ${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(String(check.familiarityStatus ?? 'not_verified').replace('_', ' '))} · answered ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
   const intervalStatus = Object.entries(normalized.delayedOutcomeByDay).map(([day, status]) => `<li>Day ${esc(day)}: ${esc(status.replace('_', ' '))}</li>`).join('');
   const history = recordedAttempts.length ? recordedAttempts.map(attempt => `<li><details><summary>${esc(attempt.activityId)} · ${esc(attempt.evidenceKind)} · ${esc(attempt.scoreStatus)} · ${attempt.assisted ? 'assisted' : 'independent'} · ${esc(new Date(attempt.occurredAt).toLocaleString())}</summary><p>Content ${esc(attempt.contentVersion)} · Hint: ${esc(attempt.hintLevel.replace('_', ' '))} · Method: ${esc(attempt.gradingMethod)}</p><p>Pre-hint confidence: ${attempt.confidence == null ? 'not provided' : `${Math.round(attempt.confidence * 100)}%`} · Outside study: ${esc(attempt.outsideStudy ?? 'not recorded')}</p><pre class="code">${esc(attempt.firstAnswer)}</pre></details></li>`).join('') : '<li>No attempts recorded yet.</li>';
   const candidates = normalized.contentQualityCandidates.length ? normalized.contentQualityCandidates.map(row => `<li>${esc(row.activityId)}: ${esc(row.reason)} (${row.attemptIds.length} recorded attempts). Requires content review; repeated errors alone do not prove an item defect.</li>`).join('') : '<li>No content review candidates recorded.</li>';
@@ -580,7 +609,7 @@ function renderWorkspace() {
   if (state.result) {
     const r = validateAttemptResult(state.result);
     const status = r.scoreStatus === 'ungraded' ? 'Saved for self review' : r.scoreStatus === 'correct' ? 'Candidate key match' : 'Try another approach';
-    content.innerHTML = intro + `<div class="feedback"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>` +
+    content.innerHTML = intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>${solutionMarkup(r)}` +
       (r.rubric && !state.review ? `<div class="activity-card"><span class="label">SELF REVIEW · ORIGINAL ANSWER</span><pre class="code">${esc(state.answer)}</pre><p class="muted">For each criterion, quote the part of your first answer that supports a shown or partial rating.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Evidence for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save self review →</button></div></div>` : '') +
       (state.review ? `<div class="activity-card"><span class="label">COMPARE AND REVISE</span><p>${esc(state.review.nextStep.replace('_',' '))}</p><pre class="code">${esc(state.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((state.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
       `<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
@@ -644,7 +673,21 @@ function drawAfterSave(a, draft) {
   document.querySelector('#outside-study-detail').oninput = event => { state.outsideStudyDetail = event.target.value; };
   const hint = document.querySelector('#hint');
   if (hint) hint.onclick = async () => { try { await api('/api/v2/hints',{draftId:draft.id}); await refresh(); } catch(error){showError(error)} };
-  document.querySelector('#submit').onclick = async () => { try { const payload = buildAttemptPayload(draft.id, Math.max(0,Math.floor((Date.now()-state.started)/1000)), state.confidence, state.outsideStudy, state.outsideStudyDetail); const result = validateAttemptResult(await api('/api/v2/attempts',payload)); const overview=validateOverview(await api('/api/v2/overview')); state.result=result; state.overview=overview; concepts(); render(); } catch(error){showError(error)} };
+  document.querySelector('#submit').onclick = async () => {
+    try {
+      const payload = buildAttemptPayload(draft.id, Math.max(0, Math.floor((Date.now()-state.started)/1000)), state.confidence, state.outsideStudy, state.outsideStudyDetail);
+      const result = validateAttemptResult(await api('/api/v2/attempts', payload));
+      const cid = encodeURIComponent(state.conceptId);
+      const [overview, session] = await Promise.all([
+        api('/api/v2/overview'),
+        api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`),
+      ]);
+      state.result = result;
+      state.overview = validateOverview(overview);
+      state.session = validateSession(session);
+      concepts(); render();
+    } catch (error) { showError(error); }
+  };
 }
 document.querySelector('#export').onclick = async () => {
   try { const data=await api('/api/v2/export'); data.displayPreferences = {...preferences}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}

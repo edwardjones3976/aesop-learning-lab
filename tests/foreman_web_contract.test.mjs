@@ -11,6 +11,7 @@ import {
   lessonMarkup,
   normalizeEvidence,
   reviewTimingMarkup,
+  solutionMarkup,
   validateAttemptResult,
   validateLesson,
   validateOverview,
@@ -146,6 +147,20 @@ test('a delayed check without assistance status cannot be called independent', (
   assert.throws(() => normalizeEvidence(evidence), /delayedChecks\[0\]\.assisted/);
 });
 
+test('delayed evidence distinguishes target delay from actual elapsed delay', () => {
+  const evidence = emptyEvidence();
+  evidence.delayedChecks.push({ attemptId: 'late', checkDelayDays: 7, evidenceKind: 'transfer',
+    scoreStatus: 'incorrect', assisted: false, familiarityStatus: 'not_verified',
+    dueAt: '2026-01-08T12:00:00Z', actualDelayDays: 9.25,
+    occurredAt: '2026-01-10T18:00:00Z' });
+  const html = evidenceMarkup(evidence);
+  assert.match(html, /Target delay 7 days/);
+  assert.match(html, /Actual delay 9.25 days/);
+  assert.match(html, /Due <time/);
+  evidence.delayedChecks[0].actualDelayDays = -1;
+  assert.throws(() => normalizeEvidence(evidence), /actualDelayDays/);
+});
+
 test('content quality candidates remain review candidates and escape their reason', () => {
   const evidence = emptyEvidence();
   evidence.contentQualityCandidates = [{ activityId: 'item-1', attemptIds: ['a1', 'a2'],
@@ -211,7 +226,7 @@ test('saved hint must have revealed text in the offered activity', () => {
 test('activity objective is available before answer while explanation is withheld', () => {
   const activity = { id: 'a1', type: 'choice', evidenceKind: 'recognition', prompt: 'Pick one',
     learningObjective: 'Distinguish return from print', difficulty: 'introductory',
-    choices: ['return 1'], hints: [] };
+    heldOut: true, choices: ['return 1'], hints: [] };
   const session = { activity, draft: null, recommendation: { reason: 'Begin practice.' } };
   const valid = validateSession(session);
   assert.equal(valid.activity.learningObjective, 'Distinguish return from print');
@@ -219,6 +234,12 @@ test('activity objective is available before answer while explanation is withhel
   assert.equal(Object.hasOwn(valid.activity, 'explanation'), false);
   activity.explanation = 'return sends the value back';
   assert.throws(() => validateSession(session), /session\.activity\.explanation: must not be sent/);
+  delete activity.explanation;
+  activity.solution = { answer: 'return 1' };
+  assert.throws(() => validateSession(session), /session\.activity\.solution: must not be sent/);
+  delete activity.solution;
+  activity.hints = [{ level: 'worked_solution', text: 'return 1' }];
+  assert.throws(() => validateSession(session), /unrequested hint text must not be sent/);
 });
 
 test('live preview API payloads validate for all five concepts', () => {
@@ -298,6 +319,21 @@ test('attempt result validation guards feedback rendering', () => {
   assert.throws(() => validateAttemptResult({ attemptId: 'a', scoreStatus: 'correct',
     gradingMethod: 'key', assisted: false, nextReason: 'Matched.' }),
   /attempt\.developmentOnly/);
+});
+
+test('candidate solution is intentionally revealed only for a scored result', () => {
+  const result = { attemptId: 'a', scoreStatus: 'incorrect', gradingMethod: 'development_fixture_exact_key',
+    assisted: false, nextReason: 'Candidate key did not match.', developmentOnly: true,
+    solution: { kind: 'candidate_key', answer: '<return 1>', reasoning: 'Return sends a value.',
+      misconception: '<print> only displays it.' } };
+  const html = solutionMarkup(result);
+  assert.match(html, /<details class="solution-panel"><summary>Reveal candidate answer and reasoning/);
+  assert.match(html, /&lt;return 1&gt;/);
+  assert.match(html, /&lt;print&gt;/);
+  assert.doesNotMatch(html, /<return 1>/);
+  assert.equal(solutionMarkup({ ...result, solution: undefined }), '');
+  assert.throws(() => validateAttemptResult({ ...result, scoreStatus: 'ungraded' }),
+    /ungraded answers cannot have a scored solution/);
 });
 
 test('experiment lesson condition controls optional labeled diagram', () => {
