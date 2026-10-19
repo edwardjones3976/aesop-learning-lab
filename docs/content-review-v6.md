@@ -2,7 +2,9 @@
 
 **Candidate:** `python-functions-recursion`, `m2-draft.6` (`v6` content). This is an author audit, not independent or human approval. The pack remains `draft`, all 26 scored keys remain `candidate`, and there are no approval receipts.
 
-The v6 pack preserves the five v5 lessons, their common text and labeled diagrams, 32 activities, cited Python sources, and the one-day/seven-day review structure in a new immutable content version. Lesson and activity IDs end in `-v6`; v5 remains unchanged. Each scored item now has a specific `common_mistakes` list for post-submission feedback in addition to its candidate key and worked `explanation`. The six explanation/code-design items remain ungraded and retain rubrics. The API/UI must not expose keys, worked explanations, or mistake rationales before answer submission.
+The v6 pack preserves the five v5 lessons, their common text and labeled diagrams, 32 activities, cited Python sources, and the one-day/seven-day review structure in a separate content version. Lesson and activity IDs end in `-v6`. Each scored item now has a specific `common_mistakes` list for post-submission feedback in addition to its candidate key and worked `explanation`. The six explanation/code-design items remain ungraded and retain rubrics. The API/UI must not expose keys, worked explanations, or mistake rationales before answer submission.
+
+**Historical provenance correction:** v5 was edited in commit `ec1f0ba` after its initial commit `a513641`, changing a scope week item and a rubric prompt. V6 was also edited in commit `bd27e34` after its initial commit `9fcd925`, correcting a recursive-case misconception. Therefore an unconditional claim that these version IDs were immutable from first publication would be inaccurate. Their current files are preserved by later prospective versions, but whether any real learner saw an earlier blob is unknown. No historical attempts are rewritten by this note.
 
 ## Corrected evidence-family boundaries
 
