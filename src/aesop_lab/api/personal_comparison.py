@@ -331,6 +331,20 @@ class PersonalComparison:
                  _iso(self.now()), outside_study, confidence))
         return self.report()
 
+    def reveal_solution(self, unit_id: str, phase: str) -> dict:
+        """Record the first explicit opening of a candidate solution after submission."""
+        self._assigned(unit_id)
+        if phase not in ("practice", "delayed"):
+            raise ValueError("Unknown comparison response phase.")
+        if (unit_id, phase) not in self._responses():
+            raise ValueError("Submit the first answer before revealing its solution.")
+        with self.store.connection:
+            self.store.connection.execute(
+                "INSERT OR IGNORE INTO personal_solution_reveals VALUES (?, ?, ?, ?, ?, ?)",
+                (PROTOCOL_ID, PROTOCOL_VERSION, CONTENT_VERSION, unit_id, phase,
+                 _iso(self.now())))
+        return self.report()
+
     def override(self, recommended_unit_id: str, recommended_stage: str,
                  selected_unit_id: str, selected_stage: str,
                  learner_reason: str | None = None) -> dict:
@@ -365,6 +379,11 @@ class PersonalComparison:
         exposures = self._rows("personal_exposures")
         responses = self._responses()
         views = self._views()
+        solution_reveals = {(row["unit_id"], row["phase"]): row["revealed_at"]
+                            for row in self.store.connection.execute(
+                                "SELECT unit_id, phase, revealed_at FROM personal_solution_reveals "
+                                "WHERE protocol_id = ? AND protocol_version = ?",
+                                (PROTOCOL_ID, PROTOCOL_VERSION))}
         hint_levels = {row["unit_id"]: row["level"] for row in self.store.connection.execute(
             "SELECT unit_id, MAX(level) AS level FROM personal_hint_events "
             "WHERE protocol_id = ? AND protocol_version = ? GROUP BY unit_id",
@@ -449,8 +468,10 @@ class PersonalComparison:
                           "interrupted": bool(exposure and not exposure["completed_at"]),
                           "practiceAnswered": bool(practice), "practiceAssisted": bool(practice and practice["assisted"]),
                           "practiceCandidateMatch": bool(practice and practice["candidate_match"]),
+                          "practiceSolutionRevealedAt": solution_reveals.get((unit.id, "practice")),
                           "delayedAnswered": bool(delayed),
                           "delayedCandidateMatch": bool(delayed and delayed["candidate_match"]),
+                          "delayedSolutionRevealedAt": solution_reveals.get((unit.id, "delayed")),
                           "delayedOutsideStudy": delayed["outside_study"] if delayed else None,
                           "otherConceptLearningBeforeDelayed": bool(
                               delayed and any(datetime.fromisoformat(assignment["assigned_at"]) <=
@@ -580,6 +601,7 @@ class PersonalComparison:
                     last_feedback.append(((datetime.fromisoformat(row["occurred_at"]), row["event_order"]), {"unitId": unit.id, "phase": phase,
                                           "candidateMatch": bool(row["candidate_match"]),
                                           "assisted": bool(row["assisted"]),
+                                          "solutionRevealedAt": solution_reveals.get((unit.id, phase)),
                                           "answer": unit.practice_answer if phase == "practice" else unit.delayed_answer,
                                           "steps": unit.practice_steps if phase == "practice" else unit.delayed_steps}))
         descriptive = {arm: {"observed": sum(row["condition"] == arm and row["delayedAnswered"]

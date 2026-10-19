@@ -53,6 +53,23 @@ test('delayed question exposes no answer and feedback labels draft and assistanc
   assert.doesNotMatch(html, /independent answer/);
 });
 
+test('solution exposure is distinguished from the locked first answer', () => {
+  const report = base(); report.enrolled = true;
+  report.units = [{id:'u1',name:'A',condition:'text',practiceAnswered:true,
+    practiceAssisted:false,practiceCandidateMatch:true,classification:'missing',
+    practiceSolutionRevealedAt:null,delayedSolutionRevealedAt:null}];
+  report.feedback = {unitId:'u1',phase:'practice',candidateMatch:true,assisted:false,
+    answer:'3, 9',steps:['Reason'],solutionRevealedAt:null};
+  let html = personalComparisonMarkup(report);
+  assert.match(html, /Solution opening not recorded/);
+  assert.match(html, /<th scope="col">Solution viewed<\/th>/);
+  report.units[0].practiceSolutionRevealedAt = '2026-10-18T12:00:00Z';
+  report.feedback.solutionRevealedAt = report.units[0].practiceSolutionRevealedAt;
+  html = personalComparisonMarkup(report);
+  assert.match(html, /Solution opening recorded/);
+  assert.match(html, /<td>Practice<\/td>/);
+});
+
 test('opened delayed family loses unfamiliar label and warns after 30 minutes', () => {
   const report = base(); report.enrolled = true;
   report.next = {unitId:'u1',stage:'delayed'};

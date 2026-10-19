@@ -18,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 
 class SQLiteStore:
@@ -267,6 +267,18 @@ class SQLiteStore:
                     )
                 """)
                 self.connection.execute("PRAGMA user_version = 13")
+        if current < 14:
+            with self.connection:
+                self.connection.execute("""
+                    CREATE TABLE IF NOT EXISTS personal_solution_reveals (
+                        protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                        content_version TEXT NOT NULL, unit_id TEXT NOT NULL,
+                        phase TEXT NOT NULL CHECK(phase IN ('practice', 'delayed')),
+                        revealed_at TEXT NOT NULL,
+                        PRIMARY KEY (protocol_id, protocol_version, unit_id, phase)
+                    )
+                """)
+                self.connection.execute("PRAGMA user_version = 14")
 
     def learner_id(self) -> str:
         row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
@@ -617,6 +629,8 @@ class SQLiteStore:
                 "SELECT * FROM personal_recommendation_overrides ORDER BY occurred_at, id")],
             "personalHintEvents": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM personal_hint_events ORDER BY viewed_at, unit_id, level")],
+            "personalSolutionReveals": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_solution_reveals ORDER BY revealed_at, unit_id, phase")],
             "learnerIdentity": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM learner_identity")],
             "experimentExposures": [dict(row) for row in self.connection.execute(
@@ -645,6 +659,7 @@ class SQLiteStore:
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM personal_solution_reveals")
             self.connection.execute("DELETE FROM personal_hint_events")
             self.connection.execute("DELETE FROM personal_recommendation_overrides")
             self.connection.execute("DELETE FROM personal_responses")

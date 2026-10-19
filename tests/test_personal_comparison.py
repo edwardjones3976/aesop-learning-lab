@@ -105,6 +105,32 @@ class PersonalComparisonTests(unittest.TestCase):
         self.assertEqual(exported["personalResponses"][0]["first_answer"], "0, 0")
         self.assertEqual(exported["personalAssignments"][0]["content_version"], CONTENT_VERSION)
 
+    def test_solution_opening_is_persisted_without_changing_first_answer(self):
+        self.comparison.enroll()
+        first = UNITS[0]
+        self.comparison.start_exposure(first.id)
+        self.comparison.complete_exposure(first.id, "none")
+        self.comparison.open_question(first.id, "practice")
+        with self.assertRaisesRegex(ValueError, "Submit the first answer"):
+            self.comparison.reveal_solution(first.id, "practice")
+        self.comparison.answer(first.id, "practice", "0, 0", "none")
+        self.assertIsNone(self.comparison.report()["units"][0]["practiceSolutionRevealedAt"])
+        self.clock += timedelta(minutes=2)
+        revealed = self.comparison.reveal_solution(first.id, "practice")
+        at = revealed["units"][0]["practiceSolutionRevealedAt"]
+        self.assertEqual(revealed["feedback"]["solutionRevealedAt"], at)
+        self.clock += timedelta(minutes=1)
+        self.assertEqual(self.comparison.reveal_solution(first.id, "practice")["units"][0]
+                         ["practiceSolutionRevealedAt"], at)
+        self.store.close()
+        self.store = SQLiteStore(self.db)
+        self.comparison = PersonalComparison(self.store, lambda: self.clock,
+                                             prior_concept_exposure=False)
+        self.assertEqual(self.comparison.report()["units"][0]["practiceSolutionRevealedAt"], at)
+        exported = self.store.export_all()
+        self.assertEqual(exported["personalResponses"][0]["first_answer"], "0, 0")
+        self.assertEqual(len(exported["personalSolutionReveals"]), 1)
+
     def test_two_hint_levels_persist_and_keep_first_response_assisted(self):
         self.comparison.enroll()
         first = UNITS[0]
