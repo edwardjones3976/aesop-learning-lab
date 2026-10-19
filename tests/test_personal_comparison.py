@@ -12,6 +12,7 @@ from aesop_lab.api.personal_comparison import (
 from aesop_lab.api.personal_comparison_v1 import (
     CONTENT_VERSION as V1_CONTENT_VERSION, PersonalComparison as LegacyPersonalComparison,
 )
+from aesop_lab.api.service import ApiError
 from aesop_lab.foreman import Preview
 from aesop_lab.storage.sqlite import SQLiteStore
 
@@ -209,6 +210,8 @@ class PersonalComparisonTests(unittest.TestCase):
         preview = Preview(self.db, now=lambda: self.clock)
         try:
             self.assertIsInstance(preview.personal_comparison(), LegacyPersonalComparison)
+            with self.assertRaisesRegex(ApiError, "historical protocol version"):
+                preview.reveal_comparison_solution(UNITS[0].id, "practice")
             preview.personal_comparison().answer(UNITS[0].id, "practice", "12, 40", "none", None)
         finally:
             preview.store.close()

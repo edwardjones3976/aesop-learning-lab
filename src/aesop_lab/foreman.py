@@ -96,6 +96,13 @@ class Preview:
         comparison = LegacyPersonalComparison if "v1" in versions else PersonalComparison
         return comparison(self.store, self.now, prior_concept_exposure=prior)
 
+    def reveal_comparison_solution(self, unit_id: object, phase: object) -> dict:
+        comparison = self.personal_comparison()
+        if isinstance(comparison, LegacyPersonalComparison):
+            raise ApiError("comparison_version_conflict",
+                           "Solution-opening records are unavailable for this historical protocol version.", 409)
+        return comparison.reveal_solution(unit_id, phase)
+
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
         if self.pack.status != "draft" or any(
@@ -556,7 +563,7 @@ def make_handler(preview: Preview, *, port: int = PORT):
                               "/api/v2/personal-comparison/open": lambda: preview.personal_comparison().open_question(body.get("unitId"), body.get("phase")),
                               "/api/v2/personal-comparison/hint": lambda: preview.personal_comparison().hint(body.get("unitId")),
                               "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy"), body.get("confidence")),
-                              "/api/v2/personal-comparison/reveal": lambda: preview.personal_comparison().reveal_solution(body.get("unitId"), body.get("phase")),
+                              "/api/v2/personal-comparison/reveal": lambda: preview.reveal_comparison_solution(body.get("unitId"), body.get("phase")),
                               "/api/v2/personal-comparison/override": lambda: preview.personal_comparison().override(body.get("recommendedUnitId"), body.get("recommendedStage"), body.get("selectedUnitId"), body.get("selectedStage"), body.get("learnerReason")),
                               "/api/v2/delete": preview.delete_data}
                     if path in routes:

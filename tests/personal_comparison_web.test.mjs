@@ -68,6 +68,9 @@ test('solution exposure is distinguished from the locked first answer', () => {
   html = personalComparisonMarkup(report);
   assert.match(html, /Solution opening recorded/);
   assert.match(html, /data-solution-unit="u1">Practice<\/td>/);
+  report.units[0].practiceSolutionRevealedAt = null;
+  report.units[0].delayedSolutionRevealedAt = '2026-10-26T12:00:00Z';
+  assert.match(personalComparisonMarkup(report), /data-solution-unit="u1">Delayed<\/td>/);
 });
 
 test('opened delayed family loses unfamiliar label and warns after 30 minutes', () => {
