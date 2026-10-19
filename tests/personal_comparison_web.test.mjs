@@ -38,15 +38,22 @@ test('delayed question exposes no answer and feedback labels draft and assistanc
   const report = base(); report.enrolled = true;
   report.next = {unitId:'u1',stage:'delayed'};
   report.question = {phase:'delayed',prompt:'Trace this',code:'x = 1',familyId:'held-out',hintAvailable:false,hintOpened:false};
-  let html = personalComparisonMarkup(report);
+  let html = personalComparisonMarkup(report, '', new Date(), true);
   assert.match(html, /Unfamiliar delayed assessment/);
   assert.doesNotMatch(html, /Open practice hint/);
   assert.doesNotMatch(html, /Candidate answer:/);
   report.feedback = {phase:'practice',candidateMatch:true,assisted:true,answer:'3, 9',steps:['Reason']};
   html = personalComparisonMarkup(report);
+  assert.match(html, /Earlier answer feedback is hidden while the delayed check is due/);
+  assert.doesNotMatch(html, /Reveal candidate answer and reasoning/);
+  report.next = {unitId:'u2',stage:'study'};
+  report.question = null;
+  report.units = [{id:'u2',name:'B',condition:'text',exposureStartedAt:null}];
+  html = personalComparisonMarkup(report);
   assert.match(html, /assisted practice/);
   assert.match(html, /Reveal candidate answer and reasoning/);
-  assert.match(html, /Candidate answer: <strong>3, 9/);
+  assert.match(html, /id="comparison-reveal"/);
+  assert.doesNotMatch(html, /Candidate answer: <strong>3, 9/);
   report.feedback.assisted = false;
   html = personalComparisonMarkup(report);
   assert.match(html, /unassisted response; delayed eligibility is reported separately/);
@@ -63,10 +70,13 @@ test('solution exposure is distinguished from the locked first answer', () => {
   let html = personalComparisonMarkup(report);
   assert.match(html, /Solution opening not recorded/);
   assert.match(html, /<th scope="col">Solution viewed<\/th>/);
+  assert.match(html, /Unassisted first response/);
+  assert.doesNotMatch(html, /Candidate answer: <strong>3, 9/);
   report.units[0].practiceSolutionRevealedAt = '2026-10-18T12:00:00Z';
   report.feedback.solutionRevealedAt = report.units[0].practiceSolutionRevealedAt;
   html = personalComparisonMarkup(report);
   assert.match(html, /Solution opening recorded/);
+  assert.match(html, /Candidate answer: <strong>3, 9/);
   assert.match(html, /data-solution-unit="u1">Practice<\/td>/);
   report.units[0].practiceSolutionRevealedAt = null;
   report.units[0].delayedSolutionRevealedAt = '2026-10-26T12:00:00Z';
@@ -89,11 +99,12 @@ test('opened delayed family loses unfamiliar label and warns after 30 minutes', 
   report.question = {phase:'delayed',prompt:'Trace this',code:'x = 1',familyId:'held-out',hintAvailable:false,hintOpened:false};
   report.units = [{id:'u1',name:'A',condition:'text',delayedFirstViewedAt:null}];
   const now = new Date('2026-10-18T12:31:00Z');
-  assert.match(personalComparisonMarkup(report, '', now), /Unfamiliar delayed assessment/);
+  assert.match(personalComparisonMarkup(report, '', now, true), /Unfamiliar delayed assessment/);
   report.units[0].delayedFirstViewedAt = '2026-10-18T12:00:00Z';
   const html = personalComparisonMarkup(report, '', now);
   assert.match(html, /Previously opened delayed check/);
   assert.doesNotMatch(html, /Unfamiliar delayed assessment/);
+  assert.match(personalComparisonMarkup(report, '', now, true), /Unfamiliar delayed assessment/);
   assert.match(html, /classified contaminated/);
   assert.doesNotMatch(personalComparisonMarkup(report, '', new Date('2026-10-18T12:29:00Z')), /classified contaminated/);
 });
@@ -130,12 +141,14 @@ test('first opened hint offers the next step after refresh', () => {
 test('arm report visibly counts delayed answers with unknown outside study', () => {
   const report = base(); report.enrolled = true;
   report.arms = {
-    text: {assigned:2,provisional:0,missing:1,late:0,contaminated:0,outsideStudyUnknown:1},
-    diagram: {assigned:2,provisional:0,missing:2,late:0,contaminated:0,outsideStudyUnknown:0},
+    text: {assigned:2,eligible:0,provisional:0,missing:1,late:0,contaminated:0,outsideStudyUnknown:1},
+    diagram: {assigned:2,eligible:0,provisional:0,missing:2,late:0,contaminated:0,outsideStudyUnknown:0},
   };
-  report.descriptive = {text:{observed:1,candidateMatches:1},diagram:{observed:0,candidateMatches:0}};
+  report.descriptive = {text:{observed:1,candidateMatches:1,eligibleCandidateMatches:0},diagram:{observed:0,candidateMatches:0,eligibleCandidateMatches:0}};
   const html = personalComparisonMarkup(report);
   assert.match(html, /<th scope="col">Outside study unknown<\/th>/);
+  assert.match(html, /<th scope="col">Eligible candidate matches<\/th>/);
+  assert.match(html, /All recorded counts include ineligible answers/);
   assert.match(html, /<th scope="row">Text<\/th>.*<td>1<\/td><\/tr>/);
 });
 
@@ -174,4 +187,16 @@ test('dimension panel states missing measures and optional pre-answer confidence
   assert.match(html, /0 eligible unfamiliar delayed responses/);
   assert.match(html, /1 other delayed response retained descriptively/);
   assert.match(html, /No validated calibration estimate/);
+  assert.match(html, /Delayed eligibility uses your study and return declarations/);
+});
+
+test('unknown study declaration explains delayed primary exclusion', () => {
+  const report = base(); report.enrolled = true;
+  report.units = [{id:'u1',name:'A',condition:'text',exposureStartedAt:'2026-10-18T12:00:00Z'}];
+  report.next = {unitId:'u1',stage:'study'};
+  report.instruction = {workedCode:'x = 1',workedAnswer:'1, 9',steps:['Trace'],
+    misconceptions:[],diagram:null,studyTargetMinutes:10,source:'https://docs.python.org/'};
+  const html = personalComparisonMarkup(report);
+  assert.match(html, /Unknown or reported outside study remains recorded but makes the delayed outcome ineligible/);
+  assert.match(html, /aria-describedby="comparison-outside-note"/);
 });
