@@ -5,7 +5,7 @@ A local-first personal learning application that tests whether its instructional
 The [project brief](docs/project-brief.md), [module contracts](docs/module-contracts.md), and [delivery board](docs/delivery-board.md) define the first prototype. This is a new project, separate from Aesop Cognitive Core and Director Orchestrator.
 
 The [five-concept adaptive development pilot](docs/adaptive-cycle-v1.md) documents the current local learning loop, fixed instructional comparison, delayed checks, and evidence limits.
-The [personal-learning pilot update](docs/personal-intelligence-pilot.md) describes v5 content, the prospective descriptive v2 protocol, return-visit evidence, and review limits.
+The [personal-learning pilot update](docs/personal-intelligence-pilot.md) describes current v7 content under the prospective descriptive v4 protocol, return-visit evidence, and review limits. Earlier v5/v2 records remain historical. The [single-learner scope comparison](docs/single-learner-comparison-v2.md) is a separate draft feasibility protocol with v1 history retained.
 
 Source concept: https://chatgpt.com/s/t_6accfb5560548191bdc0ba8d133d8b8d
 

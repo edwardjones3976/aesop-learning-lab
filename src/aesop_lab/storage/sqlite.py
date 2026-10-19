@@ -18,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 13
 
 
 class SQLiteStore:
@@ -236,6 +236,37 @@ class SQLiteStore:
                 );
                 """)
                 self.connection.execute("PRAGMA user_version = 11")
+        if current < 12:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute(
+                    "PRAGMA table_info(personal_responses)")}
+                if "confidence" not in columns:
+                    self.connection.execute(
+                        "ALTER TABLE personal_responses ADD COLUMN confidence REAL")
+                self.connection.execute("""
+                    CREATE TABLE IF NOT EXISTS personal_recommendation_overrides (
+                        id TEXT PRIMARY KEY,
+                        protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                        content_version TEXT NOT NULL, policy_version TEXT NOT NULL,
+                        recommended_unit_id TEXT NOT NULL, recommended_stage TEXT NOT NULL,
+                        recommended_reason TEXT NOT NULL, evidence_unit_ids TEXT NOT NULL,
+                        selected_unit_id TEXT NOT NULL, selected_stage TEXT NOT NULL,
+                        learner_reason TEXT, occurred_at TEXT NOT NULL
+                    )
+                """)
+                self.connection.execute("PRAGMA user_version = 12")
+        if current < 13:
+            with self.connection:
+                self.connection.execute("""
+                    CREATE TABLE IF NOT EXISTS personal_hint_events (
+                        protocol_id TEXT NOT NULL, protocol_version TEXT NOT NULL,
+                        content_version TEXT NOT NULL, unit_id TEXT NOT NULL,
+                        level INTEGER NOT NULL CHECK(level IN (1, 2)),
+                        viewed_at TEXT NOT NULL,
+                        PRIMARY KEY (protocol_id, protocol_version, unit_id, level)
+                    )
+                """)
+                self.connection.execute("PRAGMA user_version = 13")
 
     def learner_id(self) -> str:
         row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
@@ -582,6 +613,10 @@ class SQLiteStore:
                 "SELECT * FROM personal_responses ORDER BY occurred_at, unit_id, phase")],
             "personalQuestionViews": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM personal_question_views ORDER BY first_viewed_at, unit_id, phase")],
+            "personalRecommendationOverrides": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_recommendation_overrides ORDER BY occurred_at, id")],
+            "personalHintEvents": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM personal_hint_events ORDER BY viewed_at, unit_id, level")],
             "learnerIdentity": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM learner_identity")],
             "experimentExposures": [dict(row) for row in self.connection.execute(
@@ -610,6 +645,8 @@ class SQLiteStore:
 
     def delete_all(self) -> None:
         with self.connection:
+            self.connection.execute("DELETE FROM personal_hint_events")
+            self.connection.execute("DELETE FROM personal_recommendation_overrides")
             self.connection.execute("DELETE FROM personal_responses")
             self.connection.execute("DELETE FROM personal_question_views")
             self.connection.execute("DELETE FROM personal_exposures")

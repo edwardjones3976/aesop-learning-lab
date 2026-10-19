@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { comparisonHintBlockReason, personalComparisonMarkup } from '../foreman_web/app.js';
 
 const base = () => ({
-  protocol: { id: 'local', version: 'v1', contentVersion: 'draft.1', analysisUnit: 'one learner', contentReviewStatus: 'candidate' },
+  protocol: { id: 'local', version: 'v2', contentVersion: 'draft.2', analysisUnit: 'one learner', contentReviewStatus: 'candidate' },
   enrolled: false, priorConceptExposure: false, status: 'insufficient_evidence',
   reason: 'Four dependent units cannot establish benefit.', uncertainty: 'No interval.',
   units: [], arms: {}, descriptive: {}, next: null, instruction: null, question: null, feedback: null,
@@ -22,6 +22,7 @@ test('worked answer remains behind explicit exposure start and assigned diagram'
   const report = base(); report.enrolled = true;
   report.units = [{id:'u1', name:'A', condition:'diagram', exposureStartedAt:null}];
   report.next = {unitId:'u1',stage:'study'};
+  assert.match(personalComparisonMarkup(report), /Open worked example/);
   report.instruction = {workedCode:'x < 3',workedAnswer:'3, 9',steps:['First < step'],
     misconceptions:['Wrong < idea'],diagram:'x -> 3',studyTargetMinutes:10,source:'https://docs.python.org/'};
   assert.doesNotMatch(personalComparisonMarkup(report), /First &lt; step/);
@@ -46,6 +47,10 @@ test('delayed question exposes no answer and feedback labels draft and assistanc
   assert.match(html, /assisted practice/);
   assert.match(html, /Reveal candidate answer and reasoning/);
   assert.match(html, /Candidate answer: <strong>3, 9/);
+  report.feedback.assisted = false;
+  html = personalComparisonMarkup(report);
+  assert.match(html, /unassisted response; delayed eligibility is reported separately/);
+  assert.doesNotMatch(html, /independent answer/);
 });
 
 test('opened delayed family loses unfamiliar label and warns after 30 minutes', () => {
@@ -74,9 +79,22 @@ test('a typed first answer blocks hint; hint-opened practice uses assisted wordi
   assert.match(html, /independent first answer/);
   report.question.hintAvailable = false;
   report.question.hintOpened = true;
+  report.question.hintLevel = 2;
+  report.question.hintText = 'Trace each statement in order.';
   html = personalComparisonMarkup(report);
   assert.match(html, /this answer will be assisted practice/);
+  assert.match(html, /Hint 2: Trace each statement in order/);
   assert.doesNotMatch(html, /for an independent first answer/);
+});
+
+test('first opened hint offers the next step after refresh', () => {
+  const report = base(); report.enrolled = true;
+  report.next = {unitId:'u1',stage:'practice'};
+  report.question = {phase:'practice',prompt:'Trace',code:'x = 1',familyId:'practice-a',
+    hintAvailable:true,hintOpened:true,hintLevel:1,hintText:'Identify the local values.'};
+  const html = personalComparisonMarkup(report);
+  assert.match(html, /Hint 1: Identify the local values/);
+  assert.match(html, /Open next practice hint/);
 });
 
 test('arm report visibly counts delayed answers with unknown outside study', () => {
@@ -89,4 +107,41 @@ test('arm report visibly counts delayed answers with unknown outside study', () 
   const html = personalComparisonMarkup(report);
   assert.match(html, /<th scope="col">Outside study unknown<\/th>/);
   assert.match(html, /<th scope="row">Text<\/th>.*<td>1<\/td><\/tr>/);
+});
+
+test('versioned suggestion explains evidence and preserves an override choice', () => {
+  const report = base(); report.enrolled = true;
+  report.next = {unitId:'u1',stage:'delayed'};
+  report.recommendation = {policyVersion:'scope-next-v1',unitId:'u1',stage:'delayed',
+    reason:'The held-out check is due.',aim:'Observe delayed tracing.',
+    evidenceUnitIds:['u1'],uncertainty:'No method winner.',
+    alternative:{unitId:'u2',stage:'study'}};
+  let html = personalComparisonMarkup(report);
+  assert.match(html, /Suggested next: delayed · u1/);
+  assert.match(html, /Supporting units:<\/strong> u1/);
+  assert.match(html, /Decision rule scope-next-v1/);
+  assert.match(html, /id="comparison-override"/);
+  report.override = {selectedUnitId:'u2',selectedStage:'study'};
+  report.next = {unitId:'u2',stage:'study'};
+  html = personalComparisonMarkup(report);
+  assert.match(html, /The original recommendation remains recorded/);
+  assert.doesNotMatch(html, /id="comparison-override"/);
+});
+
+test('dimension panel states missing measures and optional pre-answer confidence', () => {
+  const report = base(); report.enrolled = true;
+  report.next = {unitId:'u1',stage:'practice'};
+  report.question = {phase:'practice',prompt:'Trace',code:'x = 1',familyId:'fresh',hintAvailable:true,hintOpened:false};
+  report.dimensions = {explanation:{status:'not_measured',observations:0},
+    delayedRetention:{status:'insufficient_evidence',observations:0,
+      observationLabel:'eligible unfamiliar delayed responses',otherRecordedResponses:1},
+    confidenceCalibration:{status:'candidate_pairs_only',pairs:1,
+      interpretation:'No validated calibration estimate.'}};
+  const html = personalComparisonMarkup(report);
+  assert.match(html, /Confidence before feedback/);
+  assert.match(html, /id="comparison-confidence"/);
+  assert.match(html, /explanation:<\/strong> not measured/);
+  assert.match(html, /0 eligible unfamiliar delayed responses/);
+  assert.match(html, /1 other delayed response retained descriptively/);
+  assert.match(html, /No validated calibration estimate/);
 });

@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 
 from aesop_lab.api.service import ApiError, CatalogItem, LearningService
 from aesop_lab.api.personal_comparison import PersonalComparison, CONCEPT_ID as PERSONAL_CONCEPT_ID
+from aesop_lab.api.personal_comparison_v1 import PersonalComparison as LegacyPersonalComparison
 from aesop_lab.assessment import AnswerKey, Hint, HintLadder, ItemSpec, Rubric, RubricCriterion, assess
 from aesop_lab.content import load_pack
 from aesop_lab.domain.models import ExperimentAssignment, HintLevel
@@ -74,7 +75,7 @@ class Preview:
             raise RuntimeError("Learner records span incompatible content versions; resolve them before opening this preview")
         self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else CURRENT_PACK_PATH)
 
-    def personal_comparison(self) -> PersonalComparison:
+    def personal_comparison(self) -> PersonalComparison | LegacyPersonalComparison:
         prior = bool(self.store.list_attempts(PERSONAL_CONCEPT_ID)) or bool(
             self.store.connection.execute(
                 "SELECT 1 FROM lesson_completions WHERE concept_id = ? LIMIT 1",
@@ -86,7 +87,14 @@ class Preview:
                 "SELECT 1 FROM practice_drafts d JOIN activities a "
                 "ON a.id = d.activity_id AND a.content_version = d.content_version "
                 "WHERE a.concept_id = ? LIMIT 1", (PERSONAL_CONCEPT_ID,)).fetchone())
-        return PersonalComparison(self.store, self.now, prior_concept_exposure=prior)
+        versions = {row[0] for row in self.store.connection.execute(
+            "SELECT DISTINCT protocol_version FROM personal_assignments WHERE protocol_id = ?",
+            ("scope-text-diagram-single-learner",))}
+        if len(versions) > 1 or versions - {"v1", "v2"}:
+            raise ApiError("comparison_version_conflict",
+                           "Comparison assignments contain incompatible versions.", 409)
+        comparison = LegacyPersonalComparison if "v1" in versions else PersonalComparison
+        return comparison(self.store, self.now, prior_concept_exposure=prior)
 
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
@@ -547,7 +555,8 @@ def make_handler(preview: Preview, *, port: int = PORT):
                               "/api/v2/personal-comparison/complete": lambda: preview.personal_comparison().complete_exposure(body.get("unitId"), body.get("outsideStudy")),
                               "/api/v2/personal-comparison/open": lambda: preview.personal_comparison().open_question(body.get("unitId"), body.get("phase")),
                               "/api/v2/personal-comparison/hint": lambda: preview.personal_comparison().hint(body.get("unitId")),
-                              "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy")),
+                              "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy"), body.get("confidence")),
+                              "/api/v2/personal-comparison/override": lambda: preview.personal_comparison().override(body.get("recommendedUnitId"), body.get("recommendedStage"), body.get("selectedUnitId"), body.get("selectedStage"), body.get("learnerReason")),
                               "/api/v2/delete": preview.delete_data}
                     if path in routes:
                         return self._json(200, routes[path]())
