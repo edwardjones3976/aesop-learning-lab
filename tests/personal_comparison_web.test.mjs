@@ -73,6 +73,16 @@ test('solution exposure is distinguished from the locked first answer', () => {
   assert.match(personalComparisonMarkup(report), /data-solution-unit="u1">Delayed<\/td>/);
 });
 
+test('historical comparison does not imply its solution openings were observed', () => {
+  const report = base(); report.enrolled = true; report.protocol.version = 'v1';
+  report.units = [{id:'u1',name:'A',condition:'text',classification:'missing'}];
+  report.feedback = {phase:'practice',candidateMatch:false,assisted:false,
+    answer:'3, 9',steps:['Reason']};
+  const html = personalComparisonMarkup(report);
+  assert.match(html, /Not tracked in v1/);
+  assert.match(html, /Solution opening was not tracked in this historical version/);
+});
+
 test('opened delayed family loses unfamiliar label and warns after 30 minutes', () => {
   const report = base(); report.enrolled = true;
   report.next = {unitId:'u1',stage:'delayed'};
