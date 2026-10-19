@@ -27,10 +27,12 @@ ADAPTIVE_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-dr
 V5_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.5.json"
 V6_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.6.json"
 V7_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.7.json"
-CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.8.json"
+V8_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.8.json"
+CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.9.json"
 PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH,
                    "v4": ADAPTIVE_PACK_PATH, "v5": V5_PACK_PATH,
-                   "v6": V6_PACK_PATH, "v7": V7_PACK_PATH, "v8": CURRENT_PACK_PATH}
+                   "v6": V6_PACK_PATH, "v7": V7_PACK_PATH,
+                   "v8": V8_PACK_PATH, "v9": CURRENT_PACK_PATH}
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -67,7 +69,7 @@ class Preview:
         # exposure. Even that partial enrollment must keep its original pack.
         for assignment in self.store.list_assignments("text-vs-labeled-diagram"):
             assigned_version = {"v1": "v4", "v2": "v5", "v3": "v6", "v4": "v7",
-                                "v5": "v8"}.get(assignment.protocol_version)
+                                "v5": "v8", "v6": "v9"}.get(assignment.protocol_version)
             if assigned_version is None:
                 versions.add("unknown")
             else:
@@ -120,7 +122,7 @@ class Preview:
                     lesson.encountered_family_ids for lesson in self.pack.lessons
                     if lesson.concept_id == concept.id)),
                 now=self.now,
-                policy_version=("pilot-v4" if concept.content_version in ("v5", "v6", "v7", "v8") else
+                policy_version=("pilot-v4" if concept.content_version in ("v5", "v6", "v7", "v8", "v9") else
                                 "pilot-v2" if concept.content_version in ("v3", "v4") else "pilot-v1"),
             ) for concept in self.pack.concepts
         }
@@ -269,7 +271,7 @@ class Preview:
 
     def _method_for(self, cid: str) -> dict | None:
         version = self.pack.concept(cid).content_version
-        if version not in ("v4", "v5", "v6", "v7", "v8"):
+        if version not in ("v4", "v5", "v6", "v7", "v8", "v9"):
             return None
         if version == "v4":
             from aesop_lab.experiment import PROTOCOL as protocol, assign_condition as assign
@@ -279,8 +281,10 @@ class Preview:
             from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, assign_condition_v3 as assign
         elif version == "v7":
             from aesop_lab.experiment.descriptive_v4 import DESCRIPTIVE_V4 as protocol, assign_condition_v4 as assign
-        else:
+        elif version == "v8":
             from aesop_lab.experiment.descriptive_v5 import DESCRIPTIVE_V5 as protocol, assign_condition_v5 as assign
+        else:
+            from aesop_lab.experiment.descriptive_v6 import DESCRIPTIVE_V6 as protocol, assign_condition_v6 as assign
         assignment = next((a for a in self.store.list_assignments(protocol.id)
                            if a.concept_id == cid and a.protocol_version == protocol.version), None)
         if assignment is None:
@@ -289,13 +293,13 @@ class Preview:
             self.store.save_assignment(assignment)
         method = {"conditionId": assignment.condition_id, "protocolId": protocol.id,
                   "protocolVersion": protocol.version}
-        if version in ("v5", "v6", "v7", "v8"):
+        if version in ("v5", "v6", "v7", "v8", "v9"):
             method["studyTargetMinutes"] = protocol.target_exposure_minutes
         return method
 
     def experiment_findings(self) -> dict:
         version = self.pack.concepts[0].content_version
-        if version not in ("v4", "v5", "v6", "v7", "v8"):
+        if version not in ("v4", "v5", "v6", "v7", "v8", "v9"):
             return {"status": "insufficient_evidence", "reason": "This content version predates the fixed comparison."}
         if version == "v4":
             from aesop_lab.experiment import PROTOCOL as protocol, Exposure, analyze
@@ -305,8 +309,10 @@ class Preview:
             from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, ExposureV3 as Exposure, analyze_v3 as analyze
         elif version == "v7":
             from aesop_lab.experiment.descriptive_v4 import DESCRIPTIVE_V4 as protocol, ExposureV4 as Exposure, analyze_v4 as analyze
-        else:
+        elif version == "v8":
             from aesop_lab.experiment.descriptive_v5 import DESCRIPTIVE_V5 as protocol, ExposureV5 as Exposure, analyze_v5 as analyze
+        else:
+            from aesop_lab.experiment.descriptive_v6 import DESCRIPTIVE_V6 as protocol, ExposureV6 as Exposure, analyze_v6 as analyze
         exposures = tuple(Exposure(
             row["concept_id"], row["content_version"], row["condition_id"],
             datetime.fromisoformat(row["exposed_at"]),
@@ -320,7 +326,7 @@ class Preview:
         activities = {item.activity.id: item.activity for item in self.pack.items}
         assignments = tuple(a for a in self.store.list_assignments(protocol.id)
                             if a.protocol_version == protocol.version)
-        if version in ("v5", "v6", "v7", "v8"):
+        if version in ("v5", "v6", "v7", "v8", "v9"):
             return analyze(assignments, exposures, attempts, activities,
                            learner_id=self.store.learner_id(), now=self.now())
         return analyze(assignments, exposures, attempts, activities, now=self.now())
