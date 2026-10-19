@@ -67,7 +67,7 @@ test('solution exposure is distinguished from the locked first answer', () => {
   report.feedback.solutionRevealedAt = report.units[0].practiceSolutionRevealedAt;
   html = personalComparisonMarkup(report);
   assert.match(html, /Solution opening recorded/);
-  assert.match(html, /<td>Practice<\/td>/);
+  assert.match(html, /data-solution-unit="u1">Practice<\/td>/);
 });
 
 test('opened delayed family loses unfamiliar label and warns after 30 minutes', () => {

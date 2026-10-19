@@ -192,7 +192,7 @@ class PersonalComparison:
         return self.report()
 
     def _assigned(self, unit_id: str) -> dict:
-        if unit_id not in UNIT_BY_ID:
+        if not isinstance(unit_id, str) or unit_id not in UNIT_BY_ID:
             raise ValueError("Unknown comparison unit.")
         row = self._rows("personal_assignments").get(unit_id)
         if row is None:

@@ -30,6 +30,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
                 self.assertEqual(store.export_all()["personalAssignments"][0]["protocol_version"], "v1")
                 self.assertEqual(store.export_all()["personalHintEvents"], [])
+                self.assertEqual(store.export_all()["personalSolutionReveals"], [])
 
     def test_exposure_and_override_survive_restart_export_and_delete(self) -> None:
         with TemporaryDirectory() as directory:

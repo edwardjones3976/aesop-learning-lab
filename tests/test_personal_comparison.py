@@ -108,6 +108,8 @@ class PersonalComparisonTests(unittest.TestCase):
     def test_solution_opening_is_persisted_without_changing_first_answer(self):
         self.comparison.enroll()
         first = UNITS[0]
+        with self.assertRaisesRegex(ValueError, "Unknown comparison unit"):
+            self.comparison.reveal_solution([], "practice")
         self.comparison.start_exposure(first.id)
         self.comparison.complete_exposure(first.id, "none")
         self.comparison.open_question(first.id, "practice")
@@ -130,6 +132,8 @@ class PersonalComparisonTests(unittest.TestCase):
         exported = self.store.export_all()
         self.assertEqual(exported["personalResponses"][0]["first_answer"], "0, 0")
         self.assertEqual(len(exported["personalSolutionReveals"]), 1)
+        self.store.delete_all()
+        self.assertEqual(self.store.export_all()["personalSolutionReveals"], [])
 
     def test_two_hint_levels_persist_and_keep_first_response_assisted(self):
         self.comparison.enroll()
