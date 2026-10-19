@@ -8,6 +8,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -50,8 +51,37 @@ class ForemanHttpJourney(unittest.TestCase):
                 overview = request("/api/v2/overview")
                 self.assertEqual(len(overview["concepts"]), 5)
                 concept = overview["concepts"][0]["id"]
-                lesson = request(f"/api/v2/lesson?conceptId={concept}")
+
+                # Opening a lesson assigns a condition and records exposure.
+                # A foreign page must not be able to do either with a GET or
+                # a simple cross-origin POST to the loopback preview.
+                def rejected(path, *, data=None, headers=None, status):
+                    with self.assertRaises(HTTPError) as error:
+                        urlopen(Request(base + path, data=data, headers=headers or {}), timeout=5)
+                    self.assertEqual(error.exception.code, status)
+
+                self.assertEqual(request("/api/v2/export")["experimentAssignments"], [])
+                rejected(f"/api/v2/lesson?conceptId={concept}",
+                         headers={"Referer": "https://foreign.example/"}, status=404)
+                lesson_body = json.dumps({"conceptId": concept}).encode()
+                rejected("/api/v2/lesson", data=lesson_body,
+                         headers={"Content-Type": "text/plain", "Origin": "https://foreign.example"},
+                         status=403)
+                rejected("/api/v2/lesson", data=lesson_body,
+                         headers={"Content-Type": "application/json", "Origin": "https://foreign.example"},
+                         status=403)
+                rejected("/api/v2/lesson", data=lesson_body,
+                         headers={"Content-Type": "application/json"}, status=403)
+                rejected("/api/v2/lesson", data=lesson_body,
+                         headers={"Content-Type": "text/plain", "Origin": base}, status=415)
+                before = request("/api/v2/export")
+                self.assertEqual(before["experimentAssignments"], [])
+                self.assertEqual(before["experimentExposures"], [])
+                lesson = request("/api/v2/lesson", {"conceptId": concept})
                 self.assertTrue(lesson["body"])
+                after = request("/api/v2/export")
+                self.assertEqual(len(after["experimentAssignments"]), 1)
+                self.assertEqual(len(after["experimentExposures"]), 1)
                 request("/api/v2/lesson-completions", {"conceptId": concept})
                 session = request(f"/api/v2/session?conceptId={concept}")
                 activity = session["activity"]

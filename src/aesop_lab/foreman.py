@@ -498,8 +498,7 @@ def make_handler(preview: Preview, *, port: int = PORT):
             if host not in (f"{HOST}:{port}", f"localhost:{port}"):
                 self._json(403, {"error": "Invalid host"})
                 return False
-            if self.command == "POST" and self.headers.get("Origin") not in (
-                f"http://{HOST}:{port}", f"http://localhost:{port}"):
+            if self.command == "POST" and self.headers.get("Origin") != f"http://{host}":
                 self._json(403, {"error": "Invalid origin"})
                 return False
             return True
@@ -524,8 +523,6 @@ def make_handler(preview: Preview, *, port: int = PORT):
                 if self.command == "GET":
                     if path == "/api/v2/overview":
                         return self._json(200, preview.overview())
-                    if path == "/api/v2/lesson":
-                        return self._json(200, preview.lesson(query.get("conceptId", [None])[0]))
                     if path == "/api/v2/session":
                         raw_minutes = query.get("availableMinutes", ["20"])[0]
                         if not raw_minutes.isdecimal():
@@ -562,7 +559,8 @@ def make_handler(preview: Preview, *, port: int = PORT):
                     body = json.loads(self.rfile.read(size))
                     if not isinstance(body, dict):
                         raise ApiError("validation_error", "JSON body must be an object.")
-                    routes = {"/api/v2/lesson-completions": lambda: preview.complete_lesson(body.get("conceptId")),
+                    routes = {"/api/v2/lesson": lambda: preview.lesson(body.get("conceptId")),
+                              "/api/v2/lesson-completions": lambda: preview.complete_lesson(body.get("conceptId")),
                               "/api/v2/first-answers": lambda: preview.first_answer(body),
                               "/api/v2/hints": lambda: preview.hint(body),
                               "/api/v2/attempts": lambda: preview.submit(body),

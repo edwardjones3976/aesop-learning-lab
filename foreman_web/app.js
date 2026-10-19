@@ -641,7 +641,7 @@ async function chooseMorePractice() {
 async function refresh() {
   const cid = encodeURIComponent(state.conceptId);
   const [overview, lesson, session] = await Promise.all([
-    api('/api/v2/overview'), api(`/api/v2/lesson?conceptId=${cid}`),
+    api('/api/v2/overview'), api('/api/v2/lesson', {conceptId:state.conceptId}),
     api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`)
   ]);
   const validOverview = validateOverview(overview);
