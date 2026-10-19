@@ -4,7 +4,7 @@
 
 **Reviewed source:** `src/aesop_lab/api/personal_comparison.py`, SHA-256 `ac24275fbb6681151a142d9a01143ecf6dea5dd1b2b211ae34da2aadf002d351`. This receipt applies only while that exact source hash remains unchanged. The frozen historical v1 module has SHA-256 `3930248ed8cc63eb740f9145e9019094796878fc04083d93f6028f12e5516a16`.
 
-**Subsequent source revision:** The current source SHA-256 is `98822a1434f10055fbaa269f0c80cd84158de361cd6047af5582f7255baae2e4`. Its fixed Python snippets, diagrams, keys, and item-family identifiers are unchanged. The revision records explicit candidate-solution openings after first answers and rejects malformed unit identifiers. The earlier source-hash receipt is historical; the revised exact commit requires its own engineering review receipt before integration. Qualified human content validation remains outstanding.
+**Subsequent source revision:** The current source SHA-256 is `259118d14eb62c3bdfc92d7764536294f1f388cc3047ebaf71c7384d258eedd8`. Its fixed Python snippets, diagrams, keys, and item-family identifiers are unchanged. The revision records explicit candidate-solution openings after first answers, rejects malformed unit identifiers, and withholds answer text and reasoning from the report until the reveal event is stored. The earlier source-hash receipt is historical; a nonauthor AI engineering review of commit `686f30d9e9e056964ff72b2096ba84b42697588f` checked this gate. Qualified human content validation remains outstanding.
 
 **Reviewer:** `/root/repo_science_audit`, a read-only nonauthor AI engineering agent. It authored no candidate content or source files. This is an AI technical review, not a credentialed human curriculum review.
 
