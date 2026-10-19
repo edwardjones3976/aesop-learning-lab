@@ -658,6 +658,10 @@ class SQLiteStore:
         return frozenset(row[0] for row in versions)
 
     def delete_all(self) -> None:
+        # Zero deleted cell payloads, including on databases created before this
+        # setting was enabled. VACUUM below also removes older free-page copies.
+        self.connection.execute("PRAGMA secure_delete = ON")
+        self.connection.execute("PRAGMA journal_size_limit = 0")
         with self.connection:
             self.connection.execute("DELETE FROM personal_solution_reveals")
             self.connection.execute("DELETE FROM personal_hint_events")
@@ -676,3 +680,13 @@ class SQLiteStore:
             self.connection.execute("DELETE FROM attempts")
             self.connection.execute("DELETE FROM experiment_assignments")
             self.connection.execute("DELETE FROM lesson_completions")
+        # VACUUM must run after the deletion transaction commits. It rebuilds
+        # the database without historical free-page content while retaining
+        # the immutable content catalog and the current schema.
+        self.connection.execute("VACUUM")
+        if self.connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal":
+            # A WAL can still contain pre-delete frames until checkpointed.
+            # Report a busy checkpoint rather than claiming erasure succeeded.
+            busy, _, _ = self.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            if busy:
+                raise RuntimeError("learner rows deleted, but WAL cleanup is blocked")

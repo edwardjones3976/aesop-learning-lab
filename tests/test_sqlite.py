@@ -13,6 +13,35 @@ from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class SQLiteStoreTests(unittest.TestCase):
+    def test_delete_removes_private_bytes_from_database_and_journals(self) -> None:
+        marker = "private-answer-" + "7c2e9a41" * 24
+        for journal_mode in ("delete", "persist", "wal"):
+            with self.subTest(journal_mode=journal_mode), TemporaryDirectory() as directory:
+                path = Path(directory) / "learner.db"
+                now = datetime.now(timezone.utc)
+                with SQLiteStore(path) as store:
+                    store.connection.execute(f"PRAGMA journal_mode = {journal_mode}")
+                    concept = Concept("private-concept", "Public catalog", "v1")
+                    activity = Activity("private-activity", concept.id, "v1", "family-a",
+                                        ActivityType.EXPLANATION, EvidenceKind.EXPLANATION)
+                    store.add_concept(concept)
+                    store.add_activity(activity)
+                    store.append_attempt(Attempt("private-attempt", activity.id, "v1", now,
+                                                 marker, HintLevel.NONE, ScoreStatus.UNGRADED,
+                                                 "ungraded_pending_review", "assessment-v1", "practice"))
+                    self.assertTrue(any(marker.encode() in file.read_bytes()
+                                        for file in path.parent.glob("learner.db*")))
+                    store.delete_all()
+                    self.assertEqual(store.export_all()["attempts"], [])
+                    self.assertEqual(store.get_activity(activity.id, "v1"), activity)
+                    self.assertFalse(any(marker.encode() in file.read_bytes()
+                                         for file in path.parent.glob("learner.db*")))
+                with SQLiteStore(path) as store:
+                    self.assertEqual(store.export_all()["attempts"], [])
+                    self.assertEqual(store.get_activity(activity.id, "v1"), activity)
+                self.assertFalse(any(marker.encode() in file.read_bytes()
+                                     for file in path.parent.glob("learner.db*")))
+
     def test_v12_comparison_records_survive_hint_event_migration(self) -> None:
         with TemporaryDirectory() as directory:
             path = Path(directory) / "comparison.db"
