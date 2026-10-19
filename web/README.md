@@ -7,7 +7,7 @@ Open-ended activities demonstrate guided self review: lock the first answer, com
 Open this directory through a local server so the modules load:
 
 ```text
-python -m http.server 8765
+python -m http.server --bind 127.0.0.1 8765
 ```
 
 Start the local API as described in `../docs/local-api-dev.md`, then visit
