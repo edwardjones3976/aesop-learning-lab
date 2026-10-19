@@ -118,10 +118,14 @@ class PersonalComparisonTests(unittest.TestCase):
             self.comparison.reveal_solution(first.id, "practice")
         self.comparison.answer(first.id, "practice", "0, 0", "none")
         self.assertIsNone(self.comparison.report()["units"][0]["practiceSolutionRevealedAt"])
+        self.assertIsNone(self.comparison.report()["feedback"]["answer"])
+        self.assertEqual(self.comparison.report()["feedback"]["steps"], ())
         self.clock += timedelta(minutes=2)
         revealed = self.comparison.reveal_solution(first.id, "practice")
         at = revealed["units"][0]["practiceSolutionRevealedAt"]
         self.assertEqual(revealed["feedback"]["solutionRevealedAt"], at)
+        self.assertEqual(revealed["feedback"]["answer"], first.practice_answer)
+        self.assertEqual(revealed["feedback"]["steps"], first.practice_steps)
         self.clock += timedelta(minutes=1)
         self.assertEqual(self.comparison.reveal_solution(first.id, "practice")["units"][0]
                          ["practiceSolutionRevealedAt"], at)

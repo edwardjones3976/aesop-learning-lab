@@ -598,12 +598,15 @@ class PersonalComparison:
             for phase in ("practice", "delayed"):
                 row = responses.get((unit.id, phase))
                 if row:
+                    revealed = solution_reveals.get((unit.id, phase))
                     last_feedback.append(((datetime.fromisoformat(row["occurred_at"]), row["event_order"]), {"unitId": unit.id, "phase": phase,
                                           "candidateMatch": bool(row["candidate_match"]),
                                           "assisted": bool(row["assisted"]),
-                                          "solutionRevealedAt": solution_reveals.get((unit.id, phase)),
-                                          "answer": unit.practice_answer if phase == "practice" else unit.delayed_answer,
-                                          "steps": unit.practice_steps if phase == "practice" else unit.delayed_steps}))
+                                          "solutionRevealedAt": revealed,
+                                          "answer": (unit.practice_answer if phase == "practice" else unit.delayed_answer)
+                                          if revealed else None,
+                                          "steps": (unit.practice_steps if phase == "practice" else unit.delayed_steps)
+                                          if revealed else ()}))
         descriptive = {arm: {"observed": sum(row["condition"] == arm and row["delayedAnswered"]
                                               for row in units),
                              "candidateMatches": sum(row["condition"] == arm and row["delayedCandidateMatch"]
