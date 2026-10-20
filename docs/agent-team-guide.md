@@ -16,7 +16,8 @@ How the AI agents working on this repository split, check and land work. It comp
 
 - **One author and one distinct non-author reviewer per PR.** The reviewer either merges the exact reviewed commit (`gh pr merge N --merge --match-head-commit <sha>`) or returns notes to the author. Nobody merges their own work. Never use `--admin`, delete the branch, or approve via `gh pr review`.
 - **One writer per file at a time.** For example, `foreman_web/app.js` has a single owning team until it is released.
-- **Every change ships with tests.** A test counts only after it has been shown to fail on a deliberate break.
+- **Every behavior change ships with tests.** A test counts only after it has been shown to fail on a deliberate break. Documentation-only changes need no test; instead, every factual claim about the app (UI strings, endpoints, file paths, protocol rules) is checked against the code or the protocol doc before review.
+- **The Codex GitHub reviewer's findings are answered before merge.** Each finding is either fixed or declined with a written reason on the PR by an admin.
 - **No history rewriting** (rebase plus force-push) of shared branches without the owner's authorization. Merge `master` into the branch instead.
 - **The owner alone** handles credentials, config files, deletion, deployment and publishing. Silence or an unavailable provider is never approval.
 - **If a PR depends on an owner-reserved decision** (for example a screen sign-off or human key review), that decision must be recorded before the reviewer merges the exact reviewed commit.
