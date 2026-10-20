@@ -493,7 +493,8 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
       const colon = part.indexOf(':');
       if (colon === -1) continue;
       const prop = part.slice(0, colon).trim().toLowerCase();
-      const val = part.slice(colon + 1).trim().toLowerCase();
+      let val = part.slice(colon + 1).trim().toLowerCase();
+      val = val.replace(/\s*!important\s*$/i, '').trim();
       decls.push({ prop, val });
     }
     return decls;
@@ -561,14 +562,14 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
     return [...new Set(currentSelectors)];
   }
 
-  const quietHidingSelectors = [];
-  for (const rule of quietRules) {
+  const allHidingSelectors = [];
+  for (const rule of allRules) {
     if (isHiding(rule.body, rule.selector)) {
       const rawSelectors = splitSelectorList(rule.selector);
       for (const rawSel of rawSelectors) {
         const expanded = expandFunctionalPseudo(rawSel);
         for (const sel of expanded) {
-          quietHidingSelectors.push(sel.trim());
+          allHidingSelectors.push(sel.trim());
         }
       }
     }
@@ -577,6 +578,9 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
   function selectorTargets(selector, item) {
     const segments = selector.trim().split(/[\s>+~]+/);
     const subject = segments[segments.length - 1];
+    if (/::[a-zA-Z-]+$/.test(subject) || /:(?:before|after|first-line|first-letter|placeholder|backdrop|selection)(?![a-zA-Z-])/i.test(subject)) {
+      return false;
+    }
 
     const matches = (target) => {
       if (item.startsWith('.')) {
@@ -598,12 +602,12 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
   }
 
   assert.ok(
-    quietHidingSelectors.some(selector => /(?<![\\w-])\.quiet(?![\\w-])/.test(selector) && selectorTargets(selector, '.workspace-evidence')),
+    allHidingSelectors.some(selector => /(?<![\\w-])\.quiet(?![\\w-])/.test(selector) && selectorTargets(selector, '.workspace-evidence')),
     'Quiet view must hide .workspace-evidence',
   );
 
   for (const forbidden of ['.review-timing', '.notice', '.why', '.workspace', '#content', '.layout', '.shell', 'main', 'body']) {
-    const offending = quietHidingSelectors.filter(selector => selectorTargets(selector, forbidden));
+    const offending = allHidingSelectors.filter(selector => selectorTargets(selector, forbidden));
     assert.deepEqual(
       offending,
       [],
