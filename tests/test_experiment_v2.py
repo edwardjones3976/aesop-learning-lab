@@ -206,6 +206,11 @@ class DescriptiveV2Tests(unittest.TestCase):
                 arm = result["arms"][assignment().condition_id]
                 self.assertEqual(arm[expected], 1)
                 self.assertEqual(arm["observations"][0]["classification"], expected)
+                displayed = arm["observations"][0]["elapsedDays"]
+                if expected == "early":
+                    self.assertLess(displayed, DESCRIPTIVE_V2.primary_delay_days)
+                elif expected == "late":
+                    self.assertGreater(displayed, DESCRIPTIVE_V2.primary_window_days)
 
     def test_missing_and_mismatched_exposure_are_not_silent_outcomes(self):
         no_attempt = analyze_v2([assignment()], [exposure()], [], {},
