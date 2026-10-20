@@ -125,7 +125,8 @@ class Preview:
                     lesson.encountered_family_ids for lesson in self.pack.lessons
                     if lesson.concept_id == concept.id)),
                 now=self.now,
-                policy_version=("pilot-v4" if concept.content_version in ("v5", "v6", "v7", "v8", "v9", "v10") else
+                policy_version=("pilot-v5" if concept.content_version == "v10" else
+                                "pilot-v4" if concept.content_version in ("v5", "v6", "v7", "v8", "v9") else
                                 "pilot-v2" if concept.content_version in ("v3", "v4") else "pilot-v1"),
             ) for concept in self.pack.concepts
         }
@@ -185,9 +186,12 @@ class Preview:
                     {item.spec.activity.id: item.spec.activity for item in service.items.values()},
                     attempts, completed, service.encountered_family_ids),
                 "reviewSchedule": {"dueAt": next_check, "status": review_status,
-                                   "reason": (f"Held-out independent review for {cid} "
-                                              "is scheduled from the recorded lesson completion."
-                                              if due else "No eligible unused delayed check is scheduled.")},
+                                   "reason": (("A new question is scheduled from the time you finished this lesson."
+                                               if due else "No new later question is scheduled.")
+                                              if self.pack.pack_version == "m2-draft.10" else
+                                              (f"Held-out independent review for {cid} "
+                                               "is scheduled from the recorded lesson completion."
+                                               if due else "No eligible unused delayed check is scheduled."))},
                 "openDraft": ({"activityId": draft["activity_id"],
                                "savedAt": draft["recorded_at"],
                                "hintLevel": (self.store.hint_levels(draft["id"])[-1].value
@@ -225,18 +229,25 @@ class Preview:
             if (concept["lessonComplete"] and
                     concept["signals"]["freshUnassistedCorrect"] == 0):
                 return {"conceptId": concept["id"], "action": "practice",
-                        "reason": "Build one unassisted candidate-key match on a new item family before moving on."}
+                        "reason": ("Try a new question without help before moving on. "
+                                   "A match with a draft answer key is only practice feedback."
+                                   if self.pack.pack_version == "m2-draft.10" else
+                                   "Build one unassisted candidate-key match on a new item family before moving on.")}
         for concept in concepts:
             if not concept["lessonComplete"] and all(
                 by_id[parent]["lessonComplete"] and
                 by_id[parent]["signals"]["freshUnassistedCorrect"] > 0
                 for parent in self.pack.prerequisites_of(concept["id"])):
                 return {"conceptId": concept["id"], "action": "lesson",
-                        "reason": "Read the next lesson in prerequisite order."}
+                        "reason": ("Read the next lesson. It builds on what you studied before."
+                                   if self.pack.pack_version == "m2-draft.10" else
+                                   "Read the next lesson in prerequisite order.")}
         for concept in concepts:
             if concept["lessonComplete"]:
                 return {"conceptId": concept["id"], "action": "practice",
-                        "reason": "Continue practice while waiting for an independent delayed check."}
+                        "reason": ("Keep practicing while you wait for a later question without help."
+                                   if self.pack.pack_version == "m2-draft.10" else
+                                   "Continue practice while waiting for an independent delayed check.")}
         return {"conceptId": concepts[0]["id"], "action": "lesson",
                 "reason": "Begin with the first lesson."}
 
