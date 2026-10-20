@@ -15,6 +15,8 @@ from uuid import uuid4
 
 from aesop_lab.storage.sqlite import SQLiteStore
 
+from .delay_display import display_delay_days
+
 
 PROTOCOL_ID = "scope-text-diagram-single-learner"
 PROTOCOL_VERSION = "v2"
@@ -428,7 +430,7 @@ class PersonalComparison:
             if delayed and exposure and exposure["completed_at"]:
                 actual_delay = (datetime.fromisoformat(delayed["occurred_at"]) -
                                 datetime.fromisoformat(exposure["completed_at"]))
-                actual_delay_days = round(actual_delay.total_seconds() / 86400, 3)
+                actual_delay_days = display_delay_days(actual_delay, DELAY_DAYS, WINDOW_DAYS)
                 cross_path = any(datetime.fromisoformat(assignment["assigned_at"]) <=
                                  datetime.fromisoformat(at) <=
                                  datetime.fromisoformat(delayed["occurred_at"])
