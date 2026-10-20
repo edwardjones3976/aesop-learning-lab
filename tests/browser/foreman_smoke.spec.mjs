@@ -34,55 +34,86 @@ async function waitForServer(url, timeoutMs = 15000) {
     } catch (_) {
       // server not ready yet
     }
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 100));
   }
   throw new Error(`Server at ${url} failed to respond within ${timeoutMs}ms`);
 }
 
-let serverProcess = null;
-let serverBaseUrl = '';
-let tempDbDir = '';
+function initSeededDb(dbPath, learnerId) {
+  return new Promise((resolve, reject) => {
+    const pyCode = [
+      'import sqlite3, sys',
+      'from aesop_lab.storage.sqlite import SQLiteStore',
+      'db_file = sys.argv[1]',
+      'uid = sys.argv[2]',
+      'store = SQLiteStore(db_file)',
+      'store.close()',
+      'conn = sqlite3.connect(db_file)',
+      'conn.execute("INSERT INTO learner_identity VALUES (1, ?)", (uid,))',
+      'conn.commit()',
+      'conn.close()',
+    ].join('; ');
 
-test.beforeAll(async () => {
+    const proc = spawn('python', ['-c', pyCode, dbPath, learnerId], {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stderr = '';
+    proc.stderr.on('data', chunk => { stderr += chunk.toString(); });
+    proc.on('close', code => {
+      if (code === 0) resolve();
+      else reject(new Error(`Failed to init db (exit ${code}): ${stderr}`));
+    });
+    proc.on('error', reject);
+  });
+}
+
+async function startServerForLearner(learnerId) {
   const port = await getFreePort();
-  tempDbDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aesop-smoke-'));
-  const tempDbPath = path.join(tempDbDir, 'test.db');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aesop-smoke-'));
+  const tempDbPath = path.join(tempDir, 'test.db');
 
-  serverBaseUrl = `http://127.0.0.1:${port}`;
+  await initSeededDb(tempDbPath, learnerId);
 
+  const serverBaseUrl = `http://127.0.0.1:${port}`;
   const pythonScript = path.join(repoRoot, 'scripts', 'run_foreman.py');
-  serverProcess = spawn('python', [pythonScript, '--port', String(port), '--db', tempDbPath], {
+  const serverProcess = spawn('python', [pythonScript, '--port', String(port), '--db', tempDbPath], {
     cwd: repoRoot,
     stdio: 'ignore',
   });
 
   await waitForServer(serverBaseUrl);
-});
 
-test.afterAll(async () => {
-  if (serverProcess) {
-    serverProcess.kill();
-    serverProcess = null;
-  }
-  if (tempDbDir) {
-    try {
-      fs.rmSync(tempDbDir, { recursive: true, force: true });
-    } catch (_) {
-      // best-effort cleanup
+  const cleanup = async () => {
+    if (serverProcess) {
+      serverProcess.kill();
+      await new Promise(r => serverProcess.on('close', r));
     }
-  }
-});
+    if (tempDir) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) {
+        // best-effort cleanup
+      }
+    }
+  };
 
-const viewports = [
-  { width: 1280, height: 800, label: '1280x800' },
-  { width: 375, height: 800, label: '375x800' },
+  return { serverBaseUrl, cleanup };
+}
+
+const testCases = [
+  { width: 1280, height: 800, label: '1280x800', theme: 'light', condition: 'text', learnerId: 'user_0' },
+  { width: 1280, height: 800, label: '1280x800', theme: 'dark', condition: 'diagram', learnerId: 'user_1' },
+  { width: 375, height: 800, label: '375x800', theme: 'light', condition: 'diagram', learnerId: 'user_1' },
+  { width: 375, height: 800, label: '375x800', theme: 'dark', condition: 'text', learnerId: 'user_0' },
 ];
 
-const themes = ['light', 'dark'];
+for (const c of testCases) {
+  test(`smoke Foreman UI at ${c.label} in ${c.theme} theme (${c.condition} condition)`, async ({ page }) => {
+    const { serverBaseUrl, cleanup } = await startServerForLearner(c.learnerId);
 
-for (const vp of viewports) {
-  for (const th of themes) {
-    test(`smoke Foreman UI at ${vp.label} in ${th} theme`, async ({ page }) => {
+    try {
       const consoleErrors = [];
       page.on('console', msg => {
         if (msg.type() === 'error') {
@@ -93,7 +124,7 @@ for (const vp of viewports) {
         consoleErrors.push(err.message || String(err));
       });
 
-      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.setViewportSize({ width: c.width, height: c.height });
       await page.goto(serverBaseUrl, { waitUntil: 'networkidle' });
 
       // Open settings panel if closed (summary "YOUR SETTING")
@@ -107,8 +138,8 @@ for (const vp of viewports) {
 
       // Theme selection (set the #theme select)
       const themeSelect = page.locator('#theme');
-      await themeSelect.selectOption(th);
-      expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(th);
+      await themeSelect.selectOption(c.theme);
+      expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(c.theme);
 
       // (a) The page loads with no console errors and no horizontal overflow (document.documentElement.scrollWidth <= innerWidth).
       expect(consoleErrors).toEqual([]);
@@ -121,12 +152,23 @@ for (const vp of viewports) {
       });
       expect(overflowCheck.overflows, `Page overflows horizontally: scrollWidth=${overflowCheck.scrollWidth}, innerWidth=${overflowCheck.innerWidth}`).toBe(false);
 
-      // (d) The How this works panel (details.rail-panel) can be opened and is visible at both widths.
+      // Verify the experimental lesson condition matches expectations
+      const diagramElement = page.locator('figure.lesson-diagram');
+      if (c.condition === 'diagram') {
+        await expect(diagramElement).toBeVisible();
+      } else {
+        await expect(diagramElement).toHaveCount(0);
+      }
+
+      // (d) The How this works panel (details.rail-panel) can be opened and representative child contents are visible at both widths.
       const railPanel = page.locator('details.rail-panel');
       const railSummary = railPanel.locator('summary');
       await railSummary.click();
       await expect(railPanel).toHaveAttribute('open', '');
       await expect(railPanel).toBeVisible();
+      // Assert representative children (.side-intro and .rail-card) are visible
+      await expect(railPanel.locator('.side-intro')).toBeVisible();
+      await expect(railPanel.locator('.rail-card').first()).toBeVisible();
 
       // (c) With Quiet view on (#focus), .workspace-evidence is not visible and .notice is visible.
       const focusCheck = page.locator('#focus');
@@ -139,9 +181,8 @@ for (const vp of viewports) {
 
       // (b) After completing the first lesson (click #complete), the activity card appears before details.workspace-evidence in #content, and the evidence panel is closed.
       const completeButton = page.locator('#complete');
-      if (await completeButton.isVisible()) {
-        await completeButton.click();
-      }
+      await expect(completeButton).toBeVisible();
+      await completeButton.click();
 
       // Wait for activity card to appear in #content
       const activityCard = page.locator('#content .activity-card');
@@ -180,13 +221,18 @@ for (const vp of viewports) {
       });
       expect(postOverflowCheck.overflows, `Page overflows horizontally after lesson complete: scrollWidth=${postOverflowCheck.scrollWidth}, innerWidth=${postOverflowCheck.innerWidth}`).toBe(false);
 
-      // Check quiet view again when on the activity step
+      // Rendered Quiet-view checks in practice state after the first lesson:
+      // with #focus checked, assert via Playwright's toBeVisible() that .notice and .why are visible and that details.workspace-evidence is hidden, at both widths.
       await focusCheck.check();
       await expect(page.locator('.notice')).toBeVisible();
-      await expect(page.locator('.workspace-evidence')).toBeHidden();
+      await expect(page.locator('.why')).toBeVisible();
+      await expect(page.locator('details.workspace-evidence')).toBeHidden();
       await focusCheck.uncheck();
+      await expect(page.locator('details.workspace-evidence')).toBeVisible();
 
       expect(consoleErrors).toEqual([]);
-    });
-  }
+    } finally {
+      await cleanup();
+    }
+  });
 }
