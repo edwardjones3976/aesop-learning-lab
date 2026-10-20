@@ -426,8 +426,9 @@ class PersonalComparison:
             classification = "missing"
             actual_delay_days = None
             if delayed and exposure and exposure["completed_at"]:
-                actual_delay_days = round((datetime.fromisoformat(delayed["occurred_at"]) -
-                                           datetime.fromisoformat(exposure["completed_at"])).total_seconds() / 86400, 3)
+                actual_delay = (datetime.fromisoformat(delayed["occurred_at"]) -
+                                datetime.fromisoformat(exposure["completed_at"]))
+                actual_delay_days = round(actual_delay.total_seconds() / 86400, 3)
                 cross_path = any(datetime.fromisoformat(assignment["assigned_at"]) <=
                                  datetime.fromisoformat(at) <=
                                  datetime.fromisoformat(delayed["occurred_at"])
@@ -443,11 +444,11 @@ class PersonalComparison:
                     classification = "contaminated"
                 elif exposure["outside_study"] != "none" or delayed["outside_study"] != "none":
                     classification = "outsideStudyUnknown"
-                elif actual_delay_days < DELAY_DAYS:
+                elif actual_delay < timedelta(days=DELAY_DAYS):
                     classification = "early"
-                elif actual_delay_days > WINDOW_DAYS:
+                elif actual_delay > timedelta(days=WINDOW_DAYS):
                     classification = "late"
-                elif CONTENT_REVIEW_STATUS != "engineering_reviewed":
+                elif CONTENT_REVIEW_STATUS != "human_reviewed":
                     classification = "provisional"
                 else:
                     classification = "eligible"

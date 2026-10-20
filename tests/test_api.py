@@ -136,6 +136,7 @@ class ApiTests(unittest.TestCase):
             result = app({"REQUEST_METHOD": method, "PATH_INFO": path,
                           "QUERY_STRING": query, "CONTENT_LENGTH": str(len(data)),
                           "CONTENT_TYPE": "application/json", "HTTP_HOST": "127.0.0.1:8766",
+                          "HTTP_ORIGIN": "http://127.0.0.1:8765",
                           "wsgi.input": BytesIO(data)},
                          lambda status, headers: captured.append((status, headers)))
             return captured[0][0], json.loads(b"".join(result))
@@ -238,6 +239,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, "403 Forbidden")
         self.assertEqual(response["code"], "forbidden_request")
         (status, _), response = request("POST", "/api/v1/attempts",
+                                        origin="http://127.0.0.1:8765",
                                         content_type="text/plain",
                                         body=answer("dev-trace-a", "1"))
         self.assertEqual(status, "400 Bad Request")
@@ -249,6 +251,16 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, "403 Forbidden")
         self.assertEqual(response["code"], "forbidden_request")
         self.assertEqual(self.store.list_attempts(CONCEPT.id), ())
+        (status, _), response = request("POST", "/api/v1/attempts",
+                                        content_type="application/json",
+                                        body=answer("dev-trace-a", "1"))
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(response["code"], "forbidden_request")
+        self.assertEqual(self.store.list_attempts(CONCEPT.id), ())
+        (status, _), response = request("DELETE", "/api/v1/data")
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(response["code"], "forbidden_request")
+        self.assertEqual(len(self.store.export_all()["lessonCompletions"]), 1)
         (status, _), response = request("DELETE", "/api/v1/data",
                                         origin="https://attacker.example")
         self.assertEqual(status, "403 Forbidden")
@@ -265,6 +277,11 @@ class ApiTests(unittest.TestCase):
                                      body=answer("dev-trace-a", "1"))
         self.assertEqual(status, "201 Created")
         self.assertEqual(saved["scoreStatus"], "correct")
+        (status, _), response = request("DELETE", "/api/v1/data",
+                                        origin="http://localhost:8765")
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(self.store.export_all()["lessonCompletions"], [])
+        self.assertEqual(self.store.export_all()["attempts"], [])
 
 
 if __name__ == "__main__":

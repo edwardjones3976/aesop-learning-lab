@@ -281,13 +281,17 @@ class SQLiteStore:
                 self.connection.execute("PRAGMA user_version = 14")
 
     def learner_id(self) -> str:
-        row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
-        if row:
-            return row[0]
+        existing = self.existing_learner_id()
+        if existing:
+            return existing
         identity = str(uuid4())
         with self.connection:
             self.connection.execute("INSERT OR IGNORE INTO learner_identity VALUES (1, ?)", (identity,))
         return self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()[0]
+
+    def existing_learner_id(self) -> str | None:
+        row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
+        return row[0] if row else None
 
     def record_exposure(self, concept_id: str, version: str, protocol_id: str,
                         protocol_version: str, condition_id: str, at: datetime,

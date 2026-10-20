@@ -182,18 +182,55 @@ class PersonalComparisonTests(unittest.TestCase):
             self.comparison.answer(unit.id, "delayed", unit.delayed_answer, "none")
         report = self.comparison.report()
         self.assertEqual(report["status"], "insufficient_evidence")
-        self.assertEqual([u["classification"] for u in report["units"]], ["eligible"] * 4)
+        self.assertEqual([u["classification"] for u in report["units"]], ["provisional"] * 4)
         self.assertTrue(all(u["actualDelayDays"] == 8 for u in report["units"]))
+        for arm in ("text", "diagram"):
+            self.assertEqual((report["arms"][arm]["eligible"], report["arms"][arm]["correct"],
+                              report["arms"][arm]["provisional"]), (0, 0, 2))
+            self.assertEqual(report["descriptive"][arm]["candidateMatches"], 2)
+            self.assertEqual(report["descriptive"][arm]["eligibleCandidateMatches"], 0)
         self.assertEqual(report["descriptive"]["text"]["observed"], 2)
         self.assertEqual(report["descriptive"]["diagram"]["observed"], 2)
-        self.assertEqual(report["dimensions"]["delayedRetention"]["observations"], 4)
-        self.assertEqual(report["dimensions"]["delayedRetention"]["otherRecordedResponses"], 0)
+        self.assertEqual(report["dimensions"]["delayedRetention"]["observations"], 0)
+        self.assertEqual(report["dimensions"]["delayedRetention"]["otherRecordedResponses"], 4)
         # A revealed held-out family is still preserved, but excluded.
         self.store.connection.execute(
             "UPDATE personal_exposures SET encountered_family_ids = ? WHERE unit_id = ?",
             ('["' + UNITS[0].family("delayed") + '"]', UNITS[0].id))
         self.store.connection.commit()
         self.assertEqual(self.comparison.report()["units"][0]["classification"], "contaminated")
+
+    def test_delayed_window_uses_unrounded_elapsed_time(self):
+        self.comparison.enroll()
+        for unit in UNITS[:2]:
+            self.comparison.start_exposure(unit.id)
+            self.comparison.complete_exposure(unit.id, "none")
+            self.comparison.open_question(unit.id, "practice")
+            self.comparison.answer(unit.id, "practice", unit.practice_answer)
+
+        late, early = UNITS[:2]
+        self.clock = START + timedelta(days=14, seconds=30)
+        self.comparison.open_question(late.id, "delayed")
+        self.comparison.answer(late.id, "delayed", late.delayed_answer, "none")
+
+        # The public flow prevents early answers; restore a synthetic early record
+        # to verify classification of persisted data at the precise boundary.
+        self.clock = START + timedelta(days=7)
+        self.comparison.open_question(early.id, "delayed")
+        self.comparison.answer(early.id, "delayed", early.delayed_answer, "none")
+        early_at = (START + timedelta(days=7, seconds=-30)).isoformat()
+        with self.store.connection:
+            self.store.connection.execute(
+                "UPDATE personal_question_views SET first_viewed_at = ? WHERE unit_id = ? AND phase = 'delayed'",
+                (early_at, early.id))
+            self.store.connection.execute(
+                "UPDATE personal_responses SET occurred_at = ? WHERE unit_id = ? AND phase = 'delayed'",
+                (early_at, early.id))
+        report = self.comparison.report()
+        self.assertEqual([(unit["classification"], unit["actualDelayDays"])
+                          for unit in report["units"][:2]], [("late", 14.0), ("early", 7.0)])
+        for unit in report["units"][:2]:
+            self.assertEqual(report["arms"][unit["condition"]][unit["classification"]], 1)
 
     def test_prior_history_blocks_new_prospective_enrollment(self):
         comparison = PersonalComparison(self.store, lambda: self.clock,
@@ -230,6 +267,15 @@ class PersonalComparisonTests(unittest.TestCase):
         restored = LegacyPersonalComparison(self.store, lambda: self.clock,
                                             prior_concept_exposure=False)
         self.assertTrue(restored.report()["units"][0]["practiceCandidateMatch"])
+        self.clock += timedelta(days=8)
+        restored.open_question(UNITS[0].id, "delayed")
+        legacy_result = restored.answer(UNITS[0].id, "delayed",
+                                        UNITS[0].delayed_answer, "none")
+        legacy_arm = legacy_result["units"][0]["condition"]
+        self.assertEqual(legacy_result["units"][0]["classification"], "provisional")
+        self.assertEqual((legacy_result["arms"][legacy_arm]["eligible"],
+                          legacy_result["arms"][legacy_arm]["correct"]), (0, 0))
+        self.assertEqual(legacy_result["descriptive"][legacy_arm]["candidateMatches"], 1)
         exported = self.store.export_all()
         self.assertEqual({row["protocol_version"] for row in exported["personalAssignments"]}, {"v1"})
         self.assertEqual(exported["personalResponses"][0]["content_version"], V1_CONTENT_VERSION)
