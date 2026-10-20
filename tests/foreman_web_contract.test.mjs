@@ -417,9 +417,14 @@ test('review timing markup renders overdue status and returns empty string for n
   };
   const overdueMarkup = reviewTimingMarkup(overdueSchedule, null, fixedNow);
   assert.match(overdueMarkup, /<section class="review-timing"/);
+  assert.doesNotMatch(overdueMarkup, /<section[^>]*\bhidden\b/i, 'Section must not have a hidden attribute');
   assert.match(overdueMarkup, /Review window passed\./);
   const overdueLabel = overdueMarkup.match(/<strong[^>]*>(.*?)<\/strong>/)?.[1];
   assert.equal(overdueLabel, 'Delayed review overdue');
+  const overdueParagraphs = [...overdueMarkup.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)].map(m => m[1]);
+  const overdueReasonParagraph = overdueParagraphs.find(p => !p.includes('<time'));
+  assert.equal(overdueReasonParagraph, 'Review window passed.');
+  assert.doesNotMatch(overdueReasonParagraph ?? '', /Delayed review overdue|Delayed review due/);
 
   const dueSchedule = {
     dueAt: '2026-01-01T12:00:00Z',
@@ -428,9 +433,14 @@ test('review timing markup renders overdue status and returns empty string for n
   };
   const dueMarkup = reviewTimingMarkup(dueSchedule, null, fixedNow);
   assert.match(dueMarkup, /<section class="review-timing"/);
+  assert.doesNotMatch(dueMarkup, /<section[^>]*\bhidden\b/i, 'Section must not have a hidden attribute');
   assert.match(dueMarkup, /Review window open\./);
   const dueLabel = dueMarkup.match(/<strong[^>]*>(.*?)<\/strong>/)?.[1];
   assert.equal(dueLabel, 'Delayed review due');
+  const dueParagraphs = [...dueMarkup.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)].map(m => m[1]);
+  const dueReasonParagraph = dueParagraphs.find(p => !p.includes('<time'));
+  assert.equal(dueReasonParagraph, 'Review window open.');
+  assert.doesNotMatch(dueReasonParagraph ?? '', /Delayed review overdue|Delayed review due/);
 
   const noneSchedule = {
     dueAt: null,
@@ -447,35 +457,122 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
   const css = readFileSync(cssPath, 'utf8');
   const cleanCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-  const quietRules = cleanCss.match(/[^{}]*\.quiet[^{]*\{[^{}]*\}/g) ?? [];
+  function parseRules(str) {
+    const rules = [];
+    let i = 0;
+    while (i < str.length) {
+      const openBrace = str.indexOf('{', i);
+      if (openBrace === -1) break;
+      const selector = str.slice(i, openBrace).trim();
+      let depth = 1;
+      let j = openBrace + 1;
+      while (j < str.length && depth > 0) {
+        if (str[j] === '{') depth++;
+        else if (str[j] === '}') depth--;
+        j++;
+      }
+      const body = str.slice(openBrace + 1, j - 1);
+      if (selector.startsWith('@media') || selector.startsWith('@supports')) {
+        rules.push(...parseRules(body));
+      } else {
+        rules.push({ selector, body });
+      }
+      i = j;
+    }
+    return rules;
+  }
+
+  const allRules = parseRules(cleanCss);
+  const quietRules = allRules.filter(rule => /(?<![\w-])\.quiet(?![\w-])/.test(rule.selector));
   assert.ok(quietRules.length > 0, 'style.css should contain .quiet rules');
 
-  const isHiding = (body, selector) =>
-    /display\s*:\s*none/i.test(body) ||
-    /visibility\s*:\s*hidden/i.test(body) ||
-    /opacity\s*:\s*0(?:\.0+)?(?![0-9.]|%)/i.test(body) ||
-    /content-visibility\s*:\s*hidden/i.test(body) ||
-    /\[\s*hidden\s*\]/i.test(body) ||
-    /\[\s*hidden\s*\]/i.test(selector);
+  function parseDeclarations(body) {
+    const decls = [];
+    const parts = body.split(';');
+    for (const part of parts) {
+      const colon = part.indexOf(':');
+      if (colon === -1) continue;
+      const prop = part.slice(0, colon).trim().toLowerCase();
+      const val = part.slice(colon + 1).trim().toLowerCase();
+      decls.push({ prop, val });
+    }
+    return decls;
+  }
+
+  const isHiding = (body, selector) => {
+    if (/\[\s*hidden\s*\]/i.test(body) || /\[\s*hidden\s*\]/i.test(selector)) return true;
+    const decls = parseDeclarations(body);
+    for (const { prop, val } of decls) {
+      if (prop === 'display' && val === 'none') return true;
+      if (prop === 'visibility' && val === 'hidden') return true;
+      if (prop === 'content-visibility' && val === 'hidden') return true;
+      if (prop === 'opacity') {
+        const num = parseFloat(val);
+        if (!isNaN(num) && num === 0) return true;
+      }
+    }
+    return false;
+  };
+
+  function splitSelectorList(selectorStr) {
+    const list = [];
+    let current = '';
+    let parenDepth = 0;
+    let bracketDepth = 0;
+    for (let i = 0; i < selectorStr.length; i++) {
+      const c = selectorStr[i];
+      if (c === '(') parenDepth++;
+      else if (c === ')') parenDepth--;
+      else if (c === '[') bracketDepth++;
+      else if (c === ']') bracketDepth--;
+      else if (c === ',' && parenDepth === 0 && bracketDepth === 0) {
+        list.push(current.trim());
+        current = '';
+        continue;
+      }
+      current += c;
+    }
+    if (current.trim()) list.push(current.trim());
+    return list;
+  }
+
+  function expandFunctionalPseudo(selector) {
+    let changed = true;
+    let currentSelectors = [selector];
+    while (changed) {
+      changed = false;
+      const nextSelectors = [];
+      for (const sel of currentSelectors) {
+        const match = sel.match(/:(?:is|where)\(([^()]+)\)/);
+        if (match) {
+          changed = true;
+          const prefix = sel.slice(0, match.index);
+          const suffix = sel.slice(match.index + match[0].length);
+          const options = splitSelectorList(match[1]);
+          for (const opt of options) {
+            nextSelectors.push(prefix + opt.trim() + suffix);
+          }
+        } else {
+          nextSelectors.push(sel);
+        }
+      }
+      currentSelectors = nextSelectors;
+    }
+    return [...new Set(currentSelectors)];
+  }
 
   const quietHidingSelectors = [];
   for (const rule of quietRules) {
-    const match = rule.match(/([^{}]+)\{([^{}]+)\}/);
-    if (!match) continue;
-    const [, selector, body] = match;
-    if (isHiding(body, selector)) {
-      for (const part of selector.split(',')) {
-        if (part.includes('.quiet')) {
-          quietHidingSelectors.push(part.trim());
+    if (isHiding(rule.body, rule.selector)) {
+      const rawSelectors = splitSelectorList(rule.selector);
+      for (const rawSel of rawSelectors) {
+        const expanded = expandFunctionalPseudo(rawSel);
+        for (const sel of expanded) {
+          quietHidingSelectors.push(sel.trim());
         }
       }
     }
   }
-
-  assert.ok(
-    quietHidingSelectors.some(selector => selector.includes('.workspace-evidence')),
-    'Quiet view must hide .workspace-evidence',
-  );
 
   function selectorTargets(selector, item) {
     const segments = selector.trim().split(/[\s>+~]+/);
@@ -494,13 +591,18 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
     };
 
     if (matches(subject)) return true;
-    if (item === 'body' && /(?<![\w-])\.quiet(?![\w-])/.test(subject)) return true;
-    if (subject === '*' && segments.some(seg => matches(seg) || (item === 'body' && /(?<![\w-])\.quiet(?![\w-])/.test(seg)))) return true;
+    if (item === 'body' && /(?<![\\w-])\.quiet(?![\\w-])/.test(subject)) return true;
+    if (subject === '*' && segments.some(seg => matches(seg) || (item === 'body' && /(?<![\\w-])\.quiet(?![\\w-])/.test(seg)))) return true;
 
     return false;
   }
 
-  for (const forbidden of ['.review-timing', '.notice', '.why', '.workspace', '#content', '.layout', 'main', 'body']) {
+  assert.ok(
+    quietHidingSelectors.some(selector => /(?<![\\w-])\.quiet(?![\\w-])/.test(selector) && selectorTargets(selector, '.workspace-evidence')),
+    'Quiet view must hide .workspace-evidence',
+  );
+
+  for (const forbidden of ['.review-timing', '.notice', '.why', '.workspace', '#content', '.layout', '.shell', 'main', 'body']) {
     const offending = quietHidingSelectors.filter(selector => selectorTargets(selector, forbidden));
     assert.deepEqual(
       offending,
