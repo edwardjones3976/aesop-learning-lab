@@ -11,6 +11,8 @@ from urllib.parse import parse_qs, urlsplit
 from uuid import UUID, uuid4
 
 from aesop_lab.api.service import ApiError, CatalogItem, LearningService
+from aesop_lab.api.personal_comparison import PersonalComparison, CONCEPT_ID as PERSONAL_CONCEPT_ID
+from aesop_lab.api.personal_comparison_v1 import PersonalComparison as LegacyPersonalComparison
 from aesop_lab.assessment import AnswerKey, Hint, HintLadder, ItemSpec, Rubric, RubricCriterion, assess
 from aesop_lab.content import load_pack
 from aesop_lab.domain.models import ExperimentAssignment, HintLevel
@@ -24,10 +26,13 @@ WEEK_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.
 ADAPTIVE_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.4.json"
 V5_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.5.json"
 V6_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.6.json"
-CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.7.json"
+V7_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.7.json"
+V8_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.8.json"
+CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.9.json"
 PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH,
                    "v4": ADAPTIVE_PACK_PATH, "v5": V5_PACK_PATH,
-                   "v6": V6_PACK_PATH, "v7": CURRENT_PACK_PATH}
+                   "v6": V6_PACK_PATH, "v7": V7_PACK_PATH,
+                   "v8": V8_PACK_PATH, "v9": CURRENT_PACK_PATH}
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -63,7 +68,8 @@ class Preview:
         # A process can stop between saving a fixed assignment and its first
         # exposure. Even that partial enrollment must keep its original pack.
         for assignment in self.store.list_assignments("text-vs-labeled-diagram"):
-            assigned_version = {"v1": "v4", "v2": "v5", "v3": "v6", "v4": "v7"}.get(assignment.protocol_version)
+            assigned_version = {"v1": "v4", "v2": "v5", "v3": "v6", "v4": "v7",
+                                "v5": "v8", "v6": "v9"}.get(assignment.protocol_version)
             if assigned_version is None:
                 versions.add("unknown")
             else:
@@ -72,6 +78,34 @@ class Preview:
             self.store.close()
             raise RuntimeError("Learner records span incompatible content versions; resolve them before opening this preview")
         self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else CURRENT_PACK_PATH)
+
+    def personal_comparison(self) -> PersonalComparison | LegacyPersonalComparison:
+        prior = bool(self.store.list_attempts(PERSONAL_CONCEPT_ID)) or bool(
+            self.store.connection.execute(
+                "SELECT 1 FROM lesson_completions WHERE concept_id = ? LIMIT 1",
+                (PERSONAL_CONCEPT_ID,)).fetchone()) or bool(
+            self.store.connection.execute(
+                "SELECT 1 FROM experiment_exposures WHERE concept_id = ? LIMIT 1",
+                (PERSONAL_CONCEPT_ID,)).fetchone()) or bool(
+            self.store.connection.execute(
+                "SELECT 1 FROM practice_drafts d JOIN activities a "
+                "ON a.id = d.activity_id AND a.content_version = d.content_version "
+                "WHERE a.concept_id = ? LIMIT 1", (PERSONAL_CONCEPT_ID,)).fetchone())
+        versions = {row[0] for row in self.store.connection.execute(
+            "SELECT DISTINCT protocol_version FROM personal_assignments WHERE protocol_id = ?",
+            ("scope-text-diagram-single-learner",))}
+        if len(versions) > 1 or versions - {"v1", "v2"}:
+            raise ApiError("comparison_version_conflict",
+                           "Comparison assignments contain incompatible versions.", 409)
+        comparison = LegacyPersonalComparison if "v1" in versions else PersonalComparison
+        return comparison(self.store, self.now, prior_concept_exposure=prior)
+
+    def reveal_comparison_solution(self, unit_id: object, phase: object) -> dict:
+        comparison = self.personal_comparison()
+        if isinstance(comparison, LegacyPersonalComparison):
+            raise ApiError("comparison_version_conflict",
+                           "Solution-opening records are unavailable for this historical protocol version.", 409)
+        return comparison.reveal_solution(unit_id, phase)
 
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
@@ -88,7 +122,7 @@ class Preview:
                     lesson.encountered_family_ids for lesson in self.pack.lessons
                     if lesson.concept_id == concept.id)),
                 now=self.now,
-                policy_version=("pilot-v4" if concept.content_version in ("v5", "v6", "v7") else
+                policy_version=("pilot-v4" if concept.content_version in ("v5", "v6", "v7", "v8", "v9") else
                                 "pilot-v2" if concept.content_version in ("v3", "v4") else "pilot-v1"),
             ) for concept in self.pack.concepts
         }
@@ -237,7 +271,7 @@ class Preview:
 
     def _method_for(self, cid: str) -> dict | None:
         version = self.pack.concept(cid).content_version
-        if version not in ("v4", "v5", "v6", "v7"):
+        if version not in ("v4", "v5", "v6", "v7", "v8", "v9"):
             return None
         if version == "v4":
             from aesop_lab.experiment import PROTOCOL as protocol, assign_condition as assign
@@ -245,8 +279,12 @@ class Preview:
             from aesop_lab.experiment.descriptive_v2 import DESCRIPTIVE_V2 as protocol, assign_condition_v2 as assign
         elif version == "v6":
             from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, assign_condition_v3 as assign
-        else:
+        elif version == "v7":
             from aesop_lab.experiment.descriptive_v4 import DESCRIPTIVE_V4 as protocol, assign_condition_v4 as assign
+        elif version == "v8":
+            from aesop_lab.experiment.descriptive_v5 import DESCRIPTIVE_V5 as protocol, assign_condition_v5 as assign
+        else:
+            from aesop_lab.experiment.descriptive_v6 import DESCRIPTIVE_V6 as protocol, assign_condition_v6 as assign
         assignment = next((a for a in self.store.list_assignments(protocol.id)
                            if a.concept_id == cid and a.protocol_version == protocol.version), None)
         if assignment is None:
@@ -255,13 +293,13 @@ class Preview:
             self.store.save_assignment(assignment)
         method = {"conditionId": assignment.condition_id, "protocolId": protocol.id,
                   "protocolVersion": protocol.version}
-        if version in ("v5", "v6", "v7"):
+        if version in ("v5", "v6", "v7", "v8", "v9"):
             method["studyTargetMinutes"] = protocol.target_exposure_minutes
         return method
 
     def experiment_findings(self) -> dict:
         version = self.pack.concepts[0].content_version
-        if version not in ("v4", "v5", "v6", "v7"):
+        if version not in ("v4", "v5", "v6", "v7", "v8", "v9"):
             return {"status": "insufficient_evidence", "reason": "This content version predates the fixed comparison."}
         if version == "v4":
             from aesop_lab.experiment import PROTOCOL as protocol, Exposure, analyze
@@ -269,8 +307,12 @@ class Preview:
             from aesop_lab.experiment.descriptive_v2 import DESCRIPTIVE_V2 as protocol, ExposureV2 as Exposure, analyze_v2 as analyze
         elif version == "v6":
             from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, ExposureV3 as Exposure, analyze_v3 as analyze
-        else:
+        elif version == "v7":
             from aesop_lab.experiment.descriptive_v4 import DESCRIPTIVE_V4 as protocol, ExposureV4 as Exposure, analyze_v4 as analyze
+        elif version == "v8":
+            from aesop_lab.experiment.descriptive_v5 import DESCRIPTIVE_V5 as protocol, ExposureV5 as Exposure, analyze_v5 as analyze
+        else:
+            from aesop_lab.experiment.descriptive_v6 import DESCRIPTIVE_V6 as protocol, ExposureV6 as Exposure, analyze_v6 as analyze
         exposures = tuple(Exposure(
             row["concept_id"], row["content_version"], row["condition_id"],
             datetime.fromisoformat(row["exposed_at"]),
@@ -284,7 +326,7 @@ class Preview:
         activities = {item.activity.id: item.activity for item in self.pack.items}
         assignments = tuple(a for a in self.store.list_assignments(protocol.id)
                             if a.protocol_version == protocol.version)
-        if version in ("v5", "v6", "v7"):
+        if version in ("v5", "v6", "v7", "v8", "v9"):
             return analyze(assignments, exposures, attempts, activities,
                            learner_id=self.store.learner_id(), now=self.now())
         return analyze(assignments, exposures, attempts, activities, now=self.now())
@@ -456,8 +498,7 @@ def make_handler(preview: Preview, *, port: int = PORT):
             if host not in (f"{HOST}:{port}", f"localhost:{port}"):
                 self._json(403, {"error": "Invalid host"})
                 return False
-            if self.command == "POST" and self.headers.get("Origin") not in (
-                f"http://{HOST}:{port}", f"http://localhost:{port}"):
+            if self.command == "POST" and self.headers.get("Origin") != f"http://{host}":
                 self._json(403, {"error": "Invalid origin"})
                 return False
             return True
@@ -482,8 +523,6 @@ def make_handler(preview: Preview, *, port: int = PORT):
                 if self.command == "GET":
                     if path == "/api/v2/overview":
                         return self._json(200, preview.overview())
-                    if path == "/api/v2/lesson":
-                        return self._json(200, preview.lesson(query.get("conceptId", [None])[0]))
                     if path == "/api/v2/session":
                         raw_minutes = query.get("availableMinutes", ["20"])[0]
                         if not raw_minutes.isdecimal():
@@ -493,6 +532,8 @@ def make_handler(preview: Preview, *, port: int = PORT):
                                                                int(raw_minutes)))
                     if path == "/api/v2/export":
                         return self._json(200, preview.store.export_all())
+                    if path == "/api/v2/personal-comparison":
+                        return self._json(200, preview.personal_comparison().report())
                     files = {"/": ("index.html", "text/html"),
                              "/app.js": ("app.js", "text/javascript"),
                              "/theme-init.js": ("theme-init.js", "text/javascript"),
@@ -518,13 +559,22 @@ def make_handler(preview: Preview, *, port: int = PORT):
                     body = json.loads(self.rfile.read(size))
                     if not isinstance(body, dict):
                         raise ApiError("validation_error", "JSON body must be an object.")
-                    routes = {"/api/v2/lesson-completions": lambda: preview.complete_lesson(body.get("conceptId")),
+                    routes = {"/api/v2/lesson": lambda: preview.lesson(body.get("conceptId")),
+                              "/api/v2/lesson-completions": lambda: preview.complete_lesson(body.get("conceptId")),
                               "/api/v2/first-answers": lambda: preview.first_answer(body),
                               "/api/v2/hints": lambda: preview.hint(body),
                               "/api/v2/attempts": lambda: preview.submit(body),
                               "/api/v2/self-reviews": lambda: preview._service(body.get("conceptId")).submit_self_review(body),
                               "/api/v2/revisions": lambda: preview._service(body.get("conceptId")).submit_revision(body),
                               "/api/v2/overrides": lambda: preview.override(body),
+                              "/api/v2/personal-comparison/enroll": lambda: preview.personal_comparison().enroll(),
+                              "/api/v2/personal-comparison/start": lambda: preview.personal_comparison().start_exposure(body.get("unitId")),
+                              "/api/v2/personal-comparison/complete": lambda: preview.personal_comparison().complete_exposure(body.get("unitId"), body.get("outsideStudy")),
+                              "/api/v2/personal-comparison/open": lambda: preview.personal_comparison().open_question(body.get("unitId"), body.get("phase")),
+                              "/api/v2/personal-comparison/hint": lambda: preview.personal_comparison().hint(body.get("unitId")),
+                              "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy"), body.get("confidence")),
+                              "/api/v2/personal-comparison/reveal": lambda: preview.reveal_comparison_solution(body.get("unitId"), body.get("phase")),
+                              "/api/v2/personal-comparison/override": lambda: preview.personal_comparison().override(body.get("recommendedUnitId"), body.get("recommendedStage"), body.get("selectedUnitId"), body.get("selectedStage"), body.get("learnerReason")),
                               "/api/v2/delete": preview.delete_data}
                     if path in routes:
                         return self._json(200, routes[path]())

@@ -135,6 +135,7 @@ class ApiTests(unittest.TestCase):
             captured = []
             result = app({"REQUEST_METHOD": method, "PATH_INFO": path,
                           "QUERY_STRING": query, "CONTENT_LENGTH": str(len(data)),
+                          "CONTENT_TYPE": "application/json", "HTTP_HOST": "127.0.0.1:8766",
                           "wsgi.input": BytesIO(data)},
                          lambda status, headers: captured.append((status, headers)))
             return captured[0][0], json.loads(b"".join(result))
@@ -184,6 +185,7 @@ class ApiTests(unittest.TestCase):
             captured = []
             result = app({"REQUEST_METHOD": method, "PATH_INFO": path,
                           "CONTENT_LENGTH": str(len(data)), "wsgi.input": BytesIO(data),
+                          "CONTENT_TYPE": "application/json", "HTTP_HOST": "127.0.0.1:8766",
                           "HTTP_ORIGIN": "http://127.0.0.1:8765"},
                          lambda status, headers: captured.append((status, dict(headers))))
             return captured[0], json.loads(b"".join(result))
@@ -212,6 +214,57 @@ class ApiTests(unittest.TestCase):
         request("DELETE", "/api/v1/data")
         (_, _), exported = request("GET", "/api/v1/export")
         self.assertEqual(exported["attempts"], [])
+
+    def test_wsgi_rejects_rebinding_cross_site_and_simple_form_posts(self) -> None:
+        app = make_app(self.service)
+
+        def request(method: str, path: str, *, host: str = "127.0.0.1:8766",
+                    origin: str = "", content_type: str = "", body: object = None):
+            data = json.dumps(body).encode() if body is not None else b""
+            captured = []
+            result = app({"REQUEST_METHOD": method, "PATH_INFO": path,
+                          "SERVER_PORT": "8766", "HTTP_HOST": host,
+                          "HTTP_ORIGIN": origin, "CONTENT_TYPE": content_type,
+                          "CONTENT_LENGTH": str(len(data)), "wsgi.input": BytesIO(data)},
+                         lambda status, headers: captured.append((status, dict(headers))))
+            return captured[0], json.loads(b"".join(result))
+
+        (status, _), response = request("GET", "/api/v1/export",
+                                        host="attacker.example:8766")
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(response["code"], "forbidden_request")
+        (status, _), response = request("GET", "/api/v1/export",
+                                        origin="https://attacker.example")
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(response["code"], "forbidden_request")
+        (status, _), response = request("POST", "/api/v1/attempts",
+                                        content_type="text/plain",
+                                        body=answer("dev-trace-a", "1"))
+        self.assertEqual(status, "400 Bad Request")
+        self.assertEqual(response["code"], "validation_error")
+        (status, _), response = request("POST", "/api/v1/attempts",
+                                        origin="https://attacker.example",
+                                        content_type="application/json",
+                                        body=answer("dev-trace-a", "1"))
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(response["code"], "forbidden_request")
+        self.assertEqual(self.store.list_attempts(CONCEPT.id), ())
+        (status, _), response = request("DELETE", "/api/v1/data",
+                                        origin="https://attacker.example")
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(response["code"], "forbidden_request")
+        self.assertEqual(len(self.store.export_all()["lessonCompletions"]), 1)
+
+        (status, headers), _ = request("OPTIONS", "/api/v1/attempts",
+                                        origin="http://localhost:8765")
+        self.assertEqual(status, "204 No Content")
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://localhost:8765")
+        (status, _), saved = request("POST", "/api/v1/attempts",
+                                     host="localhost:8766", origin="http://localhost:8765",
+                                     content_type="application/json; charset=utf-8",
+                                     body=answer("dev-trace-a", "1"))
+        self.assertEqual(status, "201 Created")
+        self.assertEqual(saved["scoreStatus"], "correct")
 
 
 if __name__ == "__main__":

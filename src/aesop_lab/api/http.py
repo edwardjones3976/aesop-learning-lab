@@ -1,4 +1,4 @@
-"""Loopback-only WSGI transport for the local application service."""
+"""Loopback-bound WSGI transport for the development application service."""
 
 from __future__ import annotations
 
@@ -10,14 +10,22 @@ from wsgiref.simple_server import make_server
 from .service import ApiError, LearningService
 
 
+ALLOWED_UI_ORIGINS = ("http://127.0.0.1:8765", "http://localhost:8765")
+
+
 def make_app(service: LearningService):
     def app(environ, start_response):
         origin = environ.get("HTTP_ORIGIN", "")
         cors = ([("Access-Control-Allow-Origin", origin), ("Vary", "Origin")]
-                if origin in ("http://127.0.0.1:8765", "http://localhost:8765") else [])
+                if origin in ALLOWED_UI_ORIGINS else [])
         try:
             method = environ["REQUEST_METHOD"]
             path = environ["PATH_INFO"]
+            port = environ.get("SERVER_PORT", "8766")
+            if environ.get("HTTP_HOST") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
+                raise ApiError("forbidden_request", "Use the local API host.", 403)
+            if origin and origin not in ALLOWED_UI_ORIGINS:
+                raise ApiError("forbidden_request", "Origin is not allowed.", 403)
             if method == "OPTIONS" and path.startswith("/api/v1/"):
                 status, payload = "204 No Content", {}
                 cors += [("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"),
@@ -38,6 +46,8 @@ def make_app(service: LearningService):
                 status = "200 OK"
             elif method == "POST" and path in (
                     "/api/v1/attempts", "/api/v1/self-reviews", "/api/v1/answer-revisions"):
+                if environ.get("CONTENT_TYPE", "").split(";", 1)[0].strip().lower() != "application/json":
+                    raise ApiError("validation_error", "Content-Type must be application/json.")
                 try:
                     length = int(environ.get("CONTENT_LENGTH") or "0")
                     if length < 1 or length > 65536:
@@ -55,7 +65,7 @@ def make_app(service: LearningService):
             else:
                 raise ApiError("not_found", "Endpoint was not found.", 404)
         except ApiError as exc:
-            status = {400: "400 Bad Request", 404: "404 Not Found",
+            status = {400: "400 Bad Request", 403: "403 Forbidden", 404: "404 Not Found",
                       409: "409 Conflict", 503: "503 Service Unavailable"}.get(
                           exc.status, "400 Bad Request")
             payload = {"code": exc.code, "message": exc.message}

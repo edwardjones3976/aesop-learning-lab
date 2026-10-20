@@ -27,4 +27,4 @@ jobs:
           node-version: '24'
       - run: npm test
         working-directory: web
-      - run: node --test tests/foreman_web_contract.test.mjs
+      - run: node --test tests/foreman_web_contract.test.mjs tests/personal_comparison_web.test.mjs

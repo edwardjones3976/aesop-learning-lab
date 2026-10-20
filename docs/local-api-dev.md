@@ -12,7 +12,12 @@ $env:PYTHONPATH = 'src'
 py -m aesop_lab.api --development-fixtures --db .local/aesop-dev.sqlite3
 ```
 
-The server binds to `127.0.0.1:8766`. The fixture's lesson completion is
+The server binds to `127.0.0.1:8766` and accepts requests addressed to
+`127.0.0.1:8766` or `localhost:8766`. Browser requests from the local UI at
+`http://127.0.0.1:8765` or `http://localhost:8765` are allowed; other
+`Origin` values are rejected. POST endpoints require `Content-Type:
+application/json`. Loopback binding alone does not validate browser requests.
+The fixture's lesson completion is
 recorded on first start and remains fixed in SQLite across restarts. GET
 `/api/v1/session/next?availableMinutes=20&mode=recommended` is read-only;
 use `mode=practice` to choose routine practice while a delayed check is due.
@@ -22,7 +27,7 @@ accepts optional `availableMinutes` (default 20); send the session's value
 when submitting a delayed check so the same time-budget gate applies.
 
 The browser at `http://127.0.0.1:8765/` now uses this local API by default.
-Run `py -m http.server 8765` from `web/` in another terminal. Add
+Run `py -m http.server --bind 127.0.0.1 8765` from `web/` in another terminal. Add
 `?scenario=default` to use the isolated in-memory fixture instead.
 
 The service also provides `POST /api/v1/self-reviews`,
