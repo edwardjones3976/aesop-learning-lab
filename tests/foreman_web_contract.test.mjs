@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -405,4 +406,106 @@ test('attempt context is explicit and cannot turn assistance into independent ev
   assert.equal(buildAttemptPayload('draft-1', 0, null, 'unknown').confidence, null);
   assert.throws(() => buildAttemptPayload('draft-1', 0, 1.2, 'none'), /attempt\.confidence/);
   assert.throws(() => buildAttemptPayload('draft-1', 0, 0.5, 'never'), /attempt\.outsideStudy/);
+});
+
+test('review timing markup renders overdue status and returns empty string for none', () => {
+  const fixedNow = new Date('2026-01-03T12:00:00Z');
+  const overdueSchedule = {
+    dueAt: '2026-01-01T12:00:00Z',
+    status: 'overdue',
+    reason: 'Review window passed.',
+  };
+  const overdueMarkup = reviewTimingMarkup(overdueSchedule, null, fixedNow);
+  assert.match(overdueMarkup, /<section class="review-timing"/);
+  assert.match(overdueMarkup, /Review window passed\./);
+  const overdueLabel = overdueMarkup.match(/<strong[^>]*>(.*?)<\/strong>/)?.[1];
+  assert.equal(overdueLabel, 'Delayed review overdue');
+
+  const dueSchedule = {
+    dueAt: '2026-01-01T12:00:00Z',
+    status: 'due',
+    reason: 'Review window open.',
+  };
+  const dueMarkup = reviewTimingMarkup(dueSchedule, null, fixedNow);
+  assert.match(dueMarkup, /<section class="review-timing"/);
+  assert.match(dueMarkup, /Review window open\./);
+  const dueLabel = dueMarkup.match(/<strong[^>]*>(.*?)<\/strong>/)?.[1];
+  assert.equal(dueLabel, 'Delayed review due');
+
+  const noneSchedule = {
+    dueAt: null,
+    status: 'none',
+    reason: 'No review scheduled.',
+  };
+  assert.equal(reviewTimingMarkup(noneSchedule, null, fixedNow), '');
+  assert.equal(reviewTimingMarkup({ status: 'none', dueAt: '2026-01-01T12:00:00Z' }, null, fixedNow), '');
+  assert.equal(reviewTimingMarkup(null, null, fixedNow), '');
+});
+
+test('quiet view in style.css hides workspace evidence without hiding review timing notice or why', () => {
+  const cssPath = fileURLToPath(new URL('../foreman_web/style.css', import.meta.url));
+  const css = readFileSync(cssPath, 'utf8');
+  const cleanCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  const quietRules = cleanCss.match(/[^{}]*\.quiet[^{]*\{[^{}]*\}/g) ?? [];
+  assert.ok(quietRules.length > 0, 'style.css should contain .quiet rules');
+
+  const isHiding = (body, selector) =>
+    /display\s*:\s*none/i.test(body) ||
+    /visibility\s*:\s*hidden/i.test(body) ||
+    /opacity\s*:\s*0(?:\.0+)?(?![0-9.]|%)/i.test(body) ||
+    /content-visibility\s*:\s*hidden/i.test(body) ||
+    /\[\s*hidden\s*\]/i.test(body) ||
+    /\[\s*hidden\s*\]/i.test(selector);
+
+  const quietHidingSelectors = [];
+  for (const rule of quietRules) {
+    const match = rule.match(/([^{}]+)\{([^{}]+)\}/);
+    if (!match) continue;
+    const [, selector, body] = match;
+    if (isHiding(body, selector)) {
+      for (const part of selector.split(',')) {
+        if (part.includes('.quiet')) {
+          quietHidingSelectors.push(part.trim());
+        }
+      }
+    }
+  }
+
+  assert.ok(
+    quietHidingSelectors.some(selector => selector.includes('.workspace-evidence')),
+    'Quiet view must hide .workspace-evidence',
+  );
+
+  function selectorTargets(selector, item) {
+    const segments = selector.trim().split(/[\s>+~]+/);
+    const subject = segments[segments.length - 1];
+
+    const matches = (target) => {
+      if (item.startsWith('.')) {
+        const cls = item.slice(1);
+        return new RegExp('\\.' + cls + '(?![\\w-])').test(target);
+      }
+      if (item.startsWith('#')) {
+        const id = item.slice(1);
+        return new RegExp('#' + id + '(?![\\w-])').test(target);
+      }
+      return new RegExp('(?<![\\w.-])' + item + '(?![\\w-])').test(target);
+    };
+
+    if (matches(subject)) return true;
+    if (item === 'body' && /(?<![\w-])\.quiet(?![\w-])/.test(subject)) return true;
+    if (subject === '*' && segments.some(seg => matches(seg) || (item === 'body' && /(?<![\w-])\.quiet(?![\w-])/.test(seg)))) return true;
+
+    return false;
+  }
+
+  for (const forbidden of ['.review-timing', '.notice', '.why', '.workspace', '#content', '.layout', 'main', 'body']) {
+    const offending = quietHidingSelectors.filter(selector => selectorTargets(selector, forbidden));
+    assert.deepEqual(
+      offending,
+      [],
+      `Quiet view must not have a rule hiding ${forbidden}`,
+    );
+  }
 });
