@@ -288,6 +288,7 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     objective = _field(raw, "learning_objective", str, path, issues, required=False, default=None)
     difficulty = _field(raw, "difficulty", str, path, issues, required=False, default=None)
     explanation = _field(raw, "explanation", str, path, issues, required=False, default=None)
+    common_mistakes = _str_list(raw, "common_mistakes", path, issues, required=False)
     body = _field(raw, "body", str, path, issues, required=False, default="", allow_empty=True)
     choices = _str_list(raw, "choices", path, issues, required=False)
     cited = _str_list(raw, "source_ids", path, issues)
@@ -297,7 +298,7 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     hints = _parse_hints(raw, path, issues)
 
     if None in (item_id, concept_id, content_version, family_id, activity_type, evidence_kind,
-                held_out, check_delay_days, prompt, body, choices, cited, hints):
+                held_out, check_delay_days, prompt, body, choices, cited, hints, common_mistakes):
         return None
     if not _register(item_id, path, seen, issues):
         return None
@@ -321,7 +322,7 @@ def _parse_item(raw: Mapping[str, Any], path: str, seen: dict[str, str],
     if len(issues) > before:
         return None
     return ItemContent(activity, prompt, body, choices, key, check_expression, rubric, hints,
-                       cited, objective, difficulty, explanation)
+                       cited, objective, difficulty, explanation, common_mistakes)
 
 
 def _enum_value(raw: Mapping[str, Any], key: str, enum_type: type, path: str, issues: list[Issue]) -> Any:

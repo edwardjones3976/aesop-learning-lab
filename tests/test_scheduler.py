@@ -49,6 +49,62 @@ class SchedulerTests(unittest.TestCase):
         self.assertIn(decision.recommendation.activity_id, (PRACTICE_A.id, PRACTICE_B.id))
         self.assertIn("Two incorrect answers on application", decision.reason)
 
+    def test_repeated_misses_on_one_prompt_choose_another_and_flag_quality(self) -> None:
+        prior = (attempt("wrong-1", PRACTICE_A, correct=False),
+                 attempt("wrong-2", PRACTICE_A, correct=False))
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior),
+                             20, "pilot-v3")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIn("unclear wording", decision.reason)
+        self.assertIn("content review", decision.reason)
+
+    def test_hint_assisted_answer_leads_to_fresh_independent_prompt(self) -> None:
+        prior = (attempt("assisted", PRACTICE_A, hint=HintLevel.NUDGE),)
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior),
+                             20, "pilot-v3")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_B.id)
+        self.assertIn("fresh first answer", decision.reason)
+        self.assertIsNone(decision.next_check_at)
+
+    def test_assisted_only_item_of_kind_falls_back_to_unseen_other_kind(self) -> None:
+        recognition = Activity("recognition", "recursion", "v1", "recognition-family",
+                               ActivityType.CHOICE, EvidenceKind.RECOGNITION)
+        prior = (attempt("assisted", recognition, hint=HintLevel.NUDGE),)
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior,
+                                   (recognition, PRACTICE_A, CHECK)), 20, "pilot-v3")
+        self.assertEqual(decision.recommendation.activity_id, PRACTICE_A.id)
+        self.assertIn("fresh first answer", decision.reason)
+
+    def test_repeated_unassisted_answer_after_hint_cannot_unlock_check(self) -> None:
+        prior = (attempt("assisted", PRACTICE_A, hint=HintLevel.NUDGE),
+                 attempt("repeated", PRACTICE_A,
+                         at=LESSON_TIME + timedelta(minutes=20)))
+        decision = recommend(state(LESSON_TIME + timedelta(days=2), prior), 20,
+                             "pilot-v3")
+        self.assertIsNone(decision.next_check_at)
+        self.assertNotEqual(decision.recommendation.activity_id, CHECK.id)
+
+    def test_answer_from_studied_family_cannot_unlock_unfamiliar_check(self) -> None:
+        prior = (attempt("studied", PRACTICE_A),)
+        decision = recommend(state(LESSON_TIME + timedelta(days=2), prior,
+                                   (PRACTICE_A, PRACTICE_B, CHECK),
+                                   frozenset({PRACTICE_A.family_id})), 20, "pilot-v4")
+        self.assertIsNone(decision.next_check_at)
+        self.assertNotEqual(decision.recommendation.activity_id, CHECK.id)
+
+    def test_all_repeatedly_missed_items_are_skipped_when_clean_prompt_exists(self) -> None:
+        third = activity("practice-c", "family-e")
+        prior = (attempt("a1", PRACTICE_A, correct=False),
+                 attempt("a2", PRACTICE_A, correct=False,
+                         at=LESSON_TIME + timedelta(minutes=11)),
+                 attempt("b1", PRACTICE_B, correct=False),
+                 attempt("b2", PRACTICE_B, correct=False,
+                         at=LESSON_TIME + timedelta(minutes=11)))
+        decision = recommend(state(LESSON_TIME + timedelta(hours=2), prior,
+                                   (PRACTICE_A, PRACTICE_B, third)), 20, "pilot-v3")
+        self.assertEqual(decision.recommendation.activity_id, third.id)
+        self.assertIn("content review", decision.reason)
+
     def test_distinct_week_check_waits_for_day_one_and_seven_days(self) -> None:
         activities = (PRACTICE_A, CHECK, WEEK_CHECK)
         day_six = LESSON_TIME + timedelta(days=6)

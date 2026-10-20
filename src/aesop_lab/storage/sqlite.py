@@ -18,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 10
 
 
 class SQLiteStore:
@@ -180,6 +180,26 @@ class SQLiteStore:
                         "ALTER TABLE practice_drafts ADD COLUMN confidence REAL"
                     )
                 self.connection.execute("PRAGMA user_version = 8")
+        if current < 9:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute(
+                    "PRAGMA table_info(recommendation_overrides)")}
+                for name in ("recommended_activity_id", "recommended_reason",
+                             "selected_activity_id", "learner_reason"):
+                    if name not in columns:
+                        self.connection.execute(
+                            f"ALTER TABLE recommendation_overrides ADD COLUMN {name} TEXT")
+                self.connection.execute("PRAGMA user_version = 9")
+        if current < 10:
+            with self.connection:
+                columns = {row[1] for row in self.connection.execute(
+                    "PRAGMA table_info(recommendation_overrides)")}
+                for name in ("recommended_concept_id", "recommended_action",
+                             "selected_concept_id"):
+                    if name not in columns:
+                        self.connection.execute(
+                            f"ALTER TABLE recommendation_overrides ADD COLUMN {name} TEXT")
+                self.connection.execute("PRAGMA user_version = 10")
 
     def learner_id(self) -> str:
         row = self.connection.execute("SELECT id FROM learner_identity WHERE slot = 1").fetchone()
@@ -214,11 +234,25 @@ class SQLiteStore:
             "SELECT * FROM experiment_exposures ORDER BY exposed_at, concept_id"))
 
     def record_override(self, event_id: str, concept_id: str, version: str,
-                        mode: str, reason: str, at: datetime) -> None:
+                        mode: str, reason: str, at: datetime,
+                        *, recommended_activity_id: str | None = None,
+                        recommended_reason: str | None = None,
+                        selected_activity_id: str | None = None,
+                        learner_reason: str | None = None,
+                        recommended_concept_id: str | None = None,
+                        recommended_action: str | None = None,
+                        selected_concept_id: str | None = None) -> None:
         with self.connection:
             self.connection.execute(
-                "INSERT INTO recommendation_overrides VALUES (?, ?, ?, ?, ?, ?)",
-                (event_id, concept_id, version, mode, reason, at.isoformat()),
+                "INSERT INTO recommendation_overrides "
+                "(id, concept_id, content_version, mode, reason, occurred_at, "
+                "recommended_activity_id, recommended_reason, selected_activity_id, learner_reason, "
+                "recommended_concept_id, recommended_action, selected_concept_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (event_id, concept_id, version, mode, reason, at.isoformat(),
+                 recommended_activity_id, recommended_reason, selected_activity_id,
+                 learner_reason, recommended_concept_id, recommended_action,
+                 selected_concept_id),
             )
 
     def record_lesson_completion(self, concept_id: str, version: str,
@@ -525,6 +559,8 @@ class SQLiteStore:
             SELECT content_version FROM attempts
             UNION SELECT content_version FROM lesson_completions
             UNION SELECT content_version FROM practice_drafts
+            UNION SELECT content_version FROM experiment_exposures
+            UNION SELECT content_version FROM recommendation_overrides
         """).fetchall()
         return frozenset(row[0] for row in versions)
 

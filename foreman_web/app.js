@@ -34,6 +34,12 @@ function requireBoolean(value, path) {
   return value;
 }
 
+function requireTimestamp(value, path) {
+  requireString(value, path);
+  if (Number.isNaN(Date.parse(value))) throw contractError(path, 'expected a valid timestamp.');
+  return value;
+}
+
 export function normalizeEvidence(evidence, path = 'evidence') {
   const raw = requireRecord(evidence, path);
   const byKind = {};
@@ -64,24 +70,56 @@ export function normalizeEvidence(evidence, path = 'evidence') {
     requireString(row.familiarityStatus, `${path}.delayedChecks[${index}].familiarityStatus`);
     const occurredAt = requireString(row.occurredAt, `${path}.delayedChecks[${index}].occurredAt`);
     if (Number.isNaN(Date.parse(occurredAt))) throw contractError(`${path}.delayedChecks[${index}].occurredAt`, 'expected a valid timestamp.');
+    if (row.dueAt != null) requireTimestamp(row.dueAt, `${path}.delayedChecks[${index}].dueAt`);
+    if (row.actualDelayDays != null && (typeof row.actualDelayDays !== 'number' || !Number.isFinite(row.actualDelayDays) || row.actualDelayDays < 0)) {
+      throw contractError(`${path}.delayedChecks[${index}].actualDelayDays`, 'expected a non-negative number.');
+    }
+  });
+  const contentQualityCandidates = requireArray(raw.contentQualityCandidates ?? [], `${path}.contentQualityCandidates`);
+  contentQualityCandidates.forEach((candidate, index) => {
+    const row = requireRecord(candidate, `${path}.contentQualityCandidates[${index}]`);
+    requireString(row.activityId, `${path}.contentQualityCandidates[${index}].activityId`);
+    requireString(row.reason, `${path}.contentQualityCandidates[${index}].reason`);
+    requireArray(row.attemptIds, `${path}.contentQualityCandidates[${index}].attemptIds`).forEach((id, n) =>
+      requireString(id, `${path}.contentQualityCandidates[${index}].attemptIds[${n}]`));
   });
   return {
     byKind,
     delayedChecks,
     delayedOutcomeByDay,
     confidenceOutcomePairs: requireNumber(raw.confidenceOutcomePairs, `${path}.confidenceOutcomePairs`),
+    contentQualityCandidates,
   };
 }
 
 function validateSignals(signals, path) {
   const raw = requireRecord(signals, path);
+  const reviewSchedule = raw.reviewSchedule == null ? null : requireRecord(raw.reviewSchedule, `${path}.reviewSchedule`);
+  if (reviewSchedule) {
+    if (!['upcoming', 'due', 'overdue', 'none'].includes(reviewSchedule.status)) {
+      throw contractError(`${path}.reviewSchedule.status`, 'expected upcoming, due, overdue, or none.');
+    }
+    if (reviewSchedule.dueAt != null) requireTimestamp(reviewSchedule.dueAt, `${path}.reviewSchedule.dueAt`);
+    requireString(reviewSchedule.reason, `${path}.reviewSchedule.reason`);
+  }
+  const openDraft = raw.openDraft == null ? null : requireRecord(raw.openDraft, `${path}.openDraft`);
+  if (openDraft) {
+    requireString(openDraft.activityId, `${path}.openDraft.activityId`);
+    requireTimestamp(openDraft.savedAt, `${path}.openDraft.savedAt`);
+    if (!['none', 'nudge', 'targeted', 'worked_solution'].includes(openDraft.hintLevel)) {
+      throw contractError(`${path}.openDraft.hintLevel`, 'hint level is not recognized.');
+    }
+  }
   const recordedAttempts = requireArray(raw.recordedAttempts, `${path}.recordedAttempts`);
+  const encounteredFamilyIds = requireArray(raw.encounteredFamilyIds ?? [], `${path}.encounteredFamilyIds`);
+  encounteredFamilyIds.forEach((family, index) => requireString(family, `${path}.encounteredFamilyIds[${index}]`));
   recordedAttempts.forEach((attempt, index) => {
     const item = requireRecord(attempt, `${path}.recordedAttempts[${index}]`);
     for (const field of ['id', 'activityId', 'contentVersion', 'evidenceKind', 'occurredAt',
       'gradingMethod', 'hintLevel', 'scoreStatus']) {
       requireString(item[field], `${path}.recordedAttempts[${index}].${field}`);
     }
+    if (item.familyId != null) requireString(item.familyId, `${path}.recordedAttempts[${index}].familyId`);
     if (typeof item.firstAnswer !== 'string') throw contractError(`${path}.recordedAttempts[${index}].firstAnswer`, 'expected text.');
     requireBoolean(item.assisted, `${path}.recordedAttempts[${index}].assisted`);
     if (item.assisted !== (item.hintLevel !== 'none')) {
@@ -98,11 +136,15 @@ function validateSignals(signals, path) {
   return {
     attempts: requireNumber(raw.attempts, `${path}.attempts`),
     unassistedCorrect: requireNumber(raw.unassistedCorrect, `${path}.unassistedCorrect`),
+    freshUnassistedCorrect: raw.freshUnassistedCorrect == null ? null : requireNumber(raw.freshUnassistedCorrect, `${path}.freshUnassistedCorrect`),
     hintAssisted: requireNumber(raw.hintAssisted, `${path}.hintAssisted`),
     needsReview: requireNumber(raw.needsReview, `${path}.needsReview`),
     recentOutcome: raw.recentOutcome == null ? null : requireString(raw.recentOutcome, `${path}.recentOutcome`),
     recordedAttempts,
+    encounteredFamilyIds,
     evidence: normalizeEvidence(raw.evidence, `${path}.evidence`),
+    reviewSchedule,
+    openDraft,
   };
 }
 
@@ -147,12 +189,26 @@ export function validateOverview(data) {
         for (const count of ['assigned', 'exposed', 'eligible', 'correct', 'missing']) {
           requireNumber(row[count], `overview.experiment.arms.${arm}.${count}`);
         }
+        for (const count of ['provisional', 'candidateKeyMatches', 'late', 'early', 'contaminated', 'ungraded', 'invalid', 'exposureIncomparable']) {
+          if (row[count] != null) requireNumber(row[count], `overview.experiment.arms.${arm}.${count}`);
+        }
+        if (experiment.analysisUnit === 'independent_learner') {
+          requireNumber(row.independentLearners, `overview.experiment.arms.${arm}.independentLearners`);
+        }
       }
     }
-    if (requireString(experiment.status, 'overview.experiment.status') !== 'insufficient_evidence') {
+    if (experiment.analysisUnit != null && experiment.analysisUnit !== 'independent_learner') {
+      throw contractError('overview.experiment.analysisUnit', 'unsupported analysis unit.');
+    }
+    if (!['insufficient_evidence', 'descriptive_only'].includes(requireString(experiment.status, 'overview.experiment.status'))) {
       throw contractError('overview.experiment.status', 'unsupported finding status.');
     }
     requireString(experiment.reason, 'overview.experiment.reason');
+    if (experiment.contentReviewStatus != null && !['draft', 'reviewed'].includes(experiment.contentReviewStatus)) {
+      throw contractError('overview.experiment.contentReviewStatus', 'expected draft or reviewed.');
+    }
+    if (protocol?.exposureDurationControlled != null) requireBoolean(protocol.exposureDurationControlled, 'overview.experiment.protocol.exposureDurationControlled');
+    if (protocol?.minimumPerArm != null) requireNumber(protocol.minimumPerArm, 'overview.experiment.protocol.minimumPerArm');
   }
   return {
     ...overview,
@@ -184,6 +240,9 @@ export function validateLesson(data) {
     }
     requireString(method.protocolId, 'lesson.method.protocolId');
     requireString(method.protocolVersion, 'lesson.method.protocolVersion');
+    if (method.studyTargetMinutes != null && (!Number.isSafeInteger(method.studyTargetMinutes) || method.studyTargetMinutes < 1)) {
+      throw contractError('lesson.method.studyTargetMinutes', 'expected a positive whole number.');
+    }
   }
   if (lesson.diagram != null && typeof lesson.diagram !== 'string') {
     throw contractError('lesson.diagram', 'expected text or null.');
@@ -206,8 +265,10 @@ export function validateLesson(data) {
 
 function validateActivity(activity, path) {
   const row = requireRecord(activity, path);
-  if (Object.hasOwn(row, 'explanation')) {
-    throw contractError(`${path}.explanation`, 'must not be sent before the answer is scored.');
+  for (const hidden of ['explanation', 'solution', 'answerKey', 'correctAnswer', 'modelAnswer']) {
+    if (Object.hasOwn(row, hidden)) {
+      throw contractError(`${path}.${hidden}`, 'must not be sent before the answer is scored.');
+    }
   }
   const type = requireString(row.type, `${path}.type`);
   if (!ACTIVITY_TYPES.has(type)) throw contractError(`${path}.type`, 'activity type is not recognized.');
@@ -262,6 +323,7 @@ function validateDraft(draft, path) {
 
 export function validateSession(data) {
   const session = requireRecord(data, 'session');
+  if (session.nextCheckAt != null) requireTimestamp(session.nextCheckAt, 'session.nextCheckAt');
   if (session.lessonRequired) {
     requireBoolean(session.lessonRequired, 'session.lessonRequired');
     if (session.activity != null) throw contractError('session.activity', 'must be null when lesson is required.');
@@ -278,8 +340,18 @@ export function validateSession(data) {
       }
     }
   }
+  if (activity) {
+    const revealed = new Set(draft?.hintLevels ?? []);
+    for (const hint of activity.hints) {
+      if (!revealed.has(hint.level) && hint.text != null) {
+        throw contractError(`session.activity.hints.${hint.level}.text`, 'unrequested hint text must not be sent.');
+      }
+    }
+  }
   const recommendation = session.recommendation == null ? null : requireRecord(session.recommendation, 'session.recommendation');
   if (activity) requireString(recommendation?.reason, 'session.recommendation.reason');
+  if (recommendation?.aim != null) requireString(recommendation.aim, 'session.recommendation.aim');
+  if (recommendation?.evidenceGap != null) requireString(recommendation.evidenceGap, 'session.recommendation.evidenceGap');
   return {
     lessonRequired: false,
     activity,
@@ -302,6 +374,14 @@ export function validateAttemptResult(data) {
   requireString(result.nextReason, 'attempt.nextReason');
   if (result.explanation != null) requireString(result.explanation, 'attempt.explanation');
   requireBoolean(result.assisted, 'attempt.assisted');
+  if (result.solution != null) {
+    const solution = requireRecord(result.solution, 'attempt.solution');
+    if (status === 'ungraded') throw contractError('attempt.solution', 'ungraded answers cannot have a scored solution.');
+    if (solution.kind !== 'candidate_key') throw contractError('attempt.solution.kind', 'expected a candidate key.');
+    requireString(solution.answer, 'attempt.solution.answer');
+    requireString(solution.reasoning, 'attempt.solution.reasoning');
+    if (solution.misconception != null) requireString(solution.misconception, 'attempt.solution.misconception');
+  }
   if (result.rubric != null) {
     const rubric = requireRecord(result.rubric, 'attempt.rubric');
     requireString(rubric.id, 'attempt.rubric.id');
@@ -314,6 +394,13 @@ export function validateAttemptResult(data) {
     });
   }
   return result;
+}
+
+export function solutionMarkup(result) {
+  const validated = validateAttemptResult(result);
+  if (!validated.solution) return '';
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return `<details class="solution-panel"><summary>Reveal candidate answer and reasoning</summary><p class="muted">This is a draft candidate key shown after your first answer was saved and scored. It is not a mastery judgment.</p><p><strong>Candidate answer</strong></p><pre class="code">${esc(validated.solution.answer)}</pre><p><strong>Reasoning:</strong> ${esc(validated.solution.reasoning)}</p>${validated.solution.misconception ? `<p><strong>Common misconception:</strong> ${esc(validated.solution.misconception)}</p>` : ''}</details>`;
 }
 
 export function buildAttemptPayload(draftId, activeSeconds, confidence, outsideStudy, outsideStudyDetail = '') {
@@ -361,10 +448,40 @@ export function evidenceMarkup(evidence, recordedAttempts = []) {
   const normalized = normalizeEvidence(evidence, 'signals.evidence');
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const rows = Object.entries(normalized.byKind).map(([kind, count]) => `<tr><th scope="row">${esc(kind)}</th><td>${count.unassistedCorrect}</td><td>${count.assistedCorrect}</td><td>${count.incorrect}</td><td>${count.ungraded}</td></tr>`).join('');
-  const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => `<li>Day ${esc(check.checkDelayDays)} · ${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(String(check.familiarityStatus ?? 'not_verified').replace('_', ' '))} · ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
+  const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => `<li>Target delay ${esc(check.checkDelayDays)} day${check.checkDelayDays === 1 ? '' : 's'}${check.actualDelayDays != null ? ` · Actual delay ${esc(Number(check.actualDelayDays.toFixed(2)))} days` : ''}${check.dueAt ? ` · Due <time datetime="${esc(check.dueAt)}">${esc(new Date(check.dueAt).toLocaleString())}</time>` : ''} · ${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(String(check.familiarityStatus ?? 'not_verified').replace('_', ' '))} · answered ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
   const intervalStatus = Object.entries(normalized.delayedOutcomeByDay).map(([day, status]) => `<li>Day ${esc(day)}: ${esc(status.replace('_', ' '))}</li>`).join('');
   const history = recordedAttempts.length ? recordedAttempts.map(attempt => `<li><details><summary>${esc(attempt.activityId)} · ${esc(attempt.evidenceKind)} · ${esc(attempt.scoreStatus)} · ${attempt.assisted ? 'assisted' : 'independent'} · ${esc(new Date(attempt.occurredAt).toLocaleString())}</summary><p>Content ${esc(attempt.contentVersion)} · Hint: ${esc(attempt.hintLevel.replace('_', ' '))} · Method: ${esc(attempt.gradingMethod)}</p><p>Pre-hint confidence: ${attempt.confidence == null ? 'not provided' : `${Math.round(attempt.confidence * 100)}%`} · Outside study: ${esc(attempt.outsideStudy ?? 'not recorded')}</p><pre class="code">${esc(attempt.firstAnswer)}</pre></details></li>`).join('') : '<li>No attempts recorded yet.</li>';
-  return `<details class="evidence-panel"><summary>Inspect learning evidence</summary><p class="muted">Observed answers by kind. Candidate-key matches are development feedback, not mastery.</p><div class="table-scroll"><table><thead><tr><th scope="col">Kind</th><th scope="col">Independent matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Ungraded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Delayed check status</strong></p><ul>${intervalStatus || '<li>Insufficient evidence: no delayed held-out answer yet.</li>'}</ul><p><strong>Delayed answers</strong></p><ul>${delayed}</ul><p><strong>Attempt history</strong></p><ul>${history}</ul><p class="muted">Independent scored answers with confidence recorded: ${normalized.confidenceOutcomePairs}. No calibrated estimate is available.</p></details>`;
+  const candidates = normalized.contentQualityCandidates.length ? normalized.contentQualityCandidates.map(row => `<li>${esc(row.activityId)}: ${esc(row.reason)} (${row.attemptIds.length} recorded attempts). Requires content review; repeated errors alone do not prove an item defect.</li>`).join('') : '<li>No content review candidates recorded.</li>';
+  return `<details class="evidence-panel"><summary>Inspect learning evidence</summary><p class="muted">Observed answers by kind. Unassisted counts may include repeated or studied families; candidate-key matches are development feedback, not mastery.</p><div class="table-scroll"><table><thead><tr><th scope="col">Kind</th><th scope="col">Unassisted matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Ungraded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Delayed check status</strong></p><ul>${intervalStatus || '<li>Insufficient evidence: no delayed held-out answer yet.</li>'}</ul><p><strong>Delayed answers</strong></p><ul>${delayed}</ul><p><strong>Content review candidates</strong></p><ul>${candidates}</ul><p><strong>Attempt history</strong></p><ul>${history}</ul><p class="muted">Unassisted scored answers with confidence recorded: ${normalized.confidenceOutcomePairs}. No calibrated estimate is available.</p></details>`;
+}
+
+export function evidenceSnapshot(evidence) {
+  const normalized = normalizeEvidence(evidence, 'signals.evidence');
+  const counts = Object.values(normalized.byKind);
+  return {
+    independent: counts.reduce((sum, row) => sum + row.unassistedCorrect, 0),
+    assisted: counts.reduce((sum, row) => sum + row.assistedCorrect, 0),
+    incorrect: counts.reduce((sum, row) => sum + row.incorrect, 0),
+    ungraded: counts.reduce((sum, row) => sum + row.ungraded, 0),
+    missingKinds: counts.filter(row => row.unassistedCorrect + row.assistedCorrect + row.incorrect + row.ungraded === 0).length,
+    delayedIndependent: normalized.delayedChecks.filter(row => !row.assisted).length,
+    delayedMissing: Object.values(normalized.delayedOutcomeByDay).filter(status => status === 'insufficient_evidence').length,
+  };
+}
+
+export function evidenceSummaryMarkup(evidence) {
+  const counts = evidenceSnapshot(evidence);
+  return `<section class="evidence-summary" aria-label="Observed learning evidence"><h3>What has been observed</h3><div class="evidence-summary-grid"><p><strong>${counts.independent}</strong>Unassisted candidate matches</p><p><strong>${counts.assisted}</strong>Assisted candidate matches</p><p><strong>${counts.delayedIndependent}</strong>Unassisted delayed answers</p><p><strong>${counts.missingKinds}</strong>Evidence categories without an answer</p></div><p class="muted">${counts.incorrect} incorrect · ${counts.ungraded} ungraded · ${counts.delayedMissing} delayed intervals without an observed answer. Unassisted counts may include repeated families. Delayed answers are a subset of the categories above, not extra attempts. Candidate-key matches do not establish mastery.</p></section>`;
+}
+
+export function reviewTimingMarkup(schedule, session = null, now = new Date()) {
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dueAt = schedule?.dueAt ?? session?.nextCheckAt ?? null;
+  let status = schedule?.status ?? (session?.activity?.heldOut ? 'due' : dueAt ? 'upcoming' : 'none');
+  if (dueAt && status === 'upcoming' && Date.parse(dueAt) <= now.getTime()) status = 'due';
+  const label = {upcoming:'Upcoming delayed review', due:'Delayed review due', overdue:'Delayed review overdue', none:'No delayed review scheduled'}[status];
+  const reason = schedule?.reason ?? session?.recommendation?.reason ?? session?.reason ?? 'A review time appears after sufficient practice evidence.';
+  return `<section class="review-timing" role="status" aria-label="Review timing"><strong>${label}</strong>${dueAt ? `<p>Review time: <time datetime="${esc(dueAt)}">${esc(new Date(dueAt).toLocaleString())}</time></p>` : ''}<p>${esc(reason)}</p></section>`;
 }
 
 if (typeof globalThis.document !== 'undefined') {
@@ -423,7 +540,12 @@ function showError(error) {
 }
 function concepts() {
   const path = state.overview?.pathRecommendation;
-  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}${path && c.id === path.conceptId ? ' · Suggested' : ''}</small></span></button>`).join('');
+  conceptsEl.innerHTML = state.overview.concepts.map((c, i) => {
+    const schedule = c.signals.reviewSchedule;
+    const timing = schedule && schedule.status !== 'none' ? ` · Review ${esc(schedule.status)}` : '';
+    const draft = c.signals.openDraft ? ' · Saved first answer' : '';
+    return `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}" aria-current="${c.id === state.conceptId ? 'true' : 'false'}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}${timing}${draft}${path && c.id === path.conceptId ? ' · Suggested' : ''}</small></span></button>`;
+  }).join('');
   conceptsEl.querySelectorAll('[data-concept]').forEach(button => button.onclick = () => select(button.dataset.concept));
 }
 async function select(cid) {
@@ -433,7 +555,8 @@ async function select(cid) {
   } catch (error) { showError(error); }
 }
 async function chooseMorePractice() {
-  await api('/api/v2/overrides', { conceptId: state.conceptId, mode: 'practice', reason: 'learner_choice' });
+  const learnerReason = document.querySelector('#override-note')?.value.trim() || null;
+  await api('/api/v2/overrides', { conceptId: state.conceptId, mode: 'practice', reason: 'learner_choice', learnerReason });
   state.result = null; state.review = null; state.answer = ''; state.mode = 'practice';
   state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
   await refresh();
@@ -470,25 +593,49 @@ function renderWorkspace() {
   const finding = state.overview.experiment;
   const protocolId = finding?.protocol?.id ?? finding?.protocolId;
   const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
-  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} eligible delayed answers, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing or ineligible.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} eligible delayed answers, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing or ineligible.</p></div>` : '';
-  const experimentMarkup = finding ? `<div class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${armsMarkup}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></div>` : '';
-  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${experimentMarkup}<div class="signals"><div class="signal"><strong>${signals.attempts}</strong>attempts</div><div class="signal"><strong>${signals.unassistedCorrect}</strong>unassisted candidate matches</div><div class="signal"><strong>${signals.hintAssisted}</strong>hint-assisted attempts</div></div>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}<div class="divider"></div>`;
+  const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'correlated concept observations' : 'eligible delayed answers';
+  const armDetail = arm => {
+    if (finding?.analysisUnit !== 'independent_learner') return '';
+    const row = finding.arms[arm];
+    return `; ${row.independentLearners} independent learner${row.independentLearners === 1 ? '' : 's'}` +
+      (row.provisional ? `; ${row.provisional} provisional draft-key check${row.provisional === 1 ? '' : 's'} (${row.candidateKeyMatches} candidate match${row.candidateKeyMatches === 1 ? '' : 'es'})` : '') +
+      (row.late ? `; ${row.late} late check${row.late === 1 ? '' : 's'} reported outside the primary window` : '') +
+      (row.contaminated ? `; ${row.contaminated} familiar or assisted check${row.contaminated === 1 ? '' : 's'}` : '') +
+      (row.early ? `; ${row.early} early check${row.early === 1 ? '' : 's'}` : '') +
+      (row.ungraded ? `; ${row.ungraded} ungraded response${row.ungraded === 1 ? '' : 's'}` : '') +
+      (row.invalid ? `; ${row.invalid} invalid response${row.invalid === 1 ? '' : 's'}` : '') +
+      (row.exposureIncomparable ? `; ${row.exposureIncomparable} exposure${row.exposureIncomparable === 1 ? '' : 's'} without verified comparability` : '');
+  };
+  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
+  const limitations = [
+    finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
+    finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
+    finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
+    finding?.protocol?.minimumIndependentLearnersPerArm != null ? `A stronger comparison needs at least ${finding.protocol.minimumIndependentLearnersPerArm} independent learners per arm, verified exposure, and reviewed content. One person's concept results remain correlated.` : null,
+    finding?.syntheticResultsAreLearningEvidence === false ? 'Synthetic test results are not learner evidence.' : null,
+  ].filter(Boolean);
+  const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B · text with diagram' : state.lesson.method?.conditionId === 'text' ? 'A · text' : null;
+  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>Limits on interpretation</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></section>` : '';
+  const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
+  const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
+  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p><div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${draftMarkup}${reviewMarkup}${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}<div class="divider"></div>`;
+  const overrideNote = '<label class="muted" for="override-note">Why choose more practice? (optional)</label><input id="override-note" class="answer" maxlength="500" placeholder="Your reason, if you want to record it">';
   content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
     const method = state.lesson.method;
-    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p><small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
+    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p>${method.studyTargetMinutes ? `<p>Comparison study target: about ${esc(method.studyTargetMinutes)} minutes with this lesson before practice in either method. You may continue sooner or later; study time is not verified.</p>` : ''}<small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
     const diagramMarkup = state.lesson.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled concept diagram</figcaption><pre>${esc(state.lesson.diagram)}</pre></figure>` : '';
-    content.innerHTML = intro + `<span class="pill">Short lesson</span><h2>${esc(state.lesson.title)}</h2>${methodMarkup}<article class="lesson-body">${lessonMarkup(state.lesson.body)}</article>${diagramMarkup}${state.lesson.experimentNotice ? `<p class="muted">${esc(state.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've read this lesson →</button></div>`;
+    content.innerHTML = intro + `<span class="pill">Worked answer first · draft lesson</span><h2>${esc(state.lesson.title)}</h2>${methodMarkup}<p class="method-note">Study the complete worked answer, follow each step, and check the common mistakes. Your next question uses a different item family; studying this answer does not count as an independent correct answer.</p><article class="lesson-body">${lessonMarkup(state.lesson.body)}</article>${diagramMarkup}${state.lesson.experimentNotice ? `<p class="muted">${esc(state.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've studied the worked answer →</button></div>`;
     document.querySelector('#complete').onclick = async () => { try { await api('/api/v2/lesson-completions',{conceptId:state.conceptId}); await refresh(); } catch(e){showError(e)} };
     return;
   }
   if (state.result) {
     const r = validateAttemptResult(state.result);
     const status = r.scoreStatus === 'ungraded' ? 'Saved for self review' : r.scoreStatus === 'correct' ? 'Candidate key match' : 'Try another approach';
-    content.innerHTML = intro + `<div class="feedback"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>` +
+    content.innerHTML = intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>${solutionMarkup(r)}` +
       (r.rubric && !state.review ? `<div class="activity-card"><span class="label">SELF REVIEW · ORIGINAL ANSWER</span><pre class="code">${esc(state.answer)}</pre><p class="muted">For each criterion, quote the part of your first answer that supports a shown or partial rating.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Evidence for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save self review →</button></div></div>` : '') +
       (state.review ? `<div class="activity-card"><span class="label">COMPARE AND REVISE</span><p>${esc(state.review.nextStep.replace('_',' '))}</p><pre class="code">${esc(state.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((state.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
-      `<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
+      `${overrideNote}<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
     if (r.rubric && !state.review) document.querySelector('#review').onclick = async () => {
       try {
         const judgments = [...document.querySelectorAll('.review-row')].map(row => ({criterionId:row.dataset.criterion,rating:row.querySelector('.rating').value,evidence:row.querySelector('.evidence').value}));
@@ -505,14 +652,18 @@ function renderWorkspace() {
   }
   const s = state.session, a = s.activity;
   if (!a) {
-    content.innerHTML = intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
+    content.innerHTML = intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>`;
     document.querySelector('#more').onclick = () => chooseMorePractice().catch(showError);
     return;
   }
   const saved = Boolean(s.draft);
   const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
   const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
-  content.innerHTML = intro + `<span class="pill">${a.heldOut ? 'Delayed check' : 'Practice activity'}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>`;
+  const priorFamily = signals.recordedAttempts.filter(attempt => attempt.familyId === a.familyId);
+  const activityLabel = a.heldOut ? 'Unfamiliar delayed assessment' :
+    priorFamily.some(attempt => attempt.assisted) ? 'Assisted review' :
+    priorFamily.length || signals.encounteredFamilyIds.includes(a.familyId) ? 'Repeated practice' : 'New question';
+  content.innerHTML = intro + `<span class="pill">${activityLabel}</span><div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${priorFamily.length ? '<p>This item family has been attempted before. A new answer here remains repeat practice.</p>' : ''}${s.recommendation?.aim ? `<p><strong>Aim:</strong> ${esc(s.recommendation.aim)}</p>` : ''}${s.recommendation?.evidenceGap ? `<p><strong>Evidence still needed:</strong> ${esc(s.recommendation.evidenceGap)}</p>` : ''}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>${!saved && state.mode === 'recommended' ? `${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>` : ''}`;
   drawAnswer(a, saved);
   if (!saved) {
     document.querySelector('#confidence').value = state.confidence == null ? '' : String(state.confidence);
@@ -525,13 +676,15 @@ function renderWorkspace() {
       await refresh();
     } catch(error){showError(error)}
   };
+  const overrideButton = document.querySelector('#more');
+  if (overrideButton) overrideButton.onclick = () => chooseMorePractice().catch(showError);
   if (saved) drawAfterSave(a, s.draft);
 }
 function drawAnswer(a, saved) {
   const area = document.querySelector('#answer-area');
   if (a.type === 'choice') {
-    area.innerHTML = a.choices.map((choice,i)=>`<button class="choice ${state.answer===choice?'selected':''}" data-choice="${i}" ${saved?'disabled':''}><span></span>${esc(choice)}</button>`).join('');
-    area.querySelectorAll('[data-choice]').forEach(button=>button.onclick=()=>{ state.answer=a.choices[Number(button.dataset.choice)]; drawAnswer(a,false); });
+    area.innerHTML = `<div role="group" aria-label="Answer choices">${a.choices.map((choice,i)=>`<button type="button" class="choice ${state.answer===choice?'selected':''}" aria-pressed="${state.answer===choice}" data-choice="${i}" ${saved?'disabled':''}><span aria-hidden="true">${state.answer===choice?'✓':''}</span>${esc(choice)}</button>`).join('')}</div>`;
+    area.querySelectorAll('[data-choice]').forEach(button=>button.onclick=()=>{ const index = Number(button.dataset.choice); state.answer=a.choices[index]; drawAnswer(a,false); area.querySelector(`[data-choice="${index}"]`).focus(); });
   } else if (a.type === 'trace') {
     area.innerHTML = `<label class="muted" for="answer-input">YOUR ANSWER</label><input id="answer-input" class="answer" value="${esc(state.answer)}" ${saved?'readonly':''} autocomplete="off">`;
     area.querySelector('input').oninput = event => { state.answer=event.target.value; };
@@ -549,7 +702,21 @@ function drawAfterSave(a, draft) {
   document.querySelector('#outside-study-detail').oninput = event => { state.outsideStudyDetail = event.target.value; };
   const hint = document.querySelector('#hint');
   if (hint) hint.onclick = async () => { try { await api('/api/v2/hints',{draftId:draft.id}); await refresh(); } catch(error){showError(error)} };
-  document.querySelector('#submit').onclick = async () => { try { const payload = buildAttemptPayload(draft.id, Math.max(0,Math.floor((Date.now()-state.started)/1000)), state.confidence, state.outsideStudy, state.outsideStudyDetail); const result = validateAttemptResult(await api('/api/v2/attempts',payload)); const overview=validateOverview(await api('/api/v2/overview')); state.result=result; state.overview=overview; concepts(); render(); } catch(error){showError(error)} };
+  document.querySelector('#submit').onclick = async () => {
+    try {
+      const payload = buildAttemptPayload(draft.id, Math.max(0, Math.floor((Date.now()-state.started)/1000)), state.confidence, state.outsideStudy, state.outsideStudyDetail);
+      const result = validateAttemptResult(await api('/api/v2/attempts', payload));
+      const cid = encodeURIComponent(state.conceptId);
+      const [overview, session] = await Promise.all([
+        api('/api/v2/overview'),
+        api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`),
+      ]);
+      state.result = result;
+      state.overview = validateOverview(overview);
+      state.session = validateSession(session);
+      concepts(); render();
+    } catch (error) { showError(error); }
+  };
 }
 document.querySelector('#export').onclick = async () => {
   try { const data=await api('/api/v2/export'); data.displayPreferences = {...preferences}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}

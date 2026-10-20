@@ -6,8 +6,12 @@ import { fileURLToPath } from 'node:url';
 import {
   buildAttemptPayload,
   evidenceMarkup,
+  evidenceSnapshot,
+  evidenceSummaryMarkup,
   lessonMarkup,
   normalizeEvidence,
+  reviewTimingMarkup,
+  solutionMarkup,
   validateAttemptResult,
   validateLesson,
   validateOverview,
@@ -72,6 +76,71 @@ test('missing evidence is identified before rendering instead of displayed as ze
   assert.match(html, /Inspect learning evidence/);
 });
 
+test('returning evidence keeps unassisted, assisted, delayed, and missing counts distinct', () => {
+  const evidence = emptyEvidence();
+  evidence.byKind.recognition.unassistedCorrect = 1;
+  evidence.byKind.recall.assistedCorrect = 1;
+  evidence.byKind.application.incorrect = 1;
+  evidence.delayedChecks.push({ attemptId: 'later', checkDelayDays: 1, evidenceKind: 'application',
+    scoreStatus: 'incorrect', assisted: false, familiarityStatus: 'not_verified',
+    occurredAt: '2026-01-02T12:00:00Z' });
+  evidence.delayedOutcomeByDay['1'] = 'observed';
+  assert.deepEqual(evidenceSnapshot(evidence), {
+    independent: 1, assisted: 1, incorrect: 1, ungraded: 0,
+    missingKinds: 2, delayedIndependent: 1, delayedMissing: 1,
+  });
+  const html = evidenceSummaryMarkup(evidence);
+  assert.match(html, /Unassisted candidate matches/);
+  assert.match(html, /Unassisted counts may include repeated families/);
+  assert.match(html, /Assisted candidate matches/);
+  assert.match(html, /Delayed answers are a subset/);
+});
+
+test('optional review schedule and saved draft validate without changing legacy overview', () => {
+  const payload = baseOverview([baseConcept('c1', 'One')], { conceptId: 'c1', action: 'resume', reason: 'Resume.' });
+  assert.equal(validateOverview(payload).concepts[0].signals.reviewSchedule, null);
+  payload.concepts[0].signals.reviewSchedule = { dueAt: '2026-01-02T12:00:00Z', status: 'due', reason: 'Check recall.' };
+  payload.concepts[0].signals.openDraft = { activityId: 'item-1', savedAt: '2026-01-01T12:00:00Z', hintLevel: 'nudge' };
+  const valid = validateOverview(payload).concepts[0].signals;
+  assert.equal(valid.reviewSchedule.status, 'due');
+  assert.equal(valid.openDraft.hintLevel, 'nudge');
+  payload.concepts[0].signals.reviewSchedule.dueAt = 'not a date';
+  assert.throws(() => validateOverview(payload), /reviewSchedule\.dueAt/);
+});
+
+test('descriptive protocol requires independent learner counts per arm', () => {
+  const payload = baseOverview([baseConcept('c1', 'One')],
+    { conceptId: 'c1', action: 'lesson', reason: 'Begin.' });
+  payload.experiment = { protocol: { id: 'text-vs-labeled-diagram', version: 'v2' },
+    status: 'insufficient_evidence', reason: 'One learner.', analysisUnit: 'independent_learner',
+    arms: Object.fromEntries(['text', 'diagram'].map(arm => [arm,
+      { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 1, independentLearners: 0 }])) };
+  assert.equal(validateOverview(payload).experiment.analysisUnit, 'independent_learner');
+  payload.experiment.arms.text.provisional = 1;
+  payload.experiment.arms.text.candidateKeyMatches = 1;
+  payload.experiment.arms.text.late = 1;
+  assert.equal(validateOverview(payload).experiment.arms.text.provisional, 1);
+  payload.experiment.arms.text.late = null;
+  payload.experiment.arms.text.provisional = 'one';
+  assert.throws(() => validateOverview(payload), /arms\.text\.provisional/);
+  payload.experiment.arms.text.provisional = 1;
+  delete payload.experiment.arms.text.independentLearners;
+  assert.throws(() => validateOverview(payload), /arms\.text\.independentLearners/);
+});
+
+test('review timing uses a controlled clock and escapes reason text', () => {
+  const schedule = { dueAt: '2026-01-02T12:00:00Z', status: 'upcoming', reason: '<review>' };
+  const before = reviewTimingMarkup(schedule, null, new Date('2026-01-01T12:00:00Z'));
+  assert.match(before, /Upcoming delayed review/);
+  const due = reviewTimingMarkup(schedule, null, new Date('2026-01-03T12:00:00Z'));
+  assert.match(due, /Delayed review due/);
+  assert.match(due, /&lt;review&gt;/);
+  assert.doesNotMatch(due, /<review>/);
+  const legacy = reviewTimingMarkup(null, { nextCheckAt: null, activity: { heldOut: true },
+    recommendation: { reason: 'Held-out check.' } }, new Date('2026-01-03T12:00:00Z'));
+  assert.match(legacy, /Delayed review due/);
+});
+
 test('null evidence.byKind is rejected with a contract path', () => {
   assert.throws(
     () => normalizeEvidence({ byKind: null }, 'signals.evidence'),
@@ -85,6 +154,33 @@ test('a delayed check without assistance status cannot be called independent', (
     evidenceKind: 'application', scoreStatus: 'correct',
     familiarityStatus: 'not_verified', occurredAt: '2026-01-02T12:00:00Z' });
   assert.throws(() => normalizeEvidence(evidence), /delayedChecks\[0\]\.assisted/);
+});
+
+test('delayed evidence distinguishes target delay from actual elapsed delay', () => {
+  const evidence = emptyEvidence();
+  evidence.delayedChecks.push({ attemptId: 'late', checkDelayDays: 7, evidenceKind: 'transfer',
+    scoreStatus: 'incorrect', assisted: false, familiarityStatus: 'not_verified',
+    dueAt: '2026-01-08T12:00:00Z', actualDelayDays: 9.25,
+    occurredAt: '2026-01-10T18:00:00Z' });
+  const html = evidenceMarkup(evidence);
+  assert.match(html, /Target delay 7 days/);
+  assert.match(html, /Actual delay 9.25 days/);
+  assert.match(html, /Due <time/);
+  evidence.delayedChecks[0].actualDelayDays = -1;
+  assert.throws(() => normalizeEvidence(evidence), /actualDelayDays/);
+});
+
+test('content quality candidates remain review candidates and escape their reason', () => {
+  const evidence = emptyEvidence();
+  evidence.contentQualityCandidates = [{ activityId: 'item-1', attemptIds: ['a1', 'a2'],
+    reason: '<script>repeated misses</script>' }];
+  const html = evidenceMarkup(evidence);
+  assert.match(html, /Content review candidates/);
+  assert.match(html, /Requires content review/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  delete evidence.contentQualityCandidates[0].attemptIds;
+  assert.throws(() => normalizeEvidence(evidence), /contentQualityCandidates\[0\]\.attemptIds/);
 });
 
 test('attempt history preserves assistance and escapes the saved answer', () => {
@@ -139,7 +235,7 @@ test('saved hint must have revealed text in the offered activity', () => {
 test('activity objective is available before answer while explanation is withheld', () => {
   const activity = { id: 'a1', type: 'choice', evidenceKind: 'recognition', prompt: 'Pick one',
     learningObjective: 'Distinguish return from print', difficulty: 'introductory',
-    choices: ['return 1'], hints: [] };
+    heldOut: true, choices: ['return 1'], hints: [] };
   const session = { activity, draft: null, recommendation: { reason: 'Begin practice.' } };
   const valid = validateSession(session);
   assert.equal(valid.activity.learningObjective, 'Distinguish return from print');
@@ -147,6 +243,12 @@ test('activity objective is available before answer while explanation is withhel
   assert.equal(Object.hasOwn(valid.activity, 'explanation'), false);
   activity.explanation = 'return sends the value back';
   assert.throws(() => validateSession(session), /session\.activity\.explanation: must not be sent/);
+  delete activity.explanation;
+  activity.solution = { answer: 'return 1' };
+  assert.throws(() => validateSession(session), /session\.activity\.solution: must not be sent/);
+  delete activity.solution;
+  activity.hints = [{ level: 'worked_solution', text: 'return 1' }];
+  assert.throws(() => validateSession(session), /unrequested hint text must not be sent/);
 });
 
 test('live preview API payloads validate for all five concepts', () => {
@@ -228,11 +330,28 @@ test('attempt result validation guards feedback rendering', () => {
   /attempt\.developmentOnly/);
 });
 
+test('candidate solution is intentionally revealed only for a scored result', () => {
+  const result = { attemptId: 'a', scoreStatus: 'incorrect', gradingMethod: 'development_fixture_exact_key',
+    assisted: false, nextReason: 'Candidate key did not match.', developmentOnly: true,
+    solution: { kind: 'candidate_key', answer: '<return 1>', reasoning: 'Return sends a value.',
+      misconception: '<print> only displays it.' } };
+  const html = solutionMarkup(result);
+  assert.match(html, /<details class="solution-panel"><summary>Reveal candidate answer and reasoning/);
+  assert.match(html, /&lt;return 1&gt;/);
+  assert.match(html, /&lt;print&gt;/);
+  assert.doesNotMatch(html, /<return 1>/);
+  assert.equal(solutionMarkup({ ...result, solution: undefined }), '');
+  assert.throws(() => validateAttemptResult({ ...result, scoreStatus: 'ungraded' }),
+    /ungraded answers cannot have a scored solution/);
+});
+
 test('experiment lesson condition controls optional labeled diagram', () => {
   const base = { conceptId: 'c1', title: 'Functions', body: 'Shared explanation', completed: false,
     sources: [], method: { conditionId: 'text', protocolId: 'pilot-1', protocolVersion: '1' },
     diagram: null, experimentNotice: 'Assignment is stable.' };
   assert.equal(validateLesson(base).method.conditionId, 'text');
+  assert.equal(validateLesson({ ...base, method: { ...base.method, studyTargetMinutes: 10 } }).method.studyTargetMinutes, 10);
+  assert.throws(() => validateLesson({ ...base, method: { ...base.method, studyTargetMinutes: 0 } }), /studyTargetMinutes/);
   assert.equal(validateLesson({ ...base, method: { ...base.method, conditionId: 'diagram' }, diagram: 'input → output' }).diagram, 'input → output');
   assert.throws(() => validateLesson({ ...base, diagram: 'leaked diagram' }), /lesson\.diagram: a diagram requires/);
   assert.throws(() => validateLesson({ ...base, method: { ...base.method, conditionId: 'unknown' } }), /lesson\.method\.conditionId/);
