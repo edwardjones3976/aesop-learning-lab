@@ -15,8 +15,11 @@ py -m aesop_lab.api --development-fixtures --db .local/aesop-dev.sqlite3
 The server binds to `127.0.0.1:8766` and accepts requests addressed to
 `127.0.0.1:8766` or `localhost:8766`. Browser requests from the local UI at
 `http://127.0.0.1:8765` or `http://localhost:8765` are allowed; other
-`Origin` values are rejected. POST endpoints require `Content-Type:
-application/json`. Loopback binding alone does not validate browser requests.
+`Origin` values are rejected. POST and DELETE requests without one of those
+allowed `Origin` headers return 403 `forbidden_request`; GET and OPTIONS are
+unchanged and still accept requests without `Origin`. POST endpoints require
+`Content-Type: application/json`; DELETE needs no JSON content type. Loopback
+binding alone does not validate browser requests.
 The fixture's lesson completion is
 recorded on first start and remains fixed in SQLite across restarts. GET
 `/api/v1/session/next?availableMinutes=20&mode=recommended` is read-only;

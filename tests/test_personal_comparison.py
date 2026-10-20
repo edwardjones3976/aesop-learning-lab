@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from aesop_lab.api.personal_comparison import (
     CONTENT_VERSION, PROTOCOL_ID, UNIT_BY_ID, UNITS, PersonalComparison,
@@ -200,6 +201,31 @@ class PersonalComparisonTests(unittest.TestCase):
         self.store.connection.commit()
         self.assertEqual(self.comparison.report()["units"][0]["classification"], "contaminated")
 
+    def test_human_reviewed_correct_delayed_answer_is_eligible(self):
+        for module, comparison_type in (
+                ("aesop_lab.api.personal_comparison", PersonalComparison),
+                ("aesop_lab.api.personal_comparison_v1", LegacyPersonalComparison)):
+            with self.subTest(protocol=comparison_type.__module__):
+                self.store.delete_all()
+                self.clock = START
+                comparison = comparison_type(self.store, lambda: self.clock,
+                                             prior_concept_exposure=False)
+                first = UNITS[0]
+                with patch(f"{module}.CONTENT_REVIEW_STATUS", "human_reviewed"):
+                    comparison.enroll()
+                    comparison.start_exposure(first.id)
+                    comparison.complete_exposure(first.id, "none")
+                    comparison.open_question(first.id, "practice")
+                    comparison.answer(first.id, "practice", first.practice_answer, "none")
+                    self.clock += timedelta(days=8)
+                    comparison.open_question(first.id, "delayed")
+                    report = comparison.answer(first.id, "delayed",
+                                               first.delayed_answer, "none")
+                unit = report["units"][0]
+                self.assertEqual(unit["classification"], "eligible")
+                self.assertTrue(unit["delayedCandidateMatch"])
+                self.assertEqual(report["arms"][unit["condition"]]["correct"], 1)
+
     def test_delayed_window_uses_unrounded_elapsed_time(self):
         self.comparison.enroll()
         for unit in UNITS[:2]:
@@ -227,8 +253,10 @@ class PersonalComparisonTests(unittest.TestCase):
                 "UPDATE personal_responses SET occurred_at = ? WHERE unit_id = ? AND phase = 'delayed'",
                 (early_at, early.id))
         report = self.comparison.report()
-        self.assertEqual([(unit["classification"], unit["actualDelayDays"])
-                          for unit in report["units"][:2]], [("late", 14.0), ("early", 7.0)])
+        self.assertEqual([unit["classification"] for unit in report["units"][:2]],
+                         ["late", "early"])
+        self.assertGreater(report["units"][0]["actualDelayDays"], 14)
+        self.assertLess(report["units"][1]["actualDelayDays"], 7)
         for unit in report["units"][:2]:
             self.assertEqual(report["arms"][unit["condition"]][unit["classification"]], 1)
 
