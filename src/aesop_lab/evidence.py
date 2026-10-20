@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Mapping
 
+from aesop_lab.api.delay_display import display_delay_days
 from aesop_lab.domain.models import Activity, Attempt, EvidenceKind, ScoreStatus
 
 
@@ -37,14 +38,14 @@ def summarize_evidence(activities: Mapping[str, Activity], attempts: tuple[Attem
             confidence_pairs += 1
         if activity.held_out and lesson_completed_at is not None:
             due_at = lesson_completed_at + timedelta(days=activity.check_delay_days)
-            elapsed_days = (attempt.occurred_at - lesson_completed_at).total_seconds() / 86400
+            delay = attempt.occurred_at - lesson_completed_at
             delayed.append({
                 "attemptId": attempt.id,
                 "activityId": activity.id,
                 "evidenceKind": activity.evidence_kind.value,
                 "checkDelayDays": activity.check_delay_days,
                 "dueAt": due_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "actualDelayDays": round(elapsed_days, 3),
+                "actualDelayDays": display_delay_days(delay, activity.check_delay_days),
                 "timingStatus": "early" if attempt.occurred_at < due_at else "on_or_after_due",
                 "occurredAt": attempt.occurred_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "scoreStatus": attempt.score_status.value,

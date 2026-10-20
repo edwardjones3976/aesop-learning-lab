@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from hashlib import sha256
 from typing import Mapping, Sequence
 
+from aesop_lab.api.delay_display import display_delay_days
 from aesop_lab.domain.models import (
     Activity, Attempt, EvidenceKind, ExperimentAssignment, HintLevel, ScoreStatus,
 )
@@ -335,7 +336,9 @@ def _analyze(
                        "exposureComparability": "unverified"}
         if elapsed_seconds is not None:
             observation["elapsedSeconds"] = elapsed_seconds
-            observation["elapsedDays"] = round(elapsed_seconds / 86400, 3)
+            observation["elapsedDays"] = display_delay_days(
+                timedelta(seconds=elapsed_seconds), protocol.primary_delay_days,
+                protocol.primary_window_days)
         if classification in ("eligible", "provisional", "late"):
             if content_review_status == "reviewed":
                 observation["reviewedScoreStatus"] = first.score_status.value

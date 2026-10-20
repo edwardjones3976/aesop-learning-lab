@@ -25,6 +25,18 @@ class EvidenceQualityTests(unittest.TestCase):
                                            frozenset({"week-family"}))
         self.assertEqual(contaminated["delayedChecks"][0]["familiarityStatus"], "familiar")
 
+    def test_early_check_displays_less_than_target_delay(self):
+        item = Activity("day", "concept", "v5", "day-family", ActivityType.TRACE,
+                        EvidenceKind.APPLICATION, True, 1)
+        at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        answer = Attempt("early", item.id, "v5", at + timedelta(days=1, seconds=-30), "x",
+                         HintLevel.NONE, ScoreStatus.CORRECT,
+                         "development_fixture_exact_key", "assessment-v1", "delayed_check")
+        observed = summarize_evidence({item.id: item}, (answer,), at)["delayedChecks"][0]
+        self.assertEqual(observed["timingStatus"], "early")
+        self.assertLess(observed["actualDelayDays"], observed["checkDelayDays"])
+        self.assertEqual(observed["actualDelayDays"], 0.999)
+
     def test_repeated_miss_candidate_keeps_original_attempts(self):
         item = Activity("question", "concept", "v5", "family", ActivityType.CHOICE,
                         EvidenceKind.RECOGNITION)

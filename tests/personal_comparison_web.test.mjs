@@ -141,13 +141,15 @@ test('first opened hint offers the next step after refresh', () => {
 test('arm report visibly counts delayed answers with unknown outside study', () => {
   const report = base(); report.enrolled = true;
   report.arms = {
-    text: {assigned:2,eligible:0,provisional:0,missing:1,late:0,contaminated:0,outsideStudyUnknown:1},
-    diagram: {assigned:2,eligible:0,provisional:0,missing:2,late:0,contaminated:0,outsideStudyUnknown:0},
+    text: {assigned:2,eligible:0,provisional:0,missing:1,early:1,late:0,contaminated:0,outsideStudyUnknown:1},
+    diagram: {assigned:2,eligible:0,provisional:0,missing:2,early:0,late:0,contaminated:0,outsideStudyUnknown:0},
   };
   report.descriptive = {text:{observed:1,candidateMatches:1,eligibleCandidateMatches:0},diagram:{observed:0,candidateMatches:0,eligibleCandidateMatches:0}};
   const html = personalComparisonMarkup(report);
   assert.match(html, /<th scope="col">Outside study unknown<\/th>/);
   assert.match(html, /<th scope="col">Eligible candidate matches<\/th>/);
+  assert.match(html, /<th scope="col">Early<\/th><th scope="col">Late<\/th>/);
+  assert.match(html, /<th scope="row">Text<\/th>.*<td>1<\/td><td>0<\/td><td>0<\/td><td>1<\/td><\/tr>/);
   assert.match(html, /All recorded counts include ineligible answers/);
   assert.match(html, /<th scope="row">Text<\/th>.*<td>1<\/td><\/tr>/);
 });

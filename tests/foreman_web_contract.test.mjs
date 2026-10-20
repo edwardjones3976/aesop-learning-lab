@@ -170,6 +170,17 @@ test('delayed evidence distinguishes target delay from actual elapsed delay', ()
   assert.throws(() => normalizeEvidence(evidence), /actualDelayDays/);
 });
 
+test('early delayed evidence shows timing status without rounding up to the target', () => {
+  const evidence = emptyEvidence();
+  evidence.delayedChecks.push({ attemptId: 'early', checkDelayDays: 1, evidenceKind: 'application',
+    scoreStatus: 'correct', assisted: false, familiarityStatus: 'not_verified',
+    dueAt: '2026-01-02T12:00:00Z', actualDelayDays: 0.999, timingStatus: 'early',
+    occurredAt: '2026-01-02T11:59:30Z' });
+  const html = evidenceMarkup(evidence);
+  assert.match(html, /Actual delay 0\.999 days · early/);
+  assert.doesNotMatch(html, /Actual delay 1(?:\.00)? days/);
+});
+
 test('content quality candidates remain review candidates and escape their reason', () => {
   const evidence = emptyEvidence();
   evidence.contentQualityCandidates = [{ activityId: 'item-1', attemptIds: ['a1', 'a2'],
