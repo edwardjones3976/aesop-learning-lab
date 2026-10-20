@@ -15,6 +15,15 @@ from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class ForemanPreviewTests(unittest.TestCase):
+    def test_fresh_overview_and_findings_do_not_create_learner_identity(self):
+        preview = Preview(Path(self.temp.name) / "fresh.db")
+        self.addCleanup(preview.store.close)
+        self.assertEqual(preview.overview()["experiment"]["status"], "insufficient_evidence")
+        self.assertEqual(preview.experiment_findings()["status"], "insufficient_evidence")
+        self.assertIsNone(preview.store.existing_learner_id())
+        self.assertEqual(preview.store.connection.execute(
+            "SELECT COUNT(*) FROM learner_identity").fetchone()[0], 0)
+
     def test_current_cannot_complete_experimental_exposure_without_opening_lesson(self):
         path = Path(self.temp.name) / "unopened.db"
         preview = Preview(path)

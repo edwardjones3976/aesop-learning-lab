@@ -327,8 +327,9 @@ class Preview:
         assignments = tuple(a for a in self.store.list_assignments(protocol.id)
                             if a.protocol_version == protocol.version)
         if version in ("v5", "v6", "v7", "v8", "v9"):
+            # Without an identity there cannot be assignments to validate.
             return analyze(assignments, exposures, attempts, activities,
-                           learner_id=self.store.learner_id(), now=self.now())
+                           learner_id=self.store.existing_learner_id() or "unassigned", now=self.now())
         return analyze(assignments, exposures, attempts, activities, now=self.now())
 
     def override(self, body: dict) -> dict:

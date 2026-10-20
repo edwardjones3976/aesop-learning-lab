@@ -24,7 +24,7 @@ def make_app(service: LearningService):
             port = environ.get("SERVER_PORT", "8766")
             if environ.get("HTTP_HOST") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
                 raise ApiError("forbidden_request", "Use the local API host.", 403)
-            if origin and origin not in ALLOWED_UI_ORIGINS:
+            if (origin or method in ("POST", "DELETE")) and origin not in ALLOWED_UI_ORIGINS:
                 raise ApiError("forbidden_request", "Origin is not allowed.", 403)
             if method == "OPTIONS" and path.startswith("/api/v1/"):
                 status, payload = "204 No Content", {}
