@@ -19,6 +19,7 @@ How the AI agents working on this repository split, check and land work. It comp
 - **Every change ships with tests.** A test counts only after it has been shown to fail on a deliberate break.
 - **No history rewriting** (rebase plus force-push) of shared branches without the owner's authorization. Merge `master` into the branch instead.
 - **The owner alone** handles credentials, config files, deletion, deployment and publishing. Silence or an unavailable provider is never approval.
+- **If a PR depends on an owner-reserved decision** (for example a screen sign-off or human key review), that decision must be recorded before the reviewer merges the exact reviewed commit.
 - **"Candidate-key match", never "mastery"**, until the answer keys are human-reviewed.
 
 ## How work flows
@@ -28,7 +29,7 @@ How the AI agents working on this repository split, check and land work. It comp
 3. Workers get a bounded order: what to read, which files they may edit, acceptance checks and tests. They do not commit.
 4. The admin reviews the diff, re-runs the tests, breaks the code on purpose to prove each new test, then commits.
 5. A second opinion where it is useful: Grok and Codex review read-only on a shared thread until both say PASS.
-6. The PR is opened, and the non-author reviewer merges after checking the exact commit, the tests and green CI.
+6. The PR is opened. The non-author reviewer merges after checking the exact commit, the tests, green CI, and that any owner decision the PR depends on has been recorded.
 7. Claude integrates across teams, runs every suite and a browser walkthrough, and writes the acceptance record.
 
 ## Talking to other agents

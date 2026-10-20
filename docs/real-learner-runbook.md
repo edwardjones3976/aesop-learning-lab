@@ -32,7 +32,7 @@ This runbook covers one real person using the Foreman preview on content `m2-dra
    - A check taken before 7 days shows as **early**, and one after 14 days as **late**. Both are kept but excluded from the primary observation.
    - Prefer a return between day 7 and day 14.
 10. **At each return, log:** the date and time, which activity was offered and why (the **Why this activity?** text), whether a hint was opened, and any outside study the learner reports.
-11. **If the learner misses a window,** record it as missed. Do not back-fill or re-run it. Missing outcomes are reported, not imputed.
+11. **If the learner returns late,** a check taken after day 14 is recorded as **late**: it is kept, but excluded from the primary observation. An outcome is **missing** only when no check was taken at all. Never back-fill or re-run a check. Missing outcomes are reported, not imputed.
 
 ## After the run
 
