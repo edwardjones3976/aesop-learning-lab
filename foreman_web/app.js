@@ -597,6 +597,15 @@ export function evidenceSummaryMarkup(evidence) {
   return `<section class="evidence-summary" aria-label="Recorded answers, not a mastery score"><h3>What we have recorded</h3><div class="evidence-summary-grid"><p><strong>${counts.independent}</strong>Unassisted draft-key matches</p><p><strong>${counts.assisted}</strong>Assisted draft-key matches</p><p><strong>${counts.delayedIndependent}</strong>Unassisted later answers</p><p><strong>${counts.missingKinds}</strong>Question types with no answer</p></div><p class="muted">${counts.incorrect} incorrect. ${counts.ungraded} not graded. ${counts.delayedMissing} planned waits with no answer. Unassisted counts may include question groups you already studied. Later answers are part of the counts above, not extra attempts. A later answer is a delayed check. A draft-key match is not verified mastery.</p></section>`;
 }
 
+export function plainExperimentReason(finding) {
+  if (finding?.reason?.startsWith('One local learner supplies at most one independent learner unit per arm;')) {
+    return 'This app has one learner. The plan needs at least 20 different people for each study method before it can compare them. Study time has not been checked.' +
+      (finding.contentReviewStatus === 'draft' ? ' The draft answers also need independent review.' : '') +
+      ' We cannot say which method helps more.';
+  }
+  return finding?.reason ?? '';
+}
+
 export function reviewTimingMarkup(schedule, session = null, now = new Date()) {
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const dueAt = schedule?.dueAt ?? session?.nextCheckAt ?? null;
@@ -678,10 +687,15 @@ export function personalComparisonMarkup(report, openedHint = '', now = new Date
 }
 
 function comparisonOutsideStudy(phase) {
+  const question = phase === 'delayed'
+    ? 'Since the worked example, have you studied this topic outside Aesop? Optional.'
+    : phase === 'practice'
+      ? 'Before this answer, have you studied this topic outside Aesop? Optional.'
+      : 'Before this lesson, had you studied this topic outside Aesop? Optional.';
   const note = phase === 'practice'
     ? 'This note is saved with your practice answer. The later check uses what you say at study time and when you return.'
     : 'If this is unknown, or you report some outside study, the answer stays recorded. It does not count in the main comparison.';
-  return `<label class="comparison-outside" for="comparison-outside-study">Have you studied this example elsewhere? Optional.</label><select id="comparison-outside-study" class="answer" aria-describedby="comparison-outside-note"><option value="unknown">Unknown, or I prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select><p id="comparison-outside-note" class="muted">${note}</p>`;
+  return `<label class="comparison-outside" for="comparison-outside-study">${question}</label><select id="comparison-outside-study" class="answer" aria-describedby="comparison-outside-note"><option value="unknown">Unknown, or I prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select><p id="comparison-outside-note" class="muted">${note}</p>`;
 }
 
 export function comparisonHintBlockReason(answer) {
@@ -909,7 +923,7 @@ function renderWorkspace() {
     finding?.syntheticResultsAreLearningEvidence === false ? 'Data made for software tests is not evidence about a real learner.' : null,
   ].filter(Boolean);
   const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B, text with a diagram' : state.lesson.method?.conditionId === 'text' ? 'A, text' : null;
-  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="What the teaching comparison can show"><strong>Teaching comparison: ${esc(plainStatus(finding.status))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>What this does not show</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Plan ${esc(protocolId)}, version ${esc(protocolVersion)}. ` : ''}Liking one method is not evidence of better learning.</small></section>` : '';
+  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="What the teaching comparison can show"><strong>Teaching comparison: ${esc(plainStatus(finding.status))}</strong><p>${esc(plainExperimentReason(finding))}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>What this does not show</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Plan ${esc(protocolId)}, version ${esc(protocolVersion)}. ` : ''}Liking one method is not evidence of better learning.</small></section>` : '';
   const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer, ready to resume</strong><p>Question ${esc(signals.openDraft.activityId)}. Hint so far: ${esc(hintLevelLabel(signals.openDraft.hintLevel))}. Saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. Your first answer stays locked while you open hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer, ready to resume</strong><p>Your first answer stays locked while you open hints.</p></section>' : '';
   const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
   const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is understanding that lasts. You can change the setting. Recalling an answer and a later check stay on the path. Recall means answering from memory. A later check means you wait, then answer.</p><div class="path-note"><strong>Suggested next: ${esc(pathActionLabel(suggested.action))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${draftMarkup}${reviewMarkup}${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} open answer${signals.needsReview === 1 ? '' : 's'} not graded. A self review helps you look again. It does not mark an answer correct.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}<div class="divider"></div>`;

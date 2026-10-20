@@ -13,6 +13,7 @@ import {
   lessonMarkup,
   normalizeEvidence,
   personalComparisonMarkup,
+  plainExperimentReason,
   reviewTimingMarkup,
   solutionMarkup,
   validateAttemptResult,
@@ -20,6 +21,17 @@ import {
   validateOverview,
   validateSession,
 } from '../foreman_web/app.js';
+
+test('the teaching comparison explains the one-learner limit plainly', () => {
+  const reason = 'One local learner supplies at most one independent learner unit per arm; the fixed minimum of 20 independent learners per arm is unreachable in this local analysis. Instructional duration remains unverified and draft answer keys lack independent review. No method benefit is established.';
+  const plain = plainExperimentReason({ reason, contentReviewStatus: 'draft' });
+  assert.match(plain, /one learner/);
+  assert.match(plain, /20 different people for each study method/);
+  assert.match(plain, /Study time has not been checked/);
+  assert.match(plain, /draft answers also need independent review/);
+  assert.match(plain, /cannot say which method helps more/);
+  assert.equal(plainExperimentReason({ reason: 'A different valid reason.' }), 'A different valid reason.');
+});
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const sourcePath = fileURLToPath(new URL('../src/', import.meta.url));

@@ -32,6 +32,7 @@ test('worked answer remains behind explicit exposure start and assigned diagram'
   assert.match(html, /First &lt; step/);
   assert.match(html, /Labeled diagram/);
   assert.match(html, /I studied this worked example/);
+  assert.match(html, /Before this lesson, had you studied this topic outside Aesop/);
 });
 
 test('delayed question exposes no answer and feedback labels draft and assistance', () => {
@@ -40,6 +41,7 @@ test('delayed question exposes no answer and feedback labels draft and assistanc
   report.question = {phase:'delayed',prompt:'Trace this',code:'x = 1',familyId:'held-out',hintAvailable:false,hintOpened:false};
   let html = personalComparisonMarkup(report, '', new Date(), true);
   assert.match(html, /Unfamiliar later check/);
+  assert.match(html, /Since the worked example, have you studied this topic outside Aesop/);
   assert.doesNotMatch(html, /Open practice hint/);
   assert.doesNotMatch(html, /Draft answer:/);
   report.feedback = {phase:'practice',candidateMatch:true,assisted:true,answer:'3, 9',steps:['Reason']};
@@ -116,6 +118,7 @@ test('a typed first answer blocks hint; hint-opened practice uses assisted wordi
   report.question = {phase:'practice',prompt:'Trace',code:'x = 1',familyId:'practice-a',hintAvailable:true,hintOpened:false};
   let html = personalComparisonMarkup(report);
   assert.match(html, /Open a hint only while the answer field is blank/);
+  assert.match(html, /Before this answer, have you studied this topic outside Aesop/);
   assert.match(html, /unassisted first answer/);
   report.question.hintAvailable = false;
   report.question.hintOpened = true;

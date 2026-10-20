@@ -41,7 +41,7 @@ class PersonalPilotJourneyTests(unittest.TestCase):
                 lesson = preview.lesson(cid)
                 self.assertGreater(len(lesson["body"]), 1400)
                 self.assertIn("## How it works", lesson["body"])
-                self.assertIn("## Common misconceptions", lesson["body"])
+                self.assertIn("## Common mistakes", lesson["body"])
                 self.assertIn("```python", lesson["body"])
                 self.assertEqual(lesson["method"]["protocolVersion"], "v7")
                 preview.complete_lesson(cid)
