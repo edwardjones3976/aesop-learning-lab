@@ -23,12 +23,16 @@ Known software gaps this runbook works around are listed at the end. Each is tra
 3. **Use a fresh, separate database, and check that it really is unused.** The preview reopens an existing database silently, which would mix two sessions. Pick a new learner code, and stop if the file already exists:
 
    ```powershell
-   if (Test-Path .local/learner-01.sqlite3) { throw 'learner-01 database already exists: choose a new learner code' }
-   py scripts/run_foreman.py --port 8780 --db .local/learner-01.sqlite3
+   $code = 'L01'                                  # this learner's code
+   $db = ".local/learner-$code.sqlite3"           # record this exact path in the run log
+   $runDir = "$HOME\aesop-runs\$code"             # outside every repository
+   if (Test-Path $db) { throw "$db already exists: choose a new learner code" }
+   New-Item -ItemType Directory -Force $runDir | Out-Null
+   py scripts/run_foreman.py --port 8780 --db $db
    ```
 
-   Only then open <http://127.0.0.1:8780/>. For later returns, start the same command without the check; it must reopen this learner's file. The server binds to loopback only.
-4. **Record the setup in a run log** kept outside the repository: the learner code (e.g. `L01`), the start date and time zone, the pinned SHA, the content version shown in the notice (`m2-draft.9`), and the browser.
+   Only then open <http://127.0.0.1:8780/>. For later returns, set the same `$code`, `$db` and `$runDir`, and start the server without the existence check; it must reopen this learner's file. The server binds to loopback only.
+4. **Record the setup in a run log** kept in `$runDir`: the learner code, the **exact database path** (`$db`), the start date and time zone, the pinned SHA, the content version shown in the notice (`m2-draft.9`), and the browser.
 5. **Brief the learner, and say nothing more:**
    - Answer first, before opening any hint.
    - Confidence is optional.
@@ -57,21 +61,20 @@ If the prerequisites are not met, the app offers practice or the still-unused ea
    - If not, record "no qualifying day-0 answer, no day-1 check offered", and let the learner continue with what the app suggests.
 10. **Days 7 to 14:** this is the primary window for protocol v6. Prefer a return between day 7 and day 14.
     - If the week check's prerequisites are met, it is offered. A check taken before day 7 shows as **early**, and one after day 14 as **late**. Both are kept but excluded from the primary observation.
-    - If they are not met, record which prerequisite is missing, and let the learner take whatever is offered (practice, or the unused day-1 check). That concept has **no primary observation** for this run.
+    - If they are not met yet, let the learner take whatever is offered (practice, or the unused day-1 check), then press **Continue** and look again. Answering the day-1 check completes that interval, so the week check may be offered straight away. If it is offered within days 7 to 14, it is a valid in-window observation: take it.
+    - Record the outcome as **missing** only if the week check is still unanswered when the window closes. Note which prerequisite was missing.
 11. **At each return, log:** the date and time, the SHA check from step 2, which activity was offered and why (the **Why this activity?** text), whether a hint was opened, and **any outside study** of each concept since the last visit.
 12. **If the learner returns after day 14** and the week check's prerequisites are met, the unused week check is still offered. Let them take it **once**. The app records that first response as **late**. An outcome is **missing** only when no check was ever taken. Never change a timestamp or re-run an answered check. Missing outcomes are reported, not imputed.
 
 ## After the run
 
 13. **Capture the data locally,** while the server is still running:
-    - **Export data** in the preview downloads `aesop-foreman-data.json`: raw records plus display preferences.
-    - The computed classifications (provisional, contaminated, invalid, early, late, missing) are **not** in that export. Save them separately:
+    - **Export data** in the preview downloads `aesop-foreman-data.json`: raw records plus display preferences. Move it from the browser's download folder into `$runDir` straight away.
+    - The computed classifications (provisional, contaminated, invalid, early, late, missing) are **not** in that export. Save them **directly** into `$runDir`, never into the worktree, because the file holds raw answers and timestamps:
 
       ```powershell
-      curl.exe -s http://127.0.0.1:8780/api/v2/overview -o overview-L01.json
+      curl.exe -s http://127.0.0.1:8780/api/v2/overview -o "$runDir\overview-$code.json"
       ```
-
-    Store both files with the run log, outside the repository.
 14. **Write the report locally,** under the [report rules](#report-rules).
     - The owner produces a **de-identified aggregate** on this computer: counts and delays per category, with no answer text, free-text notes or timestamps finer than a day.
     - Only that aggregate may be shared with an agent (e.g. Codex) for drafting or review.
@@ -79,9 +82,9 @@ If the prerequisites are not met, the app offers practice or the still-unused ea
 15. **Delete,** if the learner asks. Deletion is the learner's or owner's decision, never an agent's. Do **not** use the preview's **Delete data** button: after deleting, it reloads the page, which immediately enrolls a new learner. Instead:
     1. Close the preview tab.
     2. Stop the server with Ctrl+C.
-    3. Delete `.local/learner-01.sqlite3`, plus any `-wal` or `-shm` files beside it.
+    3. Delete the **exact database path recorded in the run log** (`$db`), plus any `-wal` or `-shm` files beside it.
     4. Clear this site's data in the browser (site settings for `127.0.0.1:8780`).
-    5. Delete `aesop-foreman-data.json`, `overview-L01.json`, the run log, and every copy of them.
+    5. Delete everything in `$runDir` (the export, the overview and the run log) and every copy of them, including the browser's download folder.
     6. Record only that a deletion took place, with the date.
 
 ## Report rules
