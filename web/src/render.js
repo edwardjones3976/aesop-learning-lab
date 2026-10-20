@@ -34,24 +34,24 @@ export function mountPracticeApp(root, session, api) {
         <p id="reason" class="reason"></p>
         <p id="policy" class="meta"></p>
         <p id="check-time" class="meta"></p>
-        <p id="development" class="meta" hidden>Development fixture: answer keys have no human review receipts.</p>
+        <p id="development" class="meta" hidden>Practice material for testing: a person has not reviewed these answer keys yet.</p>
         <div id="evidence-wrap" hidden>
-          <p id="evidence-label" class="meta">Evidence attempts</p>
+          <p id="evidence-label" class="meta">Earlier answers used for this suggestion</p>
           <ul id="evidence" aria-labelledby="evidence-label"></ul>
         </div>
         <div class="tools">
-          <label>Available minutes
+          <label>Minutes you have
             <input class="minutes" type="number" min="1" step="1" value="20" data-control="minutes" inputmode="numeric">
           </label>
-          <p class="timer">Active time <span data-timer>0:00</span></p>
+          <p class="timer">Time spent answering <span data-timer>0:00</span></p>
           <button type="button" class="secondary" data-control="pause">Pause</button>
         </div>
-        <p class="meta">Available minutes are used the next time an activity is requested.</p>
+        <p class="meta">Your time choice applies to the next question.</p>
         <p id="status" class="status" role="status" aria-atomic="true"></p>
         <div id="error" class="error" role="alert" aria-atomic="true" tabindex="-1" hidden></div>
         <div class="tools">
-          <button type="button" class="secondary" data-control="export">Export learner data</button>
-          <button type="button" class="secondary" data-control="delete">Delete learner data</button>
+          <button type="button" class="secondary" data-control="export">Download my learning record</button>
+          <button type="button" class="secondary" data-control="delete">Delete my learning record</button>
         </div>
       </header>
       <main id="practice"></main>
@@ -88,8 +88,8 @@ export function mountPracticeApp(root, session, api) {
 
   function paint(state, meta) {
     reasonEl.textContent = state.recommendation?.reason ?? "";
-    policyEl.textContent = state.recommendation ? `Policy ${state.recommendation.policyVersion}` : "";
-    checkTimeEl.textContent = state.nextCheckAt ? `Next independent check: ${new Date(state.nextCheckAt).toLocaleString()}` : "";
+    policyEl.textContent = state.recommendation ? `Recommendation rule: ${state.recommendation.policyVersion}` : "";
+    checkTimeEl.textContent = state.nextCheckAt ? `Next question without help: ${new Date(state.nextCheckAt).toLocaleString()}` : "";
     developmentEl.hidden = !state.developmentOnly;
     const evidenceIds = state.recommendation?.evidenceAttemptIds ?? [];
     evidenceWrap.hidden = evidenceIds.length === 0;
@@ -126,13 +126,13 @@ export function mountPracticeApp(root, session, api) {
       }).catch((error) => { errorEl.textContent = error.message; errorEl.hidden = false; errorEl.focus(); });
     }
     if (control === "delete" && typeof api.deleteData === "function"
-        && window.confirm("Delete all local learner records? This cannot be undone.")) {
+        && window.confirm("Delete all learning records saved on this computer? You cannot undo this.")) {
       void api.deleteData().then(() => {
-        main.innerHTML = "<h2>Learner data deleted</h2><p>Restart the local service to begin a new development session.</p>";
+        main.innerHTML = "<h2>Learning record deleted</h2><p>Restart the local app to begin a new practice session.</p>";
         reasonEl.textContent = "";
         evidenceEl.replaceChildren();
         evidenceWrap.hidden = true;
-        statusEl.textContent = "Learner records removed.";
+        statusEl.textContent = "Learning record deleted.";
       })
         .catch((error) => { errorEl.textContent = error.message; errorEl.hidden = false; errorEl.focus(); });
     }

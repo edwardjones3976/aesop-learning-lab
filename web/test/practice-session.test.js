@@ -89,6 +89,21 @@ test("an unassisted trace matches the documented attempt", async () => {
   assert.equal(session.getState().phase, "result");
 });
 
+test("plain-language result keeps the actual grading and help status", async () => {
+  const session = await readySession(createFixtureApi());
+  const question = practiceMarkup(session.getState());
+  assert.match(question, /Question details/);
+  assert.match(question, /Save your first answer before opening hints/);
+  session.setDraft("2");
+  session.recordFirstAnswer();
+  session.revealNextHint();
+  await session.submit();
+  const result = practiceMarkup(session.getState());
+  assert.match(result, /<dt>Help used<\/dt><dd>Used a hint or answer<\/dd>/);
+  assert.match(result, /<dt>How it was checked<\/dt><dd>Compared with an answer key<\/dd>/);
+  assert.match(result, /<dt>Last hint opened<\/dt><dd>Small hint<\/dd>/);
+});
+
 test("unanswered confidence and outside study stay null", async () => {
   const api = createFixtureApi();
   const bodies = watchAttempts(api);
@@ -179,8 +194,8 @@ test("a storage failure stays unsuccessful and can be sent again", async () => {
   assert.equal(state.error.code, "storage_unavailable");
   assert.equal(state.error.message, "Local records are unavailable right now.");
   const html = practiceMarkup(state);
-  assert.equal(html.includes("Score status"), false);
-  assert.equal(html.includes("Submit attempt"), true);
+  assert.equal(html.includes("<dt>Result</dt>"), false);
+  assert.equal(html.includes("Check my answer"), true);
 });
 
 test("a revealed solution is not shown as correct", async () => {
@@ -274,13 +289,13 @@ test("open answer review requires evidence, reveals example later, and keeps rev
   const answer = "When n == 0, it returns 1 and makes no more calls.";
   session.setDraft(answer);
   session.recordFirstAnswer();
-  assert.equal(practiceMarkup(session.getState()).includes("Annotated example"), false);
+  assert.equal(practiceMarkup(session.getState()).includes("Example answer with explanation"), false);
   await session.submit();
   assert.equal(session.getState().phase, "review");
   assert.equal(session.getState().result.scoreStatus, "ungraded");
   assert.equal(session.getState().comparison, null);
   assert.equal(Object.hasOwn(session.getState().rubric, "annotatedExample"), false);
-  assert.equal(practiceMarkup(session.getState()).includes("Annotated example"), false);
+  assert.equal(practiceMarkup(session.getState()).includes("Example answer with explanation"), false);
   await session.submitReview();
   assert.equal(session.getState().error.code, "validation_error");
   session.setReviewRating("stopping", "shown");
@@ -294,7 +309,7 @@ test("open answer review requires evidence, reveals example later, and keeps rev
   await session.submitReview();
   assert.equal(session.getState().phase, "comparison");
   assert.equal(session.getState().review.nextStep, "targeted_retry");
-  assert.equal(practiceMarkup(session.getState()).includes("Annotated example"), true);
+  assert.equal(practiceMarkup(session.getState()).includes("Example answer with explanation"), true);
   session.setRevisionDraft("A base case at n == 0 returns 1 without calling f again.");
   await session.submitRevision();
   assert.equal(session.getState().phase, "review_done");
@@ -330,7 +345,7 @@ test("self-rating every criterion shown still needs an independent check", async
   assert.equal(session.getState().result.scoreStatus, "ungraded");
   session.finishWithoutRevision();
   assert.equal(session.getState().phase, "review_done");
-  assert.match(practiceMarkup(session.getState()), /later unassisted check/);
+  assert.match(practiceMarkup(session.getState()), /later question without help/);
 });
 
 test("markup escapes activity text and a missing reason is not invented", async () => {
