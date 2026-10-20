@@ -396,128 +396,11 @@ export function validateAttemptResult(data) {
   return result;
 }
 
-function knownLabel(map, code) {
-  if (typeof code === 'string' && Object.hasOwn(map, code)) return map[code];
-  return code.replaceAll('_', ' ');
-}
-
-function evidenceKindLabel(kind) {
-  return knownLabel({
-    recognition: 'Recognition: choose a shown answer',
-    recall: 'Recall: remember without choices',
-    explanation: 'Explanation: say why in your own words',
-    application: 'Application: use the idea on a new example',
-    transfer: 'Transfer: use the idea in a less familiar setting',
-  }, kind);
-}
-
-function hintLevelLabel(level) {
-  return knownLabel({
-    none: 'No hint',
-    nudge: 'Nudge, a small hint',
-    targeted: 'Targeted hint',
-    worked_solution: 'Worked solution',
-  }, level);
-}
-
-function scoreLabel(status) {
-  return knownLabel({
-    correct: 'Matches the draft key',
-    incorrect: 'Does not match the draft key',
-    ungraded: 'Not graded',
-  }, status);
-}
-
-function familiarityLabel(status) {
-  return knownLabel({
-    not_verified: 'Familiarity not checked',
-    familiar: 'Familiar question group',
-    unfamiliar: 'Unfamiliar question group',
-  }, status ?? 'not_verified');
-}
-
-function intervalStatusLabel(status) {
-  return knownLabel({
-    insufficient_evidence: 'Not enough evidence. No on-time later answer yet',
-    observed: 'An on-time later answer was recorded. This is not verified mastery',
-  }, status);
-}
-
-function pathActionLabel(action) {
-  return knownLabel({
-    lesson: 'Read the lesson',
-    practice: 'Practice now',
-    resume: 'Resume a saved answer',
-    delayed_check: 'Later check',
-  }, action);
-}
-
-function activityTypeLabel(type) {
-  return knownLabel({
-    choice: 'Multiple choice',
-    trace: 'Trace the code',
-    explanation: 'Explain in your own words',
-    code_design: 'Write code',
-  }, type);
-}
-
-function gradingMethodLabel(method) {
-  return knownLabel({
-    development_fixture_exact_key: 'Draft exact key, preview only',
-    reviewed_exact_key: 'Reviewed exact key',
-  }, method);
-}
-
-function outsideStudyLabel(value) {
-  if (value == null) return 'Not recorded';
-  return knownLabel({
-    none: 'No outside study',
-    some: 'Some outside study',
-    unknown: 'Unknown',
-  }, value);
-}
-
-function comparisonClassLabel(code) {
-  if (code == null) return '';
-  if (typeof code !== 'string') return String(code);
-  return knownLabel({
-    missing: 'Missing',
-    eligible: 'Eligible',
-    provisional: 'Provisional',
-    late: 'Late',
-    early: 'Early',
-    contaminated: 'Contaminated',
-    outsideStudyUnknown: 'Outside study unknown',
-    ungraded: 'Not graded',
-    invalid: 'Invalid',
-    exposure_incomparable: 'Study not comparable',
-  }, code);
-}
-
-function comparisonStageLabel(stage) {
-  if (typeof stage !== 'string') return '';
-  return knownLabel({
-    study: 'Study the worked example',
-    practice: 'Practice now',
-    delayed: 'Later check',
-    waiting: 'Wait for the later check',
-  }, stage);
-}
-
-function plainStatus(status) {
-  return knownLabel({
-    insufficient_evidence: 'Not enough evidence',
-    descriptive_only: 'Description only',
-    eligible_draft: 'Draft result only',
-    observed: 'Recorded',
-  }, status);
-}
-
 export function solutionMarkup(result) {
   const validated = validateAttemptResult(result);
   if (!validated.solution) return '';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  return `<details class="solution-panel"><summary>Show the draft answer and why</summary><p class="muted">This is a draft candidate key. It is shown after your first answer was saved and scored. A match is not verified mastery.</p><p><strong>Draft answer</strong></p><pre class="code">${esc(validated.solution.answer)}</pre><p><strong>Why this answer:</strong> ${esc(validated.solution.reasoning)}</p>${validated.solution.misconception ? `<p><strong>A common mistake:</strong> ${esc(validated.solution.misconception)}</p>` : ''}</details>`;
+  return `<details class="solution-panel"><summary>Reveal candidate answer and reasoning</summary><p class="muted">This is a draft candidate key shown after your first answer was saved and scored. It is not a mastery judgment.</p><p><strong>Candidate answer</strong></p><pre class="code">${esc(validated.solution.answer)}</pre><p><strong>Reasoning:</strong> ${esc(validated.solution.reasoning)}</p>${validated.solution.misconception ? `<p><strong>Common misconception:</strong> ${esc(validated.solution.misconception)}</p>` : ''}</details>`;
 }
 
 export function buildAttemptPayload(draftId, activeSeconds, confidence, outsideStudy, outsideStudyDetail = '') {
@@ -564,18 +447,12 @@ export function lessonMarkup(body) {
 export function evidenceMarkup(evidence, recordedAttempts = []) {
   const normalized = normalizeEvidence(evidence, 'signals.evidence');
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const rows = Object.entries(normalized.byKind).map(([kind, count]) => `<tr><th scope="row">${esc(evidenceKindLabel(kind))}</th><td>${count.unassistedCorrect}</td><td>${count.assistedCorrect}</td><td>${count.incorrect}</td><td>${count.ungraded}</td></tr>`).join('');
-  const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => {
-    const planned = `Planned wait: ${esc(check.checkDelayDays)} day${check.checkDelayDays === 1 ? '' : 's'}.`;
-    const actual = check.actualDelayDays != null ? ` Actual wait: ${esc(Number(check.actualDelayDays.toFixed(2)))} days.` : '';
-    const due = check.dueAt ? ` Due <time datetime="${esc(check.dueAt)}">${esc(new Date(check.dueAt).toLocaleString())}</time>.` : '';
-    const help = check.assisted ? 'Assisted: a hint was used.' : 'Independent: no hint was used.';
-    return `<li>${planned}${actual}${due} Question type: ${esc(evidenceKindLabel(check.evidenceKind))}. Score: ${esc(scoreLabel(check.scoreStatus))}. ${help} Question group: ${esc(familiarityLabel(check.familiarityStatus))}. Answered ${esc(new Date(check.occurredAt).toLocaleString())}.</li>`;
-  }).join('') : '<li>Not enough evidence. No later answer on a held-back question yet. Held back means the question waited for a check on a question group you had not already practiced.</li>';
-  const intervalStatus = Object.entries(normalized.delayedOutcomeByDay).map(([day, status]) => `<li>Day ${esc(day)}: ${esc(intervalStatusLabel(status))}.</li>`).join('');
-  const history = recordedAttempts.length ? recordedAttempts.map(attempt => `<li><details><summary>${esc(attempt.activityId)} · ${esc(evidenceKindLabel(attempt.evidenceKind))} · ${esc(scoreLabel(attempt.scoreStatus))} · ${attempt.assisted ? 'assisted' : 'independent'} · ${esc(new Date(attempt.occurredAt).toLocaleString())}</summary><p>Content version ${esc(attempt.contentVersion)}. Hint: ${esc(hintLevelLabel(attempt.hintLevel))}. Scoring: ${esc(gradingMethodLabel(attempt.gradingMethod))}.</p><p>Confidence before any hint: ${attempt.confidence == null ? 'not provided' : `${Math.round(attempt.confidence * 100)}%`}. Outside study: ${esc(outsideStudyLabel(attempt.outsideStudy))}.</p><pre class="code">${esc(attempt.firstAnswer)}</pre></details></li>`).join('') : '<li>No answers recorded yet.</li>';
-  const candidates = normalized.contentQualityCandidates.length ? normalized.contentQualityCandidates.map(row => `<li>${esc(row.activityId)}: ${esc(row.reason)} (${row.attemptIds.length} recorded attempts). Requires content review. Repeated wrong answers do not prove the question is faulty.</li>`).join('') : '<li>No content review candidates recorded.</li>';
-  return `<details class="evidence-panel"><summary>See what your answers show</summary><p class="muted">These are recorded answers, grouped by question type. Unassisted means no hint. Assisted means a hint was open. Unassisted counts can include question groups you already studied. A draft-key match is preview feedback, not verified mastery.</p><div class="table-scroll"><table><thead><tr><th scope="col">Question type</th><th scope="col">Unassisted matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Not graded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Later check status</strong></p><p class="muted">A later check is delayed. You wait, then answer. It is not practice right away.</p><ul>${intervalStatus || '<li>Not enough evidence. No later answer on a held-back question yet.</li>'}</ul><p><strong>Later answers</strong></p><p class="muted">The planned wait is the target delay. The actual wait is the real time that passed.</p><ul>${delayed}</ul><p><strong>Content review candidates</strong></p><p class="muted">These are questions a reviewer should check. They are not a judgment of your ability.</p><ul>${candidates}</ul><p><strong>Answer history</strong></p><ul>${history}</ul><p class="muted">Unassisted scored answers that also have a confidence rating: ${normalized.confidenceOutcomePairs}. This is not a calibrated score. Calibrated would mean your stated confidence matches how often you are right. We do not compute that, and we do not claim mastery.</p></details>`;
+  const rows = Object.entries(normalized.byKind).map(([kind, count]) => `<tr><th scope="row">${esc(kind)}</th><td>${count.unassistedCorrect}</td><td>${count.assistedCorrect}</td><td>${count.incorrect}</td><td>${count.ungraded}</td></tr>`).join('');
+  const delayed = normalized.delayedChecks.length ? normalized.delayedChecks.map(check => `<li>Target delay ${esc(check.checkDelayDays)} day${check.checkDelayDays === 1 ? '' : 's'}${check.actualDelayDays != null ? ` · Actual delay ${esc(check.actualDelayDays)} days` : ''}${check.timingStatus === 'early' ? ' · early' : ''}${check.dueAt ? ` · Due <time datetime="${esc(check.dueAt)}">${esc(new Date(check.dueAt).toLocaleString())}</time>` : ''} · ${esc(check.evidenceKind)} · ${esc(check.scoreStatus)} · ${check.assisted ? 'assisted' : 'independent'} · family familiarity ${esc(String(check.familiarityStatus ?? 'not_verified').replace('_', ' '))} · answered ${esc(new Date(check.occurredAt).toLocaleString())}</li>`).join('') : '<li>Insufficient evidence: no delayed held-out answer yet.</li>';
+  const intervalStatus = Object.entries(normalized.delayedOutcomeByDay).map(([day, status]) => `<li>Day ${esc(day)}: ${esc(status.replace('_', ' '))}</li>`).join('');
+  const history = recordedAttempts.length ? recordedAttempts.map(attempt => `<li><details><summary>${esc(attempt.activityId)} · ${esc(attempt.evidenceKind)} · ${esc(attempt.scoreStatus)} · ${attempt.assisted ? 'assisted' : 'independent'} · ${esc(new Date(attempt.occurredAt).toLocaleString())}</summary><p>Content ${esc(attempt.contentVersion)} · Hint: ${esc(attempt.hintLevel.replace('_', ' '))} · Method: ${esc(attempt.gradingMethod)}</p><p>Pre-hint confidence: ${attempt.confidence == null ? 'not provided' : `${Math.round(attempt.confidence * 100)}%`} · Outside study: ${esc(attempt.outsideStudy ?? 'not recorded')}</p><pre class="code">${esc(attempt.firstAnswer)}</pre></details></li>`).join('') : '<li>No attempts recorded yet.</li>';
+  const candidates = normalized.contentQualityCandidates.length ? normalized.contentQualityCandidates.map(row => `<li>${esc(row.activityId)}: ${esc(row.reason)} (${row.attemptIds.length} recorded attempts). Requires content review; repeated errors alone do not prove an item defect.</li>`).join('') : '<li>No content review candidates recorded.</li>';
+  return `<section class="evidence-panel" aria-label="Inspect learning evidence"><h3>Inspect learning evidence</h3><p class="muted">Observed answers by kind.</p><div class="table-scroll"><table><thead><tr><th scope="col">Kind</th><th scope="col">Unassisted matches</th><th scope="col">Assisted matches</th><th scope="col">Incorrect</th><th scope="col">Ungraded</th></tr></thead><tbody>${rows}</tbody></table></div><p><strong>Delayed check status</strong></p><ul>${intervalStatus || '<li>Insufficient evidence: no delayed held-out answer yet.</li>'}</ul><p><strong>Delayed answers</strong></p><ul>${delayed}</ul><p><strong>Content review candidates</strong></p><ul>${candidates}</ul><p><strong>Attempt history</strong></p><ul>${history}</ul><p class="muted">Unassisted scored answers with confidence recorded: ${normalized.confidenceOutcomePairs}. No calibrated estimate is available.</p></section>`;
 }
 
 export function evidenceSnapshot(evidence) {
@@ -594,16 +471,7 @@ export function evidenceSnapshot(evidence) {
 
 export function evidenceSummaryMarkup(evidence) {
   const counts = evidenceSnapshot(evidence);
-  return `<section class="evidence-summary" aria-label="Recorded answers, not a mastery score"><h3>What we have recorded</h3><div class="evidence-summary-grid"><p><strong>${counts.independent}</strong>Unassisted draft-key matches</p><p><strong>${counts.assisted}</strong>Assisted draft-key matches</p><p><strong>${counts.delayedIndependent}</strong>Unassisted later answers</p><p><strong>${counts.missingKinds}</strong>Question types with no answer</p></div><p class="muted">${counts.incorrect} incorrect. ${counts.ungraded} not graded. ${counts.delayedMissing} planned waits with no answer. Unassisted counts may include question groups you already studied. Later answers are part of the counts above, not extra attempts. A later answer is a delayed check. A draft-key match is not verified mastery.</p></section>`;
-}
-
-export function plainExperimentReason(finding) {
-  if (finding?.reason?.startsWith('One local learner supplies at most one independent learner unit per arm;')) {
-    return 'This app has one learner. The plan needs at least 20 different people for each study method before it can compare them. Study time has not been checked.' +
-      (finding.contentReviewStatus === 'draft' ? ' The draft answers also need independent review.' : '') +
-      ' We cannot say which method helps more.';
-  }
-  return finding?.reason ?? '';
+  return `<section class="evidence-summary" aria-label="Observed learning evidence"><h3>What has been observed</h3><div class="evidence-summary-grid"><p><strong>${counts.independent}</strong>Unassisted candidate matches</p><p><strong>${counts.assisted}</strong>Assisted candidate matches</p><p><strong>${counts.delayedIndependent}</strong>Unassisted delayed answers</p><p><strong>${counts.missingKinds}</strong>Evidence categories without an answer</p></div><p class="muted">${counts.incorrect} incorrect · ${counts.ungraded} ungraded · ${counts.delayedMissing} delayed intervals without an observed answer. Unassisted counts may include repeated families. Delayed answers are a subset of the categories above, not extra attempts. Candidate-key matches are development feedback, not mastery.</p></section>`;
 }
 
 export function reviewTimingMarkup(schedule, session = null, now = new Date()) {
@@ -611,63 +479,57 @@ export function reviewTimingMarkup(schedule, session = null, now = new Date()) {
   const dueAt = schedule?.dueAt ?? session?.nextCheckAt ?? null;
   let status = schedule?.status ?? (session?.activity?.heldOut ? 'due' : dueAt ? 'upcoming' : 'none');
   if (dueAt && status === 'upcoming' && Date.parse(dueAt) <= now.getTime()) status = 'due';
-  const label = {upcoming:'A later check is coming', due:'A later check is ready', overdue:'A later check is past its date', none:'No later check is scheduled'}[status];
-  const reason = schedule?.reason ?? session?.recommendation?.reason ?? session?.reason ?? 'A check time appears after there is enough practice to schedule one.';
-  return `<section class="review-timing" role="status" aria-label="When the later check is due"><strong>${label}</strong><p>This is a delayed review. You answer after a wait, not right away.</p>${dueAt ? `<p>Check time: <time datetime="${esc(dueAt)}">${esc(new Date(dueAt).toLocaleString())}</time></p>` : ''}<p>${esc(reason)}</p></section>`;
+  if (status === 'none') return '';
+  const label = {upcoming:'Upcoming delayed review', due:'Delayed review due', overdue:'Delayed review overdue'}[status];
+  const reason = schedule?.reason ?? session?.recommendation?.reason ?? session?.reason ?? 'A review time appears after sufficient practice evidence.';
+  return `<section class="review-timing" role="status" aria-label="Review timing"><strong>${label}</strong>${dueAt ? `<p>Review time: <time datetime="${esc(dueAt)}">${esc(new Date(dueAt).toLocaleString())}</time></p>` : ''}<p>${esc(reason)}</p></section>`;
 }
 
 function comparisonSolutionStatus(unit, version = 'v2') {
-  if (version === 'v1') return 'Not recorded in this older version';
+  if (version === 'v1') return 'Not tracked in v1';
   const phases = [];
-  if (unit.practiceSolutionRevealedAt) phases.push('Opened during practice');
-  if (unit.delayedSolutionRevealedAt) phases.push('Opened during the later check');
+  if (unit.practiceSolutionRevealedAt) phases.push('Practice');
+  if (unit.delayedSolutionRevealedAt) phases.push('Delayed');
   return phases.join(' · ') || 'Not recorded';
 }
 
 export function personalComparisonMarkup(report, openedHint = '', now = new Date(), justOpenedDelayed = false) {
   const h = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   if (!report || typeof report !== 'object' || !report.protocol || !Array.isArray(report.units)) {
-    throw new Error('This comparison report is missing required parts.');
+    throw new Error('The personal comparison report is incomplete.');
   }
   const protocol = report.protocol;
-  const keyNote = protocol.contentReviewStatus === 'draft'
-    ? 'Answer keys are drafts. A match is not verified mastery.'
-    : `Answer key status: ${h(protocol.contentReviewStatus)}.`;
-  const counted = protocol.analysisUnit == null ? '' : `Counted by: ${h(String(protocol.analysisUnit).replaceAll('_', ' '))}. `;
   const intro = `<div class="section-kicker">PERSONAL COMPARISON · DRAFT</div><h2>Compare two ways to study</h2>
-    <p class="lede">You study a worked Python example as text, or as text with a labeled diagram. Then you answer different questions. After seven days you return for a check on an unfamiliar question group. A question group is a family of similar items. Unfamiliar means you had not practiced that family.</p>
-    <section class="experiment-summary" aria-label="What this comparison can and cannot show"><strong>${h(plainStatus(report.status))}</strong>
+    <p class="lede">Study worked Python examples in text or with a labeled diagram, solve different questions, then return for unfamiliar checks after seven days.</p>
+    <section class="experiment-summary" aria-label="Comparison limits"><strong>${h(report.status.replaceAll('_', ' '))}</strong>
       <p>${h(report.reason)}</p><p>${h(report.uncertainty)}</p>
-      <small>${h(protocol.id)} · version ${h(protocol.version)} · content ${h(protocol.contentVersion)}. ${keyNote} ${counted}This describes one learner. It is not a test of which method works better for people. It does not show that one method caused better learning.</small></section>`;
-  const practiceCell = u => u.practiceAnswered
-    ? `${u.practiceAssisted ? 'Assisted. A hint was used.' : 'Unassisted. No hint was used.'} ${u.practiceCandidateMatch ? 'Draft-key match.' : 'No draft-key match.'}`
-    : 'Missing. No practice answer was recorded.';
-  const units = report.units.length ? `<section class="comparison-report"><h3>Your four units</h3><div class="table-scroll"><table><thead><tr><th scope="col">Unit</th><th scope="col">Study method</th><th scope="col">Practice right away</th><th scope="col">Answer opened</th><th scope="col">Later check</th><th scope="col">Wait</th></tr></thead><tbody>${report.units.map(u => `<tr><th scope="row">${h(u.name)}</th><td>${h(u.condition === 'diagram' ? 'Text with a diagram' : 'Text')}</td><td>${h(practiceCell(u))}</td><td data-solution-unit="${h(u.id)}">${h(comparisonSolutionStatus(u, protocol.version))}</td><td>${h(comparisonClassLabel(u.classification))}${u.delayedAnswered ? (u.delayedCandidateMatch ? '. Draft-key match.' : '. No draft-key match.') : ''}</td><td>${u.actualDelayDays == null ? '—' : `${h(u.actualDelayDays)} days`}</td></tr>`).join('')}</tbody></table></div>
-    <p class="muted">A draft-key match is feedback, not verified mastery. These later-check labels stay separate. Missing means no answer. Early means before the time window. Late means after the window. Contaminated means a hint, a familiar question group, study on the regular path, reported outside study, or more than 30 minutes open. Outside study unknown is a separate label. It is recorded and is not eligible. Provisional means a draft key was used. Eligible means unassisted, an unfamiliar question group, inside the window, no outside study, and a reviewed key. These counts do not show that one method caused better learning.</p></section>` : '';
-  const arms = report.enrolled ? `<details class="evidence-panel"><summary>Counts by study method</summary><div class="table-scroll"><table><thead><tr><th scope="col">Method</th><th scope="col">Assigned</th><th scope="col">All later answers</th><th scope="col">All draft-key matches</th><th scope="col">Eligible later answers</th><th scope="col">Eligible draft-key matches</th><th scope="col">Provisional</th><th scope="col">Missing</th><th scope="col">Late</th><th scope="col">Contaminated</th><th scope="col">Outside study unknown</th></tr></thead><tbody>${['text','diagram'].map(arm => { const c = report.arms?.[arm] ?? {}; const d = report.descriptive?.[arm] ?? {}; return `<tr><th scope="row">${arm === 'diagram' ? 'Text with a diagram' : 'Text'}</th><td>${h(c.assigned)}</td><td>${h(d.observed)}</td><td>${h(d.candidateMatches)}</td><td>${h(c.eligible)}</td><td>${h(d.eligibleCandidateMatches)}</td><td>${h(c.provisional)}</td><td>${h(c.missing)}</td><td>${h(c.late)}</td><td>${h(c.contaminated)}</td><td>${h(c.outsideStudyUnknown)}</td></tr>`; }).join('')}</tbody></table></div><p class="muted">Columns that say all include answers that do not qualify. Only the eligible columns follow the later-check rule. Provisional, missing, late, contaminated, and unknown outside study stay in their own columns. These are linked observations from one learner. They do not estimate a range for other people. They do not show a cause.</p></details>` : '';
-  const dimensions = report.dimensions ? `<details class="evidence-panel"><summary>What was measured, and what is missing</summary><ul>${Object.entries(report.dimensions).map(([name, data]) => `<li><strong>${h(name.replace(/([A-Z])/g, ' $1'))}:</strong> ${h(plainStatus(data.status))}${data.observations == null ? '' : ` · ${h(data.observations)} ${h(data.observationLabel ?? 'recorded responses')}`}${data.otherRecordedResponses == null ? '' : ` · ${h(data.otherRecordedResponses)} other delayed response${data.otherRecordedResponses === 1 ? '' : 's'} kept as description only`}${data.pairs == null ? '' : ` · ${h(data.pairs)} confidence and draft-key pair${data.pairs === 1 ? '' : 's'}`}${data.interpretation ? ` · ${h(data.interpretation)}` : ''}</li>`).join('')}</ul><p class="muted">A draft-key match is one recorded answer. It is not verified mastery. It does not show that the study method caused the result.</p></details>` : '';
+      <small>${h(protocol.id)} · ${h(protocol.version)} · ${h(protocol.contentVersion)} · ${h(protocol.analysisUnit)} · ${h(protocol.contentReviewStatus)} keys. This is one learner's descriptive pilot, not a test of which method works better for people.</small></section>`;
+  const units = report.units.length ? `<section class="comparison-report"><h3>Your four units</h3><div class="table-scroll"><table><thead><tr><th scope="col">Unit</th><th scope="col">Method</th><th scope="col">Practice</th><th scope="col">Solution viewed</th><th scope="col">Delayed check</th><th scope="col">Delay</th></tr></thead><tbody>${report.units.map(u => `<tr><th scope="row">${h(u.name)}</th><td>${h(u.condition === 'diagram' ? 'Text with diagram' : 'Text')}</td><td>${u.practiceAnswered ? (u.practiceAssisted ? 'Assisted' : 'Unassisted first response') + (u.practiceCandidateMatch ? ' · candidate match' : ' · no candidate match') : 'Missing'}</td><td data-solution-unit="${h(u.id)}">${comparisonSolutionStatus(u, protocol.version)}</td><td>${h(u.classification)}${u.delayedAnswered ? (u.delayedCandidateMatch ? ' · candidate match' : ' · no candidate match') : ''}</td><td>${u.actualDelayDays == null ? '—' : `${h(u.actualDelayDays)} days`}</td></tr>`).join('')}</tbody></table></div>
+    <p class="muted">Candidate-key matches are feedback, not verified mastery. Missing, early, late, contaminated, and provisional delayed answers remain distinct.</p></section>` : '';
+  const arms = report.enrolled ? `<details class="evidence-panel"><summary>Descriptive counts by method</summary><div class="table-scroll"><table><thead><tr><th scope="col">Method</th><th scope="col">Assigned</th><th scope="col">All delayed answered</th><th scope="col">All candidate matches</th><th scope="col">Eligible delayed answers</th><th scope="col">Eligible candidate matches</th><th scope="col">Provisional</th><th scope="col">Missing</th><th scope="col">Early</th><th scope="col">Late</th><th scope="col">Contaminated</th><th scope="col">Outside study unknown</th></tr></thead><tbody>${['text','diagram'].map(arm => { const c = report.arms?.[arm] ?? {}; const d = report.descriptive?.[arm] ?? {}; return `<tr><th scope="row">${arm === 'diagram' ? 'Text with diagram' : 'Text'}</th><td>${h(c.assigned)}</td><td>${h(d.observed)}</td><td>${h(d.candidateMatches)}</td><td>${h(c.eligible)}</td><td>${h(d.eligibleCandidateMatches)}</td><td>${h(c.provisional)}</td><td>${h(c.missing)}</td><td>${h(c.early)}</td><td>${h(c.late)}</td><td>${h(c.contaminated)}</td><td>${h(c.outsideStudyUnknown)}</td></tr>`; }).join('')}</tbody></table></div><p class="muted">All recorded counts include ineligible answers; only eligible columns follow the delayed outcome rule. These are dependent observations from one learner and do not supply a meaningful confidence interval.</p></details>` : '';
+  const dimensions = report.dimensions ? `<details class="evidence-panel"><summary>Learning dimensions and missing evidence</summary><ul>${Object.entries(report.dimensions).map(([name, data]) => `<li><strong>${h(name.replace(/([A-Z])/g, ' $1'))}:</strong> ${h(data.status.replaceAll('_', ' '))}${data.observations == null ? '' : ` · ${h(data.observations)} ${h(data.observationLabel ?? 'recorded responses')}`}${data.otherRecordedResponses == null ? '' : ` · ${h(data.otherRecordedResponses)} other delayed response${data.otherRecordedResponses === 1 ? '' : 's'} retained descriptively`}${data.pairs == null ? '' : ` · ${h(data.pairs)} confidence and draft-key pair${data.pairs === 1 ? '' : 's'}`}${data.interpretation ? ` · ${h(data.interpretation)}` : ''}</li>`).join('')}</ul><p class="muted">A candidate match is an observation, not demonstrated mastery or a causal method effect.</p></details>` : '';
   const hidePriorFeedback = Boolean(report.feedback) && report.next?.stage === 'delayed';
   const shownFeedback = hidePriorFeedback ? null : report.feedback;
   const solution = shownFeedback && (protocol.version === 'v1' || shownFeedback.solutionRevealedAt)
-    ? `<details class="solution-panel" id="comparison-solution" ${protocol.version === 'v2' ? 'open' : ''}><summary>Show the draft answer and the steps</summary><p>Draft answer: <strong>${h(shownFeedback.answer)}</strong></p><ol>${(shownFeedback.steps ?? []).map(step => `<li>${h(step)}</li>`).join('')}</ol><p class="muted">Your first answer stays recorded on its own. This draft key is not verified mastery.</p></details>`
-    : shownFeedback ? '<button class="button secondary" id="comparison-reveal" type="button">Show the draft answer and the steps</button>' : '';
-  const feedback = shownFeedback ? `<section class="feedback" aria-label="Last answer feedback"><h3>Last answer · ${h(comparisonStageLabel(shownFeedback.phase))}</h3><p>${shownFeedback.candidateMatch ? 'It matches' : 'It does not match'} the draft candidate key. ${shownFeedback.assisted ? 'This was assisted practice, because a hint was used.' : 'This was an unassisted response. Whether the later check counts is reported separately.'}</p>${solution}<p class="muted" id="comparison-reveal-status">${protocol.version === 'v1' ? 'This older version did not record when the answer was opened.' : shownFeedback.solutionRevealedAt ? 'The time you opened this answer is recorded.' : 'The time you opened this answer is not recorded.'}</p></section>` : hidePriorFeedback ? '<p class="muted">Feedback from the earlier answer stays hidden while the later check is ready. That keeps this later answer unassisted.</p>' : '';
+    ? `<details class="solution-panel" id="comparison-solution" ${protocol.version === 'v2' ? 'open' : ''}><summary>Candidate answer and reasoning</summary><p>Candidate answer: <strong>${h(shownFeedback.answer)}</strong></p><ol>${(shownFeedback.steps ?? []).map(step => `<li>${h(step)}</li>`).join('')}</ol><p class="muted">The first answer remains recorded separately.</p></details>`
+    : shownFeedback ? '<button class="button secondary" id="comparison-reveal" type="button">Reveal candidate answer and reasoning</button>' : '';
+  const feedback = shownFeedback ? `<section class="feedback" aria-label="Last answer feedback"><h3>Last ${h(shownFeedback.phase)} answer</h3><p>${shownFeedback.candidateMatch ? 'Matches' : 'Does not match'} the draft candidate key${shownFeedback.assisted ? ' · assisted practice' : ' · unassisted response; delayed eligibility is reported separately'}.</p>${solution}<p class="muted" id="comparison-reveal-status">${protocol.version === 'v1' ? 'Solution opening was not tracked in this historical version.' : shownFeedback.solutionRevealedAt ? 'Solution opening recorded.' : 'Solution opening not recorded.'}</p></section>` : hidePriorFeedback ? '<p class="muted">Earlier answer feedback is hidden while the delayed check is due.</p>' : '';
   if (!report.enrolled) return intro + (report.priorConceptExposure
-    ? '<div class="empty"><h3>This comparison cannot start</h3><p>This concept already has learning history. A new comparison has to be assigned before its lesson or practice. Your existing history stays as it is.</p></div>'
-    : '<div class="activity-card"><h3>Start the four-unit comparison</h3><p>The assignment is fixed when you start. Each pair has one text unit and one diagram unit, and the order is balanced. You still choose when to study and how long to spend.</p><button class="button" id="comparison-enroll" type="button">Start this draft comparison</button></div>');
+    ? '<div class="empty"><h3>This comparison cannot start for this learner</h3><p>This concept already has learner history. A prospective assignment must begin before its lesson or practice. Existing history stays intact.</p></div>'
+    : '<div class="activity-card"><h3>Start the four-unit comparison</h3><p>Assignment is fixed at enrollment. Each pair includes one text and one diagram unit; order is balanced. Your choices and study time remain under your control.</p><button class="button" id="comparison-enroll" type="button">Enroll in draft comparison</button></div>');
   const recommendation = report.recommendation;
-  const recommendationMarkup = recommendation ? `<section class="experiment-summary" aria-label="Suggested next comparison step"><h3>Suggested next: ${h(comparisonStageLabel(recommendation.stage))}${recommendation.unitId ? ` · ${h(recommendation.unitId)}` : ''}</h3><p>${h(recommendation.reason)}</p><p><strong>Aim:</strong> ${h(recommendation.aim)}</p><p><strong>Based on these units:</strong> ${h((recommendation.evidenceUnitIds ?? []).join(', ') || 'No earlier unit yet')}</p><p><strong>What this does not show:</strong> ${h(recommendation.uncertainty)}</p><small>Decision rule ${h(recommendation.policyVersion)}. One favorable result does not make this preview choose a teaching method. It does not show a cause.</small>${report.override ? `<p><strong>Your choice:</strong> Continue ${h(comparisonStageLabel(report.override.selectedStage))} in ${h(report.override.selectedUnitId)} before the check that is due. The original suggestion stays recorded. An override follows your pick and keeps the suggestion.</p>` : recommendation.alternative ? `<div class="button-row"><button class="button secondary" id="comparison-override" type="button">Choose ${h(comparisonStageLabel(recommendation.alternative.stage))} in ${h(recommendation.alternative.unitId)} first</button></div><label for="comparison-override-note">Why this choice? An override is optional.</label><input id="comparison-override-note" class="answer" maxlength="500">` : ''}</section>` : '';
+  const recommendationMarkup = recommendation ? `<section class="experiment-summary" aria-label="Suggested next comparison activity"><h3>Suggested next: ${h(recommendation.stage.replaceAll('_', ' '))}${recommendation.unitId ? ` · ${h(recommendation.unitId)}` : ''}</h3><p>${h(recommendation.reason)}</p><p><strong>Aim:</strong> ${h(recommendation.aim)}</p><p><strong>Supporting units:</strong> ${h((recommendation.evidenceUnitIds ?? []).join(', ') || 'No prior unit yet')}</p><p><strong>Uncertainty:</strong> ${h(recommendation.uncertainty)}</p><small>Decision rule ${h(recommendation.policyVersion)}. This rule does not select a teaching method from a single favorable result.</small>${report.override ? `<p><strong>Your choice:</strong> Continue ${h(report.override.selectedStage)} in ${h(report.override.selectedUnitId)} before the due check. The original recommendation remains recorded.</p>` : recommendation.alternative ? `<div class="button-row"><button class="button secondary" id="comparison-override" type="button">Choose ${h(recommendation.alternative.stage)} in ${h(recommendation.alternative.unitId)} first</button></div><label for="comparison-override-note">Reason for your choice (optional)</label><input id="comparison-override-note" class="answer" maxlength="500">` : ''}</section>` : '';
   const next = report.next;
   let activity = '';
   if (next?.stage === 'study') {
     const unit = report.units.find(u => u.id === next.unitId);
     const instruction = report.instruction;
-    if (unit?.exposureStartedAt && !instruction) throw new Error('The worked example that was opened is missing its text.');
-    activity = `<section class="activity-card"><span class="pill">${h(unit?.condition === 'diagram' ? 'Text with a labeled diagram' : 'Text')} · worked example</span><h3>${h(unit?.name)}</h3>
-      ${unit?.exposureStartedAt ? `<p class="muted">Opened ${h(new Date(unit.exposureStartedAt).toLocaleString())}. Time spent is not checked.</p>` : '<button class="button" id="comparison-start" type="button">Open the worked example</button>'}
-      ${unit?.exposureStartedAt ? `<div class="comparison-study"><p>Follow the code, the value it returns, and the global name that does not change. Studying this example is not an independent answer.</p><pre class="code">${h(instruction.workedCode)}</pre><p><strong>Worked answer:</strong> ${h(instruction.workedAnswer)}</p><h4>Step by step</h4><ol>${instruction.steps.map(step => `<li>${h(step)}</li>`).join('')}</ol>${instruction.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled diagram</figcaption><pre>${h(instruction.diagram)}</pre></figure>` : ''}<h4>Common mistakes</h4><ul>${instruction.misconceptions.map(item => `<li>${h(item)}</li>`).join('')}</ul><p class="muted">Suggested study time: about ${h(instruction.studyTargetMinutes)} minutes. We do not check whether the study was attentive.</p><p class="sources"><a href="${h(instruction.source)}" target="_blank" rel="noopener noreferrer">Python documentation</a></p>${comparisonOutsideStudy('exposure')}<button class="button" id="comparison-complete" type="button">I studied this worked example →</button></div>` : ''}</section>`;
+    if (unit?.exposureStartedAt && !instruction) throw new Error('The opened worked example is incomplete.');
+    activity = `<section class="activity-card"><span class="pill">${h(unit?.condition === 'diagram' ? 'Text with labeled diagram' : 'Text')} · worked example</span><h3>${h(unit?.name)}</h3>
+      ${unit?.exposureStartedAt ? `<p class="muted">Opened ${h(new Date(unit.exposureStartedAt).toLocaleString())}. Time spent is not verified.</p>` : '<button class="button" id="comparison-start" type="button">Open worked example</button>'}
+      ${unit?.exposureStartedAt ? `<div class="comparison-study"><p>Trace the code, the returned value, and the unchanged global name.</p><pre class="code">${h(instruction.workedCode)}</pre><p><strong>Worked answer:</strong> ${h(instruction.workedAnswer)}</p><h4>Step by step</h4><ol>${instruction.steps.map(step => `<li>${h(step)}</li>`).join('')}</ol>${instruction.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled diagram</figcaption><pre>${h(instruction.diagram)}</pre></figure>` : ''}<h4>Common misconceptions</h4><ul>${instruction.misconceptions.map(item => `<li>${h(item)}</li>`).join('')}</ul><p class="muted">Suggested study target: about ${h(instruction.studyTargetMinutes)} minutes. Attentive study is not verified.</p><p class="sources"><a href="${h(instruction.source)}" target="_blank" rel="noopener noreferrer">Python documentation source</a></p>${comparisonOutsideStudy('exposure')}<button class="button" id="comparison-complete" type="button">I studied this worked example →</button></div>` : ''}</section>`;
   } else if ((next?.stage === 'practice' || next?.stage === 'delayed') && !report.question) {
-    activity = `<div class="activity-card"><span class="pill">${next.stage === 'delayed' ? 'Unfamiliar later check' : 'Practice right away'}</span><h3>${next.stage === 'delayed' ? 'A later check is ready' : 'A different practice question is ready'}</h3><p>Opening it records this question group as seen. A question group is an item family. Answer without a hint if you want an unassisted result. A later check is not practice right away.</p><button class="button" id="comparison-open" type="button">Open ${next.stage === 'delayed' ? 'the later check' : 'the practice question'}</button></div>`;
+    activity = `<div class="activity-card"><span class="pill">${next.stage === 'delayed' ? 'Unfamiliar delayed assessment' : 'Practice'}</span><h3>${next.stage === 'delayed' ? 'A delayed check is ready' : 'A different practice question is ready'}</h3><p>Opening the question records its item family as encountered. Answer it without support for independent evidence.</p><button class="button" id="comparison-open" type="button">Open ${next.stage === 'delayed' ? 'delayed check' : 'practice question'}</button></div>`;
   } else if ((next?.stage === 'practice' || next?.stage === 'delayed') && report.question) {
     const q = report.question;
     const assistedPractice = q.phase === 'practice' && (q.hintOpened || Boolean(openedHint));
@@ -675,32 +537,27 @@ export function personalComparisonMarkup(report, openedHint = '', now = new Date
     const viewedAt = q.phase === 'delayed' ? unit?.delayedFirstViewedAt : null;
     const elapsedMs = viewedAt ? new Date(now).getTime() - Date.parse(viewedAt) : 0;
     const viewWarning = viewedAt && elapsedMs > 30 * 60 * 1000
-      ? '<p class="error" role="alert">More than 30 minutes have passed since this later question was first opened. A submitted answer will be classified contaminated. Contaminated means it cannot count in the main comparison.</p>' : '';
-    const confidence = protocol.version === 'v2' ? '<label for="comparison-confidence">How sure are you before feedback? Optional.</label><select id="comparison-confidence" class="answer"><option value="">Not recorded</option><option value="0">0%</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select>' : '';
-    activity = `<section class="activity-card"><span class="pill">${q.phase === 'delayed' ? (justOpenedDelayed ? 'Unfamiliar later check' : 'Later check already opened') : 'New practice question'}</span>${viewWarning}<h3>${h(q.prompt)}</h3><pre class="code">${h(q.code)}</pre><p class="muted">Question group ${h(q.familyId)}. A question group is an item family. ${assistedPractice ? 'A hint was opened, so this answer will be assisted practice.' : 'Answer before you use a hint if you want an unassisted first answer.'} Enter the returned value and the unchanged global value as number, number.</p><label for="comparison-answer">Your first answer</label><input id="comparison-answer" class="answer" type="text" maxlength="100" autocomplete="off" placeholder="number, number" aria-describedby="comparison-answer-note"><p id="comparison-answer-note" class="muted">Your first submitted answer is locked. The draft answer appears only after you submit.</p>${comparisonOutsideStudy(q.phase)}${confidence}${assistedPractice ? `<p class="hint" role="status">Hint ${h(q.hintLevel || 1)}: ${h(openedHint || q.hintText || 'Follow the name inside the call, then the global name that does not change.')} This practice answer will be classified assisted.</p>` : ''}${q.hintAvailable ? '<p class="muted">Open a hint only while the answer field is blank. After a hint, a later answer is assisted practice.</p>' : ''}<div class="button-row">${q.hintAvailable ? `<button class="button secondary" id="comparison-hint" type="button">${q.hintLevel ? 'Open the next practice hint' : 'Open a practice hint'}</button>` : ''}<button class="button" id="comparison-answer-submit" type="button">Submit first answer →</button></div></section>`;
+      ? '<p class="error" role="alert">More than 30 minutes have passed since this delayed question was first opened. A submitted answer will be classified contaminated.</p>' : '';
+    const confidence = protocol.version === 'v2' ? '<label for="comparison-confidence">Confidence before feedback (optional)</label><select id="comparison-confidence" class="answer"><option value="">Not recorded</option><option value="0">0%</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select>' : '';
+    activity = `<section class="activity-card"><span class="pill">${q.phase === 'delayed' ? (justOpenedDelayed ? 'Unfamiliar delayed assessment' : 'Previously opened delayed check') : 'New practice question'}</span>${viewWarning}<h3>${h(q.prompt)}</h3><pre class="code">${h(q.code)}</pre><p class="muted">Item family ${h(q.familyId)}. ${assistedPractice ? 'A hint was opened, so this answer will be assisted practice.' : 'Answer before using support for an independent first answer.'} Enter the returned value and unchanged global value as number, number.</p><label for="comparison-answer">Your first answer</label><input id="comparison-answer" class="answer" type="text" maxlength="100" autocomplete="off" placeholder="number, number" aria-describedby="comparison-answer-note"><p id="comparison-answer-note" class="muted">Your first submitted answer is locked. The candidate answer appears only after submission.</p>${comparisonOutsideStudy(q.phase)}${confidence}${assistedPractice ? `<p class="hint" role="status">Hint ${h(q.hintLevel || 1)}: ${h(openedHint || q.hintText || 'Track the local keyword parameter inside the call, then the unchanged global name.')} This practice answer will be classified assisted.</p>` : ''}${q.hintAvailable ? '<p class="muted">Open a hint only while the answer field is blank. After a hint, your later answer is assisted practice.</p>' : ''}<div class="button-row">${q.hintAvailable ? `<button class="button secondary" id="comparison-hint" type="button">${q.hintLevel ? 'Open next practice hint' : 'Open practice hint'}</button>` : ''}<button class="button" id="comparison-answer-submit" type="button">Submit first answer →</button></div></section>`;
   } else if (next?.stage === 'waiting') {
     const due = report.units.filter(u => u.exposureCompletedAt && !u.delayedAnswered).map(u => new Date(Date.parse(u.exposureCompletedAt) + 7 * 86400000));
     const soonest = due.length ? new Date(Math.min(...due)) : null;
-    activity = `<div class="empty"><h3>Waiting for an unfamiliar check</h3><p>The next question opens at least seven days after the worked example. It uses a question group you have not practiced. Return then and answer without a hint. That later answer is not practice right away.</p>${soonest ? `<p>Next possible check: <time datetime="${h(soonest.toISOString())}">${h(soonest.toLocaleString())}</time></p>` : ''}<button class="button secondary" id="comparison-refresh" type="button">Check again</button></div>`;
+    activity = `<div class="empty"><h3>Waiting for an unfamiliar check</h3><p>The next delayed question opens at least seven days after the worked example. Return then for an independent answer.</p>${soonest ? `<p>Next possible check: <time datetime="${h(soonest.toISOString())}">${h(soonest.toLocaleString())}</time></p>` : ''}<button class="button secondary" id="comparison-refresh" type="button">Check again</button></div>`;
   }
   return intro + recommendationMarkup + feedback + activity + dimensions + units + arms;
 }
 
 function comparisonOutsideStudy(phase) {
-  const question = phase === 'delayed'
-    ? 'Since the worked example, have you studied this topic outside Aesop? Optional.'
-    : phase === 'practice'
-      ? 'Before this answer, have you studied this topic outside Aesop? Optional.'
-      : 'Before this lesson, had you studied this topic outside Aesop? Optional.';
   const note = phase === 'practice'
-    ? 'This note is saved with your practice answer. The later check uses what you say at study time and when you return.'
-    : 'If this is unknown, or you report some outside study, the answer stays recorded. It does not count in the main comparison.';
-  return `<label class="comparison-outside" for="comparison-outside-study">${question}</label><select id="comparison-outside-study" class="answer" aria-describedby="comparison-outside-note"><option value="unknown">Unknown, or I prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select><p id="comparison-outside-note" class="muted">${note}</p>`;
+    ? 'This report is recorded with your practice response. Delayed eligibility uses your study and return declarations.'
+    : 'Unknown or reported outside study remains recorded but makes the delayed outcome ineligible for the primary comparison.';
+  return `<label class="comparison-outside" for="comparison-outside-study">Outside study since this example (optional)</label><select id="comparison-outside-study" class="answer" aria-describedby="comparison-outside-note"><option value="unknown">Unknown or prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select><p id="comparison-outside-note" class="muted">${note}</p>`;
 }
 
 export function comparisonHintBlockReason(answer) {
   return String(answer ?? '').trim()
-    ? 'You have typed an answer. Submit it as your unassisted first answer, or clear the field before you open a hint. After a hint, a later answer is assisted practice.'
+    ? 'You have typed an answer. Submit it as your independent first answer, or clear the field before opening a hint. After a hint, a later answer is assisted practice.'
     : null;
 }
 
@@ -744,7 +601,7 @@ async function api(path, body) {
   try {
     data = await response.json();
   } catch (_) {
-    throw new Error(`The response could not be read (${response.status}).`);
+    throw new Error(`Request failed: response was not JSON (${response.status}).`);
   }
   if (!response.ok) throw new Error(data.message || data.error || `Request failed (${response.status})`);
   return data;
@@ -762,8 +619,7 @@ function concepts() {
   const path = state.overview?.pathRecommendation;
   conceptsEl.innerHTML = state.overview.concepts.map((c, i) => {
     const schedule = c.signals.reviewSchedule;
-    const reviewWord = {upcoming:'coming up', due:'ready', overdue:'past its date'}[schedule?.status] ?? schedule?.status;
-    const timing = schedule && schedule.status !== 'none' ? ` · Later check ${esc(reviewWord)}` : '';
+    const timing = schedule && schedule.status !== 'none' ? ` · Review ${esc(schedule.status)}` : '';
     const draft = c.signals.openDraft ? ' · Saved first answer' : '';
     return `<button class="concept ${c.id === state.conceptId ? 'active' : ''}" data-concept="${esc(c.id)}" aria-current="${c.id === state.conceptId ? 'true' : 'false'}"><span class="num">${String(i+1).padStart(2,'0')}</span><span><span class="title">${esc(c.title)}</span><small>${c.lessonComplete ? 'Lesson read' : 'Lesson to read'} · ${c.signals.attempts} attempt${c.signals.attempts === 1 ? '' : 's'}${timing}${draft}${path && c.id === path.conceptId ? ' · Suggested' : ''}</small></span></button>`;
   }).join('');
@@ -796,7 +652,7 @@ async function refresh() {
   state.overview = validOverview;
   state.lesson = validLesson;
   state.session = validSession;
-  document.querySelector('.notice').textContent = `Draft · ${state.overview.packVersion}. The answer keys are candidates, not verified mastery. An independent review is still required. These results are for this preview only.`;
+  document.querySelector('.notice').textContent = `Draft content · ${state.overview.packVersion} · Candidate answer keys; independent review remains required. Results are for development, not mastery claims.`;
   if (state.session.draft) { state.answer = state.session.draft.firstAnswer; state.confidence = state.session.draft.confidence; }
   concepts(); render();
 }
@@ -858,7 +714,7 @@ async function refreshComparison(report, options = {}) {
     const input = document.querySelector('#comparison-answer');
     const answer = input.value.trim();
     if (!/^\d+\s*,\s*\d+$/.test(answer)) {
-      input.setCustomValidity('Enter two whole numbers, zero or greater, as number, number.');
+      input.setCustomValidity('Enter two non-negative whole numbers as number, number.');
       input.reportValidity(); input.focus();
       return;
     }
@@ -901,49 +757,52 @@ function renderWorkspace() {
   const finding = state.overview.experiment;
   const protocolId = finding?.protocol?.id ?? finding?.protocolId;
   const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
-  const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'eligible linked results (same people, not separate trials)' : 'eligible later answers';
+  const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'correlated concept observations' : 'eligible delayed answers';
   const armDetail = arm => {
     if (finding?.analysisUnit !== 'independent_learner') return '';
     const row = finding.arms[arm];
-    return `. ${row.independentLearners} separate learner${row.independentLearners === 1 ? '' : 's'}.` +
-      (row.provisional ? ` ${row.provisional} provisional draft-key check${row.provisional === 1 ? '' : 's'} (${row.candidateKeyMatches} draft-key match${row.candidateKeyMatches === 1 ? '' : 'es'}).` : '') +
-      (row.late ? ` ${row.late} late check${row.late === 1 ? '' : 's'}, after the main time window.` : '') +
-      (row.contaminated ? ` ${row.contaminated} contaminated check${row.contaminated === 1 ? '' : 's'}.` : '') +
-      (row.early ? ` ${row.early} early check${row.early === 1 ? '' : 's'}, before the window.` : '') +
-      (row.ungraded ? ` ${row.ungraded} response${row.ungraded === 1 ? '' : 's'} not graded.` : '') +
-      (row.invalid ? ` ${row.invalid} invalid response${row.invalid === 1 ? '' : 's'}.` : '') +
-      (row.exposureIncomparable ? ` ${row.exposureIncomparable} study period${row.exposureIncomparable === 1 ? '' : 's'} that could not be compared.` : '');
+    return `; ${row.independentLearners} independent learner${row.independentLearners === 1 ? '' : 's'}` +
+      (row.provisional ? `; ${row.provisional} provisional draft-key check${row.provisional === 1 ? '' : 's'} (${row.candidateKeyMatches} candidate match${row.candidateKeyMatches === 1 ? '' : 'es'})` : '') +
+      (row.late ? `; ${row.late} late check${row.late === 1 ? '' : 's'} reported outside the primary window` : '') +
+      (row.contaminated ? `; ${row.contaminated} familiar or assisted check${row.contaminated === 1 ? '' : 's'}` : '') +
+      (row.early ? `; ${row.early} early check${row.early === 1 ? '' : 's'}` : '') +
+      (row.ungraded ? `; ${row.ungraded} ungraded response${row.ungraded === 1 ? '' : 's'}` : '') +
+      (row.invalid ? `; ${row.invalid} invalid response${row.invalid === 1 ? '' : 's'}` : '') +
+      (row.exposureIncomparable ? `; ${row.exposureIncomparable} exposure${row.exposureIncomparable === 1 ? '' : 's'} without verified comparability` : '');
   };
-  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A, text:</strong> ${finding.arms.text.eligible} ${unitLabel}. ${finding.arms.text.correct} draft-key matches. ${finding.arms.text.missing} missing${armDetail('text')}</p><p><strong>Method B, text with a diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}. ${finding.arms.diagram.correct} draft-key matches. ${finding.arms.diagram.missing} missing${armDetail('diagram')}</p><p class="muted">Missing means no answer. A draft-key match is not verified mastery. Early means before the window. Late means after it. Contaminated means a familiar question, a hint, or a check that was not the planned one. Provisional means a draft key was used. These labels stay separate. They do not show that one method caused better learning.</p></div>` : '';
+  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
   const limitations = [
-    finding?.contentReviewStatus === 'draft' ? 'The lessons and answer keys are drafts. Independent review is not finished.' : null,
-    finding?.protocol?.exposureDurationControlled === false ? 'Study time is up to you. These two methods cannot support a claim that one causes better learning.' : null,
-    finding?.protocol?.minimumPerArm != null ? `The plan asks for ${finding.protocol.minimumPerArm} eligible later results for each method.` : null,
-    finding?.protocol?.minimumIndependentLearnersPerArm != null ? `A stronger comparison needs at least ${finding.protocol.minimumIndependentLearnersPerArm} separate learners for each method, checked study time, and reviewed content. One person's concept results stay linked.` : null,
-    finding?.syntheticResultsAreLearningEvidence === false ? 'Data made for software tests is not evidence about a real learner.' : null,
+    finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
+    finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
+    finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
+    finding?.protocol?.minimumIndependentLearnersPerArm != null ? `A stronger comparison needs at least ${finding.protocol.minimumIndependentLearnersPerArm} independent learners per arm, verified exposure, and reviewed content. One person's concept results remain correlated.` : null,
+    finding?.syntheticResultsAreLearningEvidence === false ? 'Synthetic test results are not learner evidence.' : null,
   ].filter(Boolean);
-  const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B, text with a diagram' : state.lesson.method?.conditionId === 'text' ? 'A, text' : null;
-  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="What the teaching comparison can show"><strong>Teaching comparison: ${esc(plainStatus(finding.status))}</strong><p>${esc(plainExperimentReason(finding))}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>What this does not show</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Plan ${esc(protocolId)}, version ${esc(protocolVersion)}. ` : ''}Liking one method is not evidence of better learning.</small></section>` : '';
-  const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer, ready to resume</strong><p>Question ${esc(signals.openDraft.activityId)}. Hint so far: ${esc(hintLevelLabel(signals.openDraft.hintLevel))}. Saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. Your first answer stays locked while you open hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer, ready to resume</strong><p>Your first answer stays locked while you open hints.</p></section>' : '';
+  const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B · text with diagram' : state.lesson.method?.conditionId === 'text' ? 'A · text' : null;
+  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>Limits on interpretation</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></section>` : '';
+  const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
   const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
-  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is understanding that lasts. You can change the setting. Recalling an answer and a later check stay on the path. Recall means answering from memory. A later check means you wait, then answer.</p><div class="path-note"><strong>Suggested next: ${esc(pathActionLabel(suggested.action))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>${draftMarkup}${reviewMarkup}${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} open answer${signals.needsReview === 1 ? '' : 's'} not graded. A self review helps you look again. It does not mark an answer correct.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}<div class="divider"></div>`;
-  const overrideNote = '<label class="muted" for="override-note">Why choose more practice? Optional. An override follows your choice and keeps the suggestion.</label><input id="override-note" class="answer" maxlength="500" placeholder="Your reason, if you want it recorded">';
+  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p>`;
+  const pathNote = `<div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>`;
+  const evidencePanel = `<details class="workspace-evidence"><summary>Your evidence</summary>${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}</details>`;
+  const support = `${pathNote}${draftMarkup}${reviewMarkup}${evidencePanel}<div class="divider"></div>`;
+  const overrideNote = '<label class="muted" for="override-note">Why choose more practice? (optional)</label><input id="override-note" class="answer" maxlength="500" placeholder="Your reason, if you want to record it">';
   content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
     const method = state.lesson.method;
-    const methodMarkup = method ? `<div class="method-note"><strong>Study method ${method.conditionId === 'diagram' ? 'B, text with a diagram' : 'A, text'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'You read a written explanation, then practice by recalling the idea.'}</p>${method.studyTargetMinutes ? `<p>Suggested study time: about ${esc(method.studyTargetMinutes)} minutes with this lesson before practice, for either method. You may go sooner or later. Study time is not checked.</p>` : ''}<small>Comparison plan ${esc(method.protocolId)}, version ${esc(method.protocolVersion)}.</small></div>` : '';
-    const diagramMarkup = state.lesson.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled diagram</figcaption><pre>${esc(state.lesson.diagram)}</pre></figure>` : '';
-    content.innerHTML = intro + `<span class="pill">Worked answer first · draft lesson</span><h2>${esc(state.lesson.title)}</h2>${methodMarkup}<p class="method-note">Study the full worked answer. Follow each step. Check the common mistakes. Your next question uses a different question group. A question group is an item family. Studying this answer is not an independent correct answer.</p><article class="lesson-body">${lessonMarkup(state.lesson.body)}</article>${diagramMarkup}${state.lesson.experimentNotice ? `<p class="muted">${esc(state.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I have studied the worked answer →</button></div>`;
+    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p>${method.studyTargetMinutes ? `<p>Comparison study target: about ${esc(method.studyTargetMinutes)} minutes with this lesson before practice in either method. You may continue sooner or later; study time is not verified.</p>` : ''}<small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
+    const diagramMarkup = state.lesson.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled concept diagram</figcaption><pre>${esc(state.lesson.diagram)}</pre></figure>` : '';
+    content.innerHTML = intro + `<span class="pill">Worked answer first · draft lesson</span><h2>${esc(state.lesson.title)}</h2>${methodMarkup}<p class="method-note">Study the complete worked answer, follow each step, and check the common mistakes. Your next question uses a different item family; studying this answer does not count as an independent correct answer.</p><article class="lesson-body">${lessonMarkup(state.lesson.body)}</article>${diagramMarkup}${state.lesson.experimentNotice ? `<p class="muted">${esc(state.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've studied the worked answer →</button></div>` + support;
     document.querySelector('#complete').onclick = async () => { try { await api('/api/v2/lesson-completions',{conceptId:state.conceptId}); await refresh(); } catch(e){showError(e)} };
     return;
   }
   if (state.result) {
     const r = validateAttemptResult(state.result);
-    const status = r.scoreStatus === 'ungraded' ? 'Saved for your own review' : r.scoreStatus === 'correct' ? 'Matches the draft answer key' : 'Does not match the draft answer key';
-    content.innerHTML = intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Assisted: a hint was used. ' : 'Unassisted: no hint was used. '}This is a preview. It is not verified mastery.</p></div>${solutionMarkup(r)}` +
-      (r.rubric && !state.review ? `<div class="activity-card"><span class="label">YOUR REVIEW · FIRST ANSWER</span><pre class="code">${esc(state.answer)}</pre><p class="muted">For each point, quote the part of your first answer that supports a shown or partial rating. Shown means the point is in your answer. Partial means only some of it. Not shown means it is missing. Unsure means you are not ready to say.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Quote for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save your review →</button></div></div>` : '') +
-      (state.review ? `<div class="activity-card"><span class="label">COMPARE, THEN REVISE IF YOU WANT</span><p>${esc(state.review.nextStep.replaceAll('_',' '))}</p><pre class="code">${esc(state.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((state.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
-      `${overrideNote}<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice instead of the suggestion</button></div>`;
+    const status = r.scoreStatus === 'ungraded' ? 'Saved for self review' : r.scoreStatus === 'correct' ? 'Candidate key match' : 'Try another approach';
+    content.innerHTML = intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>${solutionMarkup(r)}` +
+      (r.rubric && !state.review ? `<div class="activity-card"><span class="label">SELF REVIEW · ORIGINAL ANSWER</span><pre class="code">${esc(state.answer)}</pre><p class="muted">For each criterion, quote the part of your first answer that supports a shown or partial rating.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Evidence for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save self review →</button></div></div>` : '') +
+      (state.review ? `<div class="activity-card"><span class="label">COMPARE AND REVISE</span><p>${esc(state.review.nextStep.replace('_',' '))}</p><pre class="code">${esc(state.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((state.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
+      `${overrideNote}<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>${support}`;
     if (r.rubric && !state.review) document.querySelector('#review').onclick = async () => {
       try {
         const judgments = [...document.querySelectorAll('.review-row')].map(row => ({criterionId:row.dataset.criterion,rating:row.querySelector('.rating').value,evidence:row.querySelector('.evidence').value}));
@@ -960,18 +819,18 @@ function renderWorkspace() {
   }
   const s = state.session, a = s.activity;
   if (!a) {
-    content.innerHTML = intro + `<div class="empty"><h3>You are caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice instead of the suggestion</button></div>`;
+    content.innerHTML = intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>${support}`;
     document.querySelector('#more').onclick = () => chooseMorePractice().catch(showError);
     return;
   }
   const saved = Boolean(s.draft);
-  const previous = signals.recentOutcome === 'incorrect' ? 'Your last scored answer did not match the draft key. The suggestion is more practice.' : signals.recentOutcome === 'ungraded' ? 'Your last open answer is not graded. Your own review is what you compare it with.' : signals.recentOutcome === 'correct' ? 'Your last answer matched the draft key. That is not verified mastery. A later check still needs time and an unassisted answer.' : 'After the lesson, start by recalling the idea yourself. Recall means answering from memory.';
+  const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
   const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
   const priorFamily = signals.recordedAttempts.filter(attempt => attempt.familyId === a.familyId);
-  const activityLabel = a.heldOut ? 'Unfamiliar later check' :
+  const activityLabel = a.heldOut ? 'Unfamiliar delayed assessment' :
     priorFamily.some(attempt => attempt.assisted) ? 'Assisted review' :
     priorFamily.length || signals.encounteredFamilyIds.includes(a.familyId) ? 'Repeated practice' : 'New question';
-  content.innerHTML = intro + `<span class="pill">${activityLabel}</span><div class="why"><strong>Why this activity?</strong> ${esc(reason)} ${esc(previous)}${a.heldOut ? '<p>Unfamiliar means this question group was held back. You had not practiced it. This is a later check, not practice right away.</p>' : ''}${priorFamily.length ? '<p>This question group has been tried before. A new answer here is repeat practice, not an unfamiliar check.</p>' : ''}${s.recommendation?.aim ? `<p><strong>Aim:</strong> ${esc(s.recommendation.aim)}</p>` : ''}${s.recommendation?.evidenceGap ? `<p><strong>Still needed:</strong> ${esc(s.recommendation.evidenceGap)}</p>` : ''}${s.nextCheckAt && !a.heldOut ? `<p>Time for an unassisted check, if you still qualify: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div><div class="activity-card"><span class="label">${esc(activityTypeLabel(a.type))} · ${esc(evidenceKindLabel(a.evidenceKind))}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How sure are you about this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · sure</option></select><p class="muted">Save this before you open any hint. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>${!saved && state.mode === 'recommended' ? `${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice instead of the suggestion</button></div>` : ''}`;
+  content.innerHTML = intro + `<span class="pill">${activityLabel}</span><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>${!saved && state.mode === 'recommended' ? `${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>` : ''}<div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${priorFamily.length ? '<p>This item family has been attempted before. A new answer here remains repeat practice.</p>' : ''}${s.recommendation?.aim ? `<p><strong>Aim:</strong> ${esc(s.recommendation.aim)}</p>` : ''}${s.recommendation?.evidenceGap ? `<p><strong>Evidence still needed:</strong> ${esc(s.recommendation.evidenceGap)}</p>` : ''}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${support}`;
   drawAnswer(a, saved);
   if (!saved) {
     document.querySelector('#confidence').value = state.confidence == null ? '' : String(state.confidence);
@@ -994,17 +853,17 @@ function drawAnswer(a, saved) {
     area.innerHTML = `<div role="group" aria-label="Answer choices">${a.choices.map((choice,i)=>`<button type="button" class="choice ${state.answer===choice?'selected':''}" aria-pressed="${state.answer===choice}" data-choice="${i}" ${saved?'disabled':''}><span aria-hidden="true">${state.answer===choice?'✓':''}</span>${esc(choice)}</button>`).join('')}</div>`;
     area.querySelectorAll('[data-choice]').forEach(button=>button.onclick=()=>{ const index = Number(button.dataset.choice); state.answer=a.choices[index]; drawAnswer(a,false); area.querySelector(`[data-choice="${index}"]`).focus(); });
   } else if (a.type === 'trace') {
-    area.innerHTML = `<label class="muted" for="answer-input">Your answer</label><input id="answer-input" class="answer" value="${esc(state.answer)}" ${saved?'readonly':''} autocomplete="off">`;
+    area.innerHTML = `<label class="muted" for="answer-input">YOUR ANSWER</label><input id="answer-input" class="answer" value="${esc(state.answer)}" ${saved?'readonly':''} autocomplete="off">`;
     area.querySelector('input').oninput = event => { state.answer=event.target.value; };
   } else {
-    area.innerHTML = `<label class="muted" for="answer-input">Your explanation or code</label><textarea id="answer-input" class="answer long" ${saved?'readonly':''}>${esc(state.answer)}</textarea>`;
+    area.innerHTML = `<label class="muted" for="answer-input">YOUR EXPLANATION OR CODE</label><textarea id="answer-input" class="answer long" ${saved?'readonly':''}>${esc(state.answer)}</textarea>`;
     area.querySelector('textarea').oninput = event => { state.answer=event.target.value; };
   }
 }
 function drawAfterSave(a, draft) {
   const area = document.querySelector('#after-save');
   const viewed = new Set(draft.hintLevels);
-  area.innerHTML = `<div class="hint-panel"><h4>A little help, if you need it</h4><p>Hints open in order. The saved answer does not change. An answer after a hint is assisted.</p>${a.hints.filter(h=>viewed.has(h.level)).map(h=>`<div class="hint"><strong>${esc(hintLevelLabel(h.level))}</strong><br>${esc(h.text)}</div>`).join('')}<div class="answer-context"><h4>About this answer</h4><p>Confidence saved with the first answer, before any hint: ${draft.confidence == null ? 'not provided' : `${Math.round(draft.confidence * 100)}%`}.</p><p>Outside study means you also studied this away from this page. It helps read a later result. It does not change the score.</p><label for="outside-study">Since you studied this concept here, have you studied it elsewhere?</label><select id="outside-study" class="answer"><option value="unknown">I am not sure, or I prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select><label for="outside-study-detail">Outside study details (optional)</label><input id="outside-study-detail" class="answer" maxlength="500" value="${esc(state.outsideStudyDetail)}" placeholder="For example, a textbook or another course"></div><div class="button-row">${viewed.size<a.hints.length?'<button id="hint" class="button secondary">Open the next hint</button>':''}<button id="submit" class="button">Check the saved answer →</button></div></div>`;
+  area.innerHTML = `<div class="hint-panel"><h4>A little help, if you need it</h4><p>Hints open in order. The answer you saved stays the same.</p>${a.hints.filter(h=>viewed.has(h.level)).map(h=>`<div class="hint"><strong>${esc(h.level.replace('_',' '))}</strong><br>${esc(h.text)}</div>`).join('')}<div class="answer-context"><h4>Answer context</h4><p>Confidence was saved with the first answer before hints: ${draft.confidence == null ? 'not provided' : `${Math.round(draft.confidence * 100)}%`}.</p><p>Outside study helps interpret later outcomes; it does not change scoring.</p><label for="outside-study">Since studying this concept here, have you studied it elsewhere?</label><select id="outside-study" class="answer"><option value="unknown">I am not sure / prefer not to say</option><option value="none">No outside study</option><option value="some">Yes, some outside study</option></select><label for="outside-study-detail">Outside study details (optional)</label><input id="outside-study-detail" class="answer" maxlength="500" value="${esc(state.outsideStudyDetail)}" placeholder="For example, a textbook or another course"></div><div class="button-row">${viewed.size<a.hints.length?'<button id="hint" class="button secondary">Open next hint</button>':''}<button id="submit" class="button">Check saved answer →</button></div></div>`;
   document.querySelector('#outside-study').value = state.outsideStudy;
   document.querySelector('#outside-study').onchange = event => { state.outsideStudy = event.target.value; };
   document.querySelector('#outside-study-detail').oninput = event => { state.outsideStudyDetail = event.target.value; };
@@ -1030,7 +889,7 @@ document.querySelector('#export').onclick = async () => {
   try { const data=await api('/api/v2/export'); data.displayPreferences = {...preferences}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}
 };
 document.querySelector('#delete').onclick = async () => {
-  if (!confirm('Delete all learning data stored on this computer for this preview? This cannot be undone.')) return;
+  if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
   try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
 };
 async function boot() {

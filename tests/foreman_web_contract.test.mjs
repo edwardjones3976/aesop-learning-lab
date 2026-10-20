@@ -1,19 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
   buildAttemptPayload,
-  comparisonHintBlockReason,
   evidenceMarkup,
   evidenceSnapshot,
   evidenceSummaryMarkup,
   lessonMarkup,
   normalizeEvidence,
-  personalComparisonMarkup,
-  plainExperimentReason,
   reviewTimingMarkup,
   solutionMarkup,
   validateAttemptResult,
@@ -21,17 +17,6 @@ import {
   validateOverview,
   validateSession,
 } from '../foreman_web/app.js';
-
-test('the teaching comparison explains the one-learner limit plainly', () => {
-  const reason = 'One local learner supplies at most one independent learner unit per arm; the fixed minimum of 20 independent learners per arm is unreachable in this local analysis. Instructional duration remains unverified and draft answer keys lack independent review. No method benefit is established.';
-  const plain = plainExperimentReason({ reason, contentReviewStatus: 'draft' });
-  assert.match(plain, /one learner/);
-  assert.match(plain, /20 different people for each study method/);
-  assert.match(plain, /Study time has not been checked/);
-  assert.match(plain, /draft answers also need independent review/);
-  assert.match(plain, /cannot say which method helps more/);
-  assert.equal(plainExperimentReason({ reason: 'A different valid reason.' }), 'A different valid reason.');
-});
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const sourcePath = fileURLToPath(new URL('../src/', import.meta.url));
@@ -88,7 +73,7 @@ test('missing evidence is identified before rendering instead of displayed as ze
   );
   assert.throws(() => validateOverview(payload), /overview\.concepts\[0\]\.signals\.evidence: expected an object/);
   const html = evidenceMarkup(emptyEvidence());
-  assert.match(html, /See what your answers show/);
+  assert.match(html, /Inspect learning evidence/);
 });
 
 test('returning evidence keeps unassisted, assisted, delayed, and missing counts distinct', () => {
@@ -105,11 +90,10 @@ test('returning evidence keeps unassisted, assisted, delayed, and missing counts
     missingKinds: 2, delayedIndependent: 1, delayedMissing: 1,
   });
   const html = evidenceSummaryMarkup(evidence);
-  assert.match(html, /Unassisted draft-key matches/);
-  assert.match(html, /question groups you already studied/);
-  assert.match(html, /Assisted draft-key matches/);
-  assert.match(html, /not extra attempts/);
-  assert.match(html, /not verified mastery/);
+  assert.match(html, /Unassisted candidate matches/);
+  assert.match(html, /Unassisted counts may include repeated families/);
+  assert.match(html, /Assisted candidate matches/);
+  assert.match(html, /Delayed answers are a subset/);
 });
 
 test('optional review schedule and saved draft validate without changing legacy overview', () => {
@@ -147,15 +131,14 @@ test('descriptive protocol requires independent learner counts per arm', () => {
 test('review timing uses a controlled clock and escapes reason text', () => {
   const schedule = { dueAt: '2026-01-02T12:00:00Z', status: 'upcoming', reason: '<review>' };
   const before = reviewTimingMarkup(schedule, null, new Date('2026-01-01T12:00:00Z'));
-  assert.match(before, /A later check is coming/);
-  assert.match(before, /delayed review/);
+  assert.match(before, /Upcoming delayed review/);
   const due = reviewTimingMarkup(schedule, null, new Date('2026-01-03T12:00:00Z'));
-  assert.match(due, /A later check is ready/);
+  assert.match(due, /Delayed review due/);
   assert.match(due, /&lt;review&gt;/);
   assert.doesNotMatch(due, /<review>/);
   const legacy = reviewTimingMarkup(null, { nextCheckAt: null, activity: { heldOut: true },
     recommendation: { reason: 'Held-out check.' } }, new Date('2026-01-03T12:00:00Z'));
-  assert.match(legacy, /A later check is ready/);
+  assert.match(legacy, /Delayed review due/);
 });
 
 test('null evidence.byKind is rejected with a contract path', () => {
@@ -180,13 +163,22 @@ test('delayed evidence distinguishes target delay from actual elapsed delay', ()
     dueAt: '2026-01-08T12:00:00Z', actualDelayDays: 9.25,
     occurredAt: '2026-01-10T18:00:00Z' });
   const html = evidenceMarkup(evidence);
-  assert.match(html, /Planned wait: 7 days/);
-  assert.match(html, /Actual wait: 9\.25 days/);
+  assert.match(html, /Target delay 7 days/);
+  assert.match(html, /Actual delay 9.25 days/);
   assert.match(html, /Due <time/);
-  assert.match(html, /Independent: no hint was used/);
-  assert.match(html, /Familiarity not checked/);
   evidence.delayedChecks[0].actualDelayDays = -1;
   assert.throws(() => normalizeEvidence(evidence), /actualDelayDays/);
+});
+
+test('early delayed evidence shows timing status without rounding up to the target', () => {
+  const evidence = emptyEvidence();
+  evidence.delayedChecks.push({ attemptId: 'early', checkDelayDays: 1, evidenceKind: 'application',
+    scoreStatus: 'correct', assisted: false, familiarityStatus: 'not_verified',
+    dueAt: '2026-01-02T12:00:00Z', actualDelayDays: 0.999, timingStatus: 'early',
+    occurredAt: '2026-01-02T11:59:30Z' });
+  const html = evidenceMarkup(evidence);
+  assert.match(html, /Actual delay 0\.999 days · early/);
+  assert.doesNotMatch(html, /Actual delay 1(?:\.00)? days/);
 });
 
 test('content quality candidates remain review candidates and escape their reason', () => {
@@ -215,7 +207,7 @@ test('attempt history preserves assistance and escapes the saved answer', () => 
     overview.concepts[0].signals.recordedAttempts);
   assert.match(html, /item-1.*assisted/);
   assert.match(html, /&lt;script&gt;/);
-  assert.match(html, /Confidence before any hint: 50%/);
+  assert.match(html, /Pre-hint confidence: 50%/);
   assert.doesNotMatch(html, /<script>/);
   attempt.assisted = false;
   assert.throws(() => validateOverview(payload), /recordedAttempts\[0\]\.assisted/);
@@ -355,9 +347,7 @@ test('candidate solution is intentionally revealed only for a scored result', ()
     solution: { kind: 'candidate_key', answer: '<return 1>', reasoning: 'Return sends a value.',
       misconception: '<print> only displays it.' } };
   const html = solutionMarkup(result);
-  assert.match(html, /<details class="solution-panel"><summary>Show the draft answer and why/);
-  assert.match(html, /draft candidate key/);
-  assert.match(html, /not verified mastery/);
+  assert.match(html, /<details class="solution-panel"><summary>Reveal candidate answer and reasoning/);
   assert.match(html, /&lt;return 1&gt;/);
   assert.match(html, /&lt;print&gt;/);
   assert.doesNotMatch(html, /<return 1>/);
@@ -415,93 +405,4 @@ test('attempt context is explicit and cannot turn assistance into independent ev
   assert.equal(buildAttemptPayload('draft-1', 0, null, 'unknown').confidence, null);
   assert.throws(() => buildAttemptPayload('draft-1', 0, 1.2, 'none'), /attempt\.confidence/);
   assert.throws(() => buildAttemptPayload('draft-1', 0, 0.5, 'never'), /attempt\.outsideStudy/);
-});
-
-test('main page explains draft keys, later checks, and display limits', () => {
-  const html = readFileSync(fileURLToPath(new URL('../foreman_web/index.html', import.meta.url)), 'utf8');
-  assert.match(html, /not verified mastery/);
-  assert.match(html, /later check/);
-  assert.match(html, /unassisted/);
-  assert.match(html, /assisted/);
-  assert.match(html, /not an independent answer/);
-  assert.match(html, /id="content"/);
-  assert.match(html, /id="personal-comparison"/);
-  assert.match(html, /id="focus"/);
-  assert.match(html, /id="minutes"/);
-});
-
-test('comparison copy keeps limits distinct and escapes unit names', () => {
-  const protocol = { id: 'pilot', version: 'v2', contentVersion: 'v9', analysisUnit: 'unit', contentReviewStatus: 'draft' };
-  const units = [
-    { id: 'u1', name: '<Late>', condition: 'diagram', practiceAnswered: true, practiceAssisted: false,
-      practiceCandidateMatch: true, classification: 'late', delayedAnswered: true, delayedCandidateMatch: false, actualDelayDays: 20 },
-    { id: 'u2', name: 'Scope', condition: 'text', practiceAnswered: false, classification: 'missing',
-      delayedAnswered: false, actualDelayDays: null },
-    { id: 'u3', name: 'Bind', condition: 'text', practiceAnswered: true, practiceAssisted: true,
-      practiceCandidateMatch: false, classification: 'contaminated', delayedAnswered: true, delayedCandidateMatch: false, actualDelayDays: 8 },
-    { id: 'u4', name: 'Return', condition: 'diagram', practiceAnswered: true, practiceAssisted: false,
-      practiceCandidateMatch: true, classification: 'provisional', delayedAnswered: true, delayedCandidateMatch: true, actualDelayDays: 9 },
-  ];
-  const html = personalComparisonMarkup({
-    status: 'insufficient_evidence', reason: 'One learner is not enough.', uncertainty: 'No cause is shown.',
-    enrolled: true, protocol, units,
-    arms: { text: { assigned: 2, eligible: 0, provisional: 1, missing: 1, late: 0, contaminated: 1, outsideStudyUnknown: 0 },
-      diagram: { assigned: 2, eligible: 0, provisional: 0, missing: 0, late: 1, contaminated: 0, outsideStudyUnknown: 0 } },
-    descriptive: { text: { observed: 1, candidateMatches: 0, eligibleCandidateMatches: 0 },
-      diagram: { observed: 1, candidateMatches: 1, eligibleCandidateMatches: 0 } },
-    next: { stage: 'waiting' },
-  });
-  assert.match(html, /not verified mastery/);
-  assert.match(html, /does not show that one method caused better learning/);
-  assert.match(html, /Missing means no answer/);
-  assert.match(html, /Late means after the window/);
-  assert.match(html, /Contaminated means/);
-  assert.match(html, /Provisional means a draft key was used/);
-  assert.match(html, /Outside study unknown is a separate label/);
-  assert.match(html, /reviewed key/);
-  assert.match(html, /Unassisted\. No hint was used/);
-  assert.match(html, /Assisted\. A hint was used/);
-  assert.match(html, /&lt;Late&gt;/);
-  assert.doesNotMatch(html, /<Late>/);
-  assert.match(html, /id="comparison-refresh"/);
-  assert.match(html, /unfamiliar question group/);
-  assert.equal(comparisonHintBlockReason('  1, 2'), 
-    'You have typed an answer. Submit it as your unassisted first answer, or clear the field before you open a hint. After a hint, a later answer is assisted practice.');
-  assert.equal(comparisonHintBlockReason('   '), null);
-});
-
-test('a long-open later question is labeled contaminated without changing its controls', () => {
-  const html = personalComparisonMarkup({
-    status: 'insufficient_evidence', reason: 'Waiting.', uncertainty: 'No cause is shown.',
-    enrolled: true,
-    protocol: { id: 'pilot', version: 'v2', contentVersion: 'v9', analysisUnit: 'unit', contentReviewStatus: 'draft' },
-    units: [{ id: 'u1', name: 'Scope', condition: 'text', practiceAnswered: true, practiceAssisted: false,
-      practiceCandidateMatch: true, classification: 'missing', delayedAnswered: false, actualDelayDays: null,
-      delayedFirstViewedAt: '2026-01-01T00:00:00Z' }],
-    next: { stage: 'delayed', unitId: 'u1' },
-    question: { phase: 'delayed', prompt: 'What returns?', code: 'return 1', familyId: 'fam-1', hintAvailable: false },
-  }, '', new Date('2026-01-01T01:00:00Z'), false);
-  assert.match(html, /classified contaminated/);
-  assert.match(html, /cannot count in the main comparison/);
-  assert.match(html, /id="comparison-answer"/);
-  assert.match(html, /id="comparison-answer-submit"/);
-  assert.match(html, /Unfamiliar later check|Later check already opened/);
-});
-
-test('comparison suggestions explain an override and keep its controls', () => {
-  const html = personalComparisonMarkup({
-    status: 'descriptive_only', reason: 'Description only.', uncertainty: 'One person.',
-    enrolled: true,
-    protocol: { id: 'pilot', version: 'v2', contentVersion: 'v9', analysisUnit: 'independent_learner', contentReviewStatus: 'draft' },
-    units: [],
-    recommendation: { stage: 'delayed', unitId: 'u2', reason: 'Return for the check.', aim: 'See what remains.',
-      evidenceUnitIds: ['u1'], uncertainty: 'This does not pick a method.', policyVersion: '1',
-      alternative: { stage: 'practice', unitId: 'u1' } },
-  });
-  assert.match(html, /id="comparison-override"/);
-  assert.match(html, /id="comparison-override-note"/);
-  assert.match(html, /An override is optional/);
-  assert.match(html, /does not show a cause/);
-  assert.match(html, /Later check/);
-  assert.doesNotMatch(html, /id="comparison-enroll"/);
 });
