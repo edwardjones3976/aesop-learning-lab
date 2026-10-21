@@ -147,5 +147,14 @@ class MicroUnitPackTests(unittest.TestCase):
         self.check['check_delay_days'] = 1
         self.assertEqual({i.code for i in validate_micro_unit_pack(self.raw)}, {'held_out_required', 'invalid_delay'})
 
+    def test_optional_block(self):
+        self.assertIsNone(parse_micro_unit_pack(self.raw).units[0].block)
+        self.unit['block'] = 'difficulty-1'
+        self.assertEqual(parse_micro_unit_pack(self.raw).units[0].block, 'difficulty-1')
+        for invalid in ('', 1, None):
+            self.unit['block'] = invalid
+            self.rejects('units[0].block', 'wrong_type')
+
+
 if __name__ == '__main__':
     unittest.main()

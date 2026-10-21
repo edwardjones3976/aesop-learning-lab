@@ -37,27 +37,46 @@ class MicroUnitEngine:
     def _exposures(self):
         return {r["unit_id"]: r for r in self.store.micro_exposures(self.pack.pack_id)}
 
+    def _ordered_units(self):
+        units = list(self.pack.units)
+        random.Random(self._seed("unit-order")).shuffle(units)
+        return units
+
     def choose_method(self, unit):
+        return self._assignment(unit)[0]
+
+    def _assignment(self, unit):
         """Read existing assignment, or compute one from current received history."""
         unit = self._unit(unit)
         exposures = self._exposures()
         if unit.id in exposures:
-            return exposures[unit.id]["method_id"]
+            return exposures[unit.id]["method_id"], None
         rng = random.Random(self._seed(unit.id))
-        counts = {m: sum(r["method_id"] == m for r in exposures.values()) for m in self.methods}
+        history = [r for uid, r in exposures.items()
+                   if uid in self.units and self.units[uid].block == unit.block]
+        counts = {m: sum(r["method_id"] == m for r in history) for m in self.methods}
+        provenance = dict(assignment_seed=str(self._seed(unit.id)),
+                          policy_version="thompson-80-20-warmup2-block-v1",
+                          pack_version=self.pack.schema_version + ":sha256:" + hashlib.sha256(
+                              repr(self.pack).encode()).hexdigest())
+        def assigned(method, branch, choices):
+            return method, dict(provenance, policy_branch=branch,
+                                eligible_choices=json.dumps(choices))
         least = min(counts.values())
         if least < 2:
-            return rng.choice([m for m in self.methods if counts[m] == least])
+            return assigned(rng.choice([m for m in self.methods if counts[m] == least]),
+                            "warm-up", [m for m in self.methods if counts[m] == least])
         if rng.random() < .2:
-            return rng.choice(self.methods)
+            return assigned(rng.choice(self.methods), "uniform-20", self.methods)
         outcomes = self.outcomes_by_method()["outcomes"]
         samples = {}
         for method in self.methods:
             success = sum(correct for correct, _ in outcomes[method])
             samples[method] = rng.betavariate(1 + success, 1 + len(outcomes[method]) - success)
-        return max(self.methods, key=samples.__getitem__)
+        return assigned(max(self.methods, key=samples.__getitem__), "thompson", self.methods)
 
     def _lesson(self, unit, row):
+        self.store.mark_micro_unit(self.pack.pack_id, unit.id, self._time())
         return dict(kind="unit", unit_id=unit.id, method_id=row["method_id"],
                     lesson=unit.variants[row["method_id"]], provisional=PROVISIONAL)
 
@@ -73,12 +92,12 @@ class MicroUnitEngine:
             unit = self.units[row["unit_id"]]
             return dict(kind="check", unit_id=unit.id, check_id=unit.check.id,
                         prompt=unit.check.prompt, provisional=PROVISIONAL)
-        for unit in self.pack.units:
+        for unit in self._ordered_units():
             if unit.id in exposures and not exposures[unit.id]["completed_at"]:
                 return self._lesson(unit, exposures[unit.id])
         if self._daily_count(at, exposures) >= self.daily_limit:
             return None
-        for unit in self.pack.units:
+        for unit in self._ordered_units():
             if unit.id not in exposures:
                 return dict(kind="unit", unit_id=unit.id, provisional=PROVISIONAL)
         return None
@@ -98,7 +117,10 @@ class MicroUnitEngine:
             exposures = self._exposures()
             if unit.id not in exposures and self._daily_count(at, exposures) >= self.daily_limit:
                 raise ValueError("daily new-unit limit reached")
-            row = self.store.assign_micro_unit(self.pack.pack_id, unit.id, self.choose_method(unit), at)
+            if unit.id in exposures and exposures[unit.id]["completed_at"]:
+                raise ValueError("completed unit cannot be replayed")
+            method, provenance = self._assignment(unit)
+            row = self.store.assign_micro_unit(self.pack.pack_id, unit.id, method, at, provenance=provenance)
             self.store.mark_micro_unit(self.pack.pack_id, unit.id, at)
         return self._lesson(unit, row)
 
@@ -107,20 +129,25 @@ class MicroUnitEngine:
         self.store.mark_micro_unit(self.pack.pack_id, unit.id, self._time(), complete=True)
         return dict(unit_id=unit.id, provisional=PROVISIONAL)
 
-    def answer_check(self, unit, answer, *, assisted=False):
+    def answer_check(self, unit, answer, *, assisted=False, outside_study="unknown", previously_seen=False):
         unit = self._unit(unit)
         if not isinstance(answer, str) or type(assisted) is not bool:
             raise ValueError("answer must be text and assisted must be boolean")
+        if outside_study not in ("none", "some", "unknown") or type(previously_seen) is not bool:
+            raise ValueError("outside_study must be none, some or unknown; previously_seen must be boolean")
         # Vocabulary glosses ignore case ("Tremble" == "tremble"); spacing is normalized as elsewhere.
         match = normalize_answer(answer).casefold() in {
             normalize_answer(a).casefold() for a in unit.check.answer_key.accepted}
         row = self.store.record_micro_check(self.pack.pack_id, unit.id, unit.check.id, answer,
-                                           "correct" if match else "incorrect", self._time(), assisted)
+                                           "correct" if match else "incorrect", self._time(), assisted, outside_study, previously_seen)
         return dict(row, classification=self._classification(row, self._exposures()[unit.id]),
                     provisional=PROVISIONAL)
 
     @staticmethod
     def _classification(check, exposure):
+        if (check.get("outside_study") == "some" or check.get("previously_seen")
+                or exposure.get("reexposed_at")):
+            return "contaminated"
         if check["assisted"]:
             return "assisted"
         elapsed = datetime.fromisoformat(check["occurred_at"]) - datetime.fromisoformat(exposure["completed_at"])
@@ -132,7 +159,7 @@ class MicroUnitEngine:
 
     def outcomes_by_method(self):
         outcomes = {m: [] for m in self.methods}
-        excluded = {k: [] for k in ("early", "late", "assisted", "missing", "pending")}
+        excluded = {k: [] for k in ("early", "late", "assisted", "missing", "pending", "contaminated")}
         checks = {r["unit_id"]: r for r in self.store.micro_checks(self.pack.pack_id)}
         at = self._time()
         for uid, exposure in self._exposures().items():
