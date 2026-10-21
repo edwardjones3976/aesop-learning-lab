@@ -151,7 +151,11 @@ class MicroEngineTests(unittest.TestCase):
         result = self.engine.outcomes_by_method()
         self.assertEqual(sorted(x for values in result["outcomes"].values() for x in values), [(False, 1), (True, 1)])
         self.assertEqual({k: len(v) for k, v in result["excluded"].items()},
-                         dict(early=1, late=1, assisted=1, missing=1))
+                         dict(early=1, late=1, assisted=1, missing=0, pending=1))
+        # The same unanswered unit becomes missing only after its day-14 window closes.
+        self.at = datetime.fromisoformat(exposures[self.pack.units[5].id]["completed_at"]) + timedelta(days=14, seconds=1)
+        later = self.engine.outcomes_by_method()["excluded"]
+        self.assertEqual((len(later["missing"]), len(later["pending"])), (1, 0))
         with patch("aesop_lab.micro.engine.rank_methods", wraps=__import__(
                 "aesop_lab.ranking.method_ranking", fromlist=["rank_methods"]).rank_methods) as rank:
             ranking = self.engine.ranking()
@@ -159,6 +163,12 @@ class MicroEngineTests(unittest.TestCase):
         self.assertEqual(sum(m["effective_checks"] for m in ranking["methods"]), 2)
         self.assertEqual(ranking["provisional"], PROVISIONAL)
         self.assertFalse(ranking["show_ranking"])
+
+    def test_vocabulary_answers_ignore_case(self):
+        unit = self.pack.units[0]
+        self.learn(unit)
+        self.at = datetime.fromisoformat(self.engine._exposures()[unit.id]["completed_at"]) + timedelta(days=7)
+        self.assertEqual(self.engine.answer_check(unit, "  RIVER ")["score_status"], "correct")
 
     def test_consent(self):
         self.store.delete_all()

@@ -111,7 +111,9 @@ class MicroUnitEngine:
         unit = self._unit(unit)
         if not isinstance(answer, str) or type(assisted) is not bool:
             raise ValueError("answer must be text and assisted must be boolean")
-        match = normalize_answer(answer) in {normalize_answer(a) for a in unit.check.answer_key.accepted}
+        # Vocabulary glosses ignore case ("Tremble" == "tremble"); spacing is normalized as elsewhere.
+        match = normalize_answer(answer).casefold() in {
+            normalize_answer(a).casefold() for a in unit.check.answer_key.accepted}
         row = self.store.record_micro_check(self.pack.pack_id, unit.id, unit.check.id, answer,
                                            "correct" if match else "incorrect", self._time(), assisted)
         return dict(row, classification=self._classification(row, self._exposures()[unit.id]),
@@ -130,13 +132,19 @@ class MicroUnitEngine:
 
     def outcomes_by_method(self):
         outcomes = {m: [] for m in self.methods}
-        excluded = {k: [] for k in ("early", "late", "assisted", "missing")}
+        excluded = {k: [] for k in ("early", "late", "assisted", "missing", "pending")}
         checks = {r["unit_id"]: r for r in self.store.micro_checks(self.pack.pack_id)}
+        at = self._time()
         for uid, exposure in self._exposures().items():
             if uid not in self.units or not exposure["completed_at"]:
                 continue
             check = checks.get(uid)
-            classification = self._classification(check, exposure) if check else "missing"
+            if check:
+                classification = self._classification(check, exposure)
+            else:
+                # Unanswered is only "missing" once the day-14 window has closed.
+                open_window = at - datetime.fromisoformat(exposure["completed_at"]) <= timedelta(days=14)
+                classification = "pending" if open_window else "missing"
             if classification == "eligible":
                 outcomes[exposure["method_id"]].append((check["score_status"] == "correct", 1.0))
             else:
