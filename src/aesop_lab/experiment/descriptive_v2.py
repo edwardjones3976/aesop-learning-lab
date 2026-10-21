@@ -15,7 +15,8 @@ from typing import Mapping, Sequence
 
 from aesop_lab.api.delay_display import display_delay_days
 from aesop_lab.domain.models import (
-    Activity, Attempt, EvidenceKind, ExperimentAssignment, HintLevel, ScoreStatus,
+    Activity, Attempt, EvidenceKind, ExperimentAssignment, HintLevel, OutsideStudy,
+    ScoreStatus,
 )
 
 
@@ -200,6 +201,12 @@ def _classify_first(
     if (activity.family_id in exposure.encountered_family_ids or
             activity.family_id in prior_families or
             first.hint_level is not HintLevel.NONE):
+        return "contaminated", None
+    # V5 first explicitly excludes outside study; preserve earlier protocols.
+    # Only SOME reports study. UNKNOWN and missing (None) are not reports of
+    # study, and optional free-text detail does not override the structured value.
+    if (protocol.version in ("v5", "v6", "v7") and
+            first.outside_study is OutsideStudy.SOME):
         return "contaminated", None
     if first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT):
         return "ungraded", None
