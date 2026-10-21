@@ -89,6 +89,7 @@ class LearningService:
 
     def complete_lesson(self) -> datetime:
         """Record a real lesson event once; restarts cannot restart its clock."""
+        self.store.require_active_learner()
         return self.store.record_lesson_completion(
             self.concept.id, self.concept.content_version, self.now())
 
@@ -106,6 +107,7 @@ class LearningService:
         )
 
     def next_session(self, available_minutes: int, mode: str = "recommended") -> dict[str, object]:
+        self.store.require_active_learner()
         if type(available_minutes) is not int or available_minutes < 1:
             raise ApiError("validation_error", "availableMinutes must be a positive whole number.")
         if mode not in ("recommended", "practice"):
@@ -150,6 +152,7 @@ class LearningService:
         return result
 
     def submit_attempt(self, body: object, *, attempt_id: str | None = None) -> dict[str, object]:
+        self.store.require_active_learner()
         if not isinstance(body, dict):
             raise ApiError("validation_error", "Attempt body must be an object.")
         required = ("activityId", "contentVersion", "firstAnswer", "hintLevel",
@@ -229,6 +232,7 @@ class LearningService:
         return response
 
     def submit_self_review(self, body: object) -> dict[str, object]:
+        self.store.require_active_learner()
         if not isinstance(body, dict):
             raise ApiError("validation_error", "Self review body must be an object.")
         attempt_id = body.get("attemptId")
@@ -265,6 +269,7 @@ class LearningService:
                 "developmentOnly": self.development_only}
 
     def submit_revision(self, body: object) -> dict[str, object]:
+        self.store.require_active_learner()
         if not isinstance(body, dict) or not isinstance(body.get("reviewId"), str):
             raise ApiError("validation_error", "reviewId is required.")
         answer = body.get("answer")

@@ -77,6 +77,7 @@ class ForemanHttpJourney(unittest.TestCase):
                 before = request("/api/v2/export")
                 self.assertEqual(before["experimentAssignments"], [])
                 self.assertEqual(before["experimentExposures"], [])
+                request("/api/v2/consent", {})
                 lesson = request("/api/v2/lesson", {"conceptId": concept})
                 self.assertTrue(lesson["body"])
                 after = request("/api/v2/export")
@@ -131,6 +132,8 @@ class ForemanHttpJourney(unittest.TestCase):
                          status=403)
                 self.assertTrue(request("/api/v2/overview")["deleted"])
                 request("/api/v2/restart", {})
+                self.assertTrue(request("/api/v2/overview")["consentRequired"])
+                request("/api/v2/consent", {})
                 request("/api/v2/lesson", {"conceptId": concept})
                 self.assertEqual(len(request("/api/v2/export")["learnerIdentity"]), 1)
             finally:

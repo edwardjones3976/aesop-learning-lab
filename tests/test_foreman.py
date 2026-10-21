@@ -18,6 +18,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_deletion_marker_survives_reopen_and_blocks_stale_comparison(self):
         path = Path(self.temp.name) / "deleted.db"
         preview = Preview(path)
+        preview.consent()
         cid = preview.pack.learning_order()[0]
         comparison = preview.personal_comparison()
         preview.lesson(cid)
@@ -36,6 +37,7 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertIsNone(reopened.store.existing_learner_id())
         self.assertEqual(reopened.store.list_exposures(), ())
         reopened.restart()
+        reopened.consent()
         reopened.lesson(cid)
         self.assertIsNotNone(reopened.store.existing_learner_id())
 
@@ -72,6 +74,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_current_cannot_complete_experimental_exposure_without_opening_lesson(self):
         path = Path(self.temp.name) / "unopened.db"
         preview = Preview(path)
+        preview.consent()
         self.addCleanup(preview.store.close)
         cid = preview.pack.learning_order()[0]
         with self.assertRaisesRegex(ApiError, "Open the assigned lesson"):
@@ -86,6 +89,7 @@ class ForemanPreviewTests(unittest.TestCase):
         clock = [datetime(2026, 10, 15, 12, tzinfo=timezone.utc)]
         path = Path(self.temp.name) / "adaptive.db"
         preview = Preview(path, now=lambda: clock[0])
+        preview.consent()
         self.addCleanup(preview.store.close)
         self.assertEqual(preview.overview()["packVersion"], "m2-draft.11")
         methods = {}
@@ -183,6 +187,7 @@ class ForemanPreviewTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "learner.db"
         self.preview = Preview(self.path)
+        self.preview.consent()
         self.addCleanup(lambda: self.preview.store.close())
         self.concept = self.preview.pack.learning_order()[0]
         self.preview.lesson(self.concept)
@@ -238,6 +243,7 @@ class ForemanPreviewTests(unittest.TestCase):
                                            datetime(2026, 1, 1, tzinfo=timezone.utc))
             self.assertEqual(store.learner_content_versions(), frozenset({"v1"}))
         legacy = Preview(path)
+        legacy.consent()
         self.addCleanup(legacy.store.close)
         self.assertEqual(legacy.overview()["packVersion"], "m1-draft.1")
         self.assertTrue(legacy.lesson(concept.id)["completed"])
@@ -270,6 +276,7 @@ class ForemanPreviewTests(unittest.TestCase):
             store.record_lesson_completion(concept.id, "v2",
                                            datetime(2026, 1, 1, tzinfo=timezone.utc))
         prior = Preview(path)
+        prior.consent()
         self.addCleanup(prior.store.close)
         self.assertEqual(prior.overview()["packVersion"], "m1-draft.2")
         self.assertEqual(prior.store.learner_content_versions(), frozenset({"v2"}))
@@ -282,6 +289,7 @@ class ForemanPreviewTests(unittest.TestCase):
             store.record_lesson_completion(concept.id, "v4",
                                            datetime(2026, 1, 1, tzinfo=timezone.utc))
         prior = Preview(path)
+        prior.consent()
         self.addCleanup(prior.store.close)
         self.assertEqual(prior.overview()["packVersion"], "m2-draft.4")
         self.assertEqual(prior.lesson(concept.id)["method"]["protocolVersion"], "v1")
@@ -291,6 +299,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_existing_v5_assignment_stays_on_protocol_v2(self):
         path = Path(self.temp.name) / "prior-v5.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V5_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed.lesson(cid)["method"]
@@ -307,6 +316,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_existing_v6_assignment_stays_on_protocol_v3_and_v6_pack(self):
         path = Path(self.temp.name) / "prior-v6.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V6_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed.lesson(cid)["method"]
@@ -324,6 +334,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_existing_v7_assignment_stays_on_protocol_v4_and_v7_pack(self):
         path = Path(self.temp.name) / "prior-v7.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V7_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed._method_for(cid)
@@ -341,6 +352,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_existing_v8_assignment_stays_on_protocol_v5_and_v8_pack(self):
         path = Path(self.temp.name) / "prior-v8.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V8_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed._method_for(cid)
@@ -360,6 +372,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_v10_assignment_only_restart_keeps_protocol_v7(self):
         path = Path(self.temp.name) / "assigned-v10.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V10_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed._method_for(cid)
@@ -379,6 +392,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_v9_assignment_only_restart_keeps_protocol_v6(self):
         path = Path(self.temp.name) / "assigned-v9.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V9_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed._method_for(cid)
@@ -398,6 +412,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_v6_assignment_only_interruption_stays_on_v6_pack(self):
         path = Path(self.temp.name) / "assigned-v6.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(V6_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed._method_for(cid)
@@ -413,6 +428,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_opened_v4_lesson_stays_v4_after_interrupted_session(self):
         path = Path(self.temp.name) / "viewed-v4.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(ADAPTIVE_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed.lesson(cid)["method"]
@@ -432,6 +448,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_assignment_only_interruption_keeps_its_protocol_version(self):
         path = Path(self.temp.name) / "assigned-v4.db"
         viewed = Preview(path)
+        viewed.consent()
         viewed._activate_pack(ADAPTIVE_PACK_PATH)
         cid = viewed.pack.learning_order()[0]
         original = viewed._method_for(cid)
@@ -480,6 +497,7 @@ class ForemanPreviewTests(unittest.TestCase):
     def test_evidence_path_and_delayed_outcome_journey(self):
         clock = [datetime(2026, 1, 1, 12, tzinfo=timezone.utc)]
         preview = Preview(Path(self.temp.name) / "journey.db", now=lambda: clock[0])
+        preview.consent()
         # Keep the established v3 journey fixture stable while v4 adds open-ended items.
         preview._activate_pack(WEEK_PACK_PATH)
         self.addCleanup(preview.store.close)

@@ -168,6 +168,7 @@ class KeyAndOutcomeLockTests(unittest.TestCase):
             current_clock = [t0]
 
             preview = Preview(db_path, now=lambda: current_clock[0])
+            preview.consent()
             pack = load_pack(CURRENT_PACK_PATH)
             item_map = {item.id: item for item in pack.items}
 

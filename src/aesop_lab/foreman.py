@@ -174,6 +174,7 @@ class Preview:
         return comparison(self.store, self.now, prior_concept_exposure=prior)
 
     def reveal_comparison_solution(self, unit_id: object, phase: object) -> dict:
+        self.store.require_active_learner()
         comparison = self.personal_comparison()
         if isinstance(comparison, LegacyPersonalComparison):
             raise ApiError("comparison_version_conflict",
@@ -273,7 +274,8 @@ class Preview:
                      "lessonComplete": self.store.lesson_completed_at(
                          cid, self.pack.concept(cid).content_version) is not None,
                      "signals": summary(cid)} for cid in order]
-        return {"developmentOnly": True, "packStatus": self.pack.status,
+        return {"consentRequired": not self.store.has_consent(),
+                "developmentOnly": True, "packStatus": self.pack.status,
                 "packVersion": self.pack.pack_version,
                 "concepts": concepts, "pathRecommendation": self._path_recommendation(concepts),
                 "experiment": self.experiment_findings()}
@@ -295,6 +297,10 @@ class Preview:
         self.store.delete_all(mark_deleted=True)
         self._activate_pack(CURRENT_PACK_PATH)
         return {"deleted": True, "packVersion": self.pack.pack_version}
+
+    def consent(self) -> dict:
+        self.store.confirm_consent(self.now())
+        return {"consentRequired": False}
 
     def restart(self) -> dict:
         self.store.restart_learner()
@@ -359,6 +365,7 @@ class Preview:
                             for sid in lesson.source_ids]}
 
     def complete_lesson(self, cid: str) -> dict:
+        self.store.require_active_learner()
         service = self._service(cid)
         method = self._method_for(cid)
         existing_exposure = next((row for row in self.store.list_exposures()
@@ -417,6 +424,7 @@ class Preview:
         return analyze(assignments, exposures, attempts, activities, now=self.now())
 
     def override(self, body: dict) -> dict:
+        self.store.require_active_learner()
         cid = body.get("conceptId")
         service = self._service(cid)
         if body.get("mode") != "practice" or body.get("reason") != "learner_choice":
@@ -444,6 +452,7 @@ class Preview:
                 "selectedActivityId": (selected.get("activity") or {}).get("id")}
 
     def session(self, cid: str, mode: str = "recommended", available_minutes: int = 20) -> dict:
+        self.store.require_active_learner()
         service = self._service(cid)
         if mode not in ("recommended", "practice"):
             raise ApiError("validation_error", "Unknown practice mode.")
@@ -469,6 +478,7 @@ class Preview:
         return result
 
     def first_answer(self, body: dict) -> dict:
+        self.store.require_active_learner()
         cid, aid, did, answer = (body.get(k) for k in
                                  ("conceptId", "activityId", "draftId", "answer"))
         service = self._service(cid)
@@ -500,6 +510,7 @@ class Preview:
         return {"draftId": did, "saved": True}
 
     def hint(self, body: dict) -> dict:
+        self.store.require_active_learner()
         draft, service, item = self._draft_item(body.get("draftId"))
         if draft["submitted_attempt_id"]:
             raise ApiError("conflict", "This answer is already submitted.", 409)
@@ -513,6 +524,7 @@ class Preview:
         return {"level": next_level.value, "text": revealed.text}
 
     def submit(self, body: dict) -> dict:
+        self.store.require_active_learner()
         draft, service, item = self._draft_item(body.get("draftId"))
         if draft["response_json"]:
             return json.loads(draft["response_json"])
@@ -660,13 +672,16 @@ def make_handler(preview: Preview, *, port: int = PORT):
                               "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy"), body.get("confidence")),
                               "/api/v2/personal-comparison/reveal": lambda: preview.reveal_comparison_solution(body.get("unitId"), body.get("phase")),
                               "/api/v2/personal-comparison/override": lambda: preview.personal_comparison().override(body.get("recommendedUnitId"), body.get("recommendedStage"), body.get("selectedUnitId"), body.get("selectedStage"), body.get("learnerReason")),
+                              "/api/v2/consent": preview.consent,
                               "/api/v2/delete": preview.delete_data,
                               "/api/v2/restart": preview.restart}
                     if path in routes:
+                        if path not in ("/api/v2/consent", "/api/v2/delete", "/api/v2/restart"):
+                            preview.store.require_active_learner()
                         return self._json(200, routes[path]())
             except (ApiError, ValueError, json.JSONDecodeError) as exc:
                 if isinstance(exc, ApiError):
-                    return self._json(exc.status, {"error": exc.code, "message": exc.message})
+                    return self._json(exc.status, {"error": exc.code, "code": exc.code, "message": exc.message})
                 return self._json(400, {"error": "validation_error", "message": str(exc)})
             self._json(404, {"error": "not_found"})
 

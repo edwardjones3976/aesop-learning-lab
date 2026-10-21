@@ -18,7 +18,8 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
+CONSENT_VERSION = "consent-v1"
 
 
 class SQLiteStore:
@@ -286,6 +287,42 @@ class SQLiteStore:
                     "CREATE TABLE IF NOT EXISTS learner_deletion (slot INTEGER PRIMARY KEY CHECK(slot = 1))")
                 self.connection.execute("PRAGMA user_version = 15")
 
+        if current < 16:
+            with self.connection:
+                self.connection.execute("""
+                    CREATE TABLE IF NOT EXISTS learner_consent (
+                        slot INTEGER PRIMARY KEY CHECK(slot = 1),
+                        text_version TEXT NOT NULL, confirmed_at TEXT NOT NULL
+                    )
+                """)
+                # Any learner history predates the gate: never interrupt that run.
+                # v1-v3 packs record lessons and attempts without an identity row,
+                # so every learner-state table counts, not just learner_identity.
+                history = " OR ".join(f"EXISTS (SELECT 1 FROM {table})" for table in (
+                    "learner_identity", "lesson_completions", "attempts", "practice_drafts",
+                    "practice_hint_events", "self_reviews", "answer_revisions",
+                    "experiment_assignments", "experiment_exposures", "recommendation_overrides",
+                    "personal_assignments", "personal_exposures", "personal_responses",
+                    "personal_question_views", "personal_recommendation_overrides",
+                    "personal_hint_events", "personal_solution_reveals"))
+                self.connection.execute(f"""
+                    INSERT OR IGNORE INTO learner_consent
+                    SELECT 1, 'legacy-pre-gate', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                    WHERE {history}
+                """)
+                self.connection.execute("PRAGMA user_version = 16")
+
+    def has_consent(self) -> bool:
+        return self.connection.execute("SELECT 1 FROM learner_consent").fetchone() is not None
+
+    def confirm_consent(self, at: datetime) -> None:
+        if self.learner_deleted():
+            self.require_active_learner()
+        with self.connection:
+            self.connection.execute(
+                "INSERT OR IGNORE INTO learner_consent VALUES (1, ?, ?)",
+                (CONSENT_VERSION, at.isoformat()))
+
     def learner_deleted(self) -> bool:
         return self.connection.execute("SELECT 1 FROM learner_deletion").fetchone() is not None
 
@@ -293,6 +330,10 @@ class SQLiteStore:
         if self.learner_deleted():
             from aesop_lab.api.service import ApiError
             raise ApiError("learner_deleted", "Your data was deleted. Start again to enroll as a new learner.", 409)
+
+        if not self.has_consent():
+            from aesop_lab.api.service import ApiError
+            raise ApiError("consent_required", "Please confirm consent before starting.", 409)
 
     def restart_learner(self) -> None:
         with self.connection:
@@ -654,6 +695,8 @@ class SQLiteStore:
                 "SELECT * FROM personal_hint_events ORDER BY viewed_at, unit_id, level")],
             "personalSolutionReveals": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM personal_solution_reveals ORDER BY revealed_at, unit_id, phase")],
+            "learnerConsent": [dict(row) for row in self.connection.execute(
+                "SELECT * FROM learner_consent")],
             "learnerIdentity": [dict(row) for row in self.connection.execute(
                 "SELECT * FROM learner_identity")],
             "experimentExposures": [dict(row) for row in self.connection.execute(
@@ -696,6 +739,7 @@ class SQLiteStore:
             self.connection.execute("DELETE FROM personal_question_views")
             self.connection.execute("DELETE FROM personal_exposures")
             self.connection.execute("DELETE FROM personal_assignments")
+            self.connection.execute("DELETE FROM learner_consent")
             self.connection.execute("DELETE FROM learner_identity")
             self.connection.execute("DELETE FROM recommendation_overrides")
             self.connection.execute("DELETE FROM experiment_exposures")

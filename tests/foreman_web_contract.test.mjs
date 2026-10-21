@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   workspaceMarkup,
+  consentMarkup,
   buildAttemptPayload,
   evidenceMarkup,
   evidenceSnapshot,
@@ -448,6 +449,7 @@ from aesop_lab.foreman import Preview
 
 path = Path(tempfile.mkdtemp()) / "learner.db"
 preview = Preview(path)
+preview.consent()
 try:
     order = preview.pack.learning_order()
     assert len(order) == 5
@@ -506,7 +508,8 @@ finally:
         assert.equal(selector, '#complete');
         return completeButton;
       } },
-      workspaceMarkup, evidenceSummaryMarkup, evidenceMarkup, lessonMarkup, reviewTimingMarkup,
+      workspaceMarkup,
+  consentMarkup, evidenceSummaryMarkup, evidenceMarkup, lessonMarkup, reviewTimingMarkup,
     };
     runInNewContext(`${escapeSource}\n${renderSource}\nrenderWorkspace();`, context);
     const title = `<h2>${concept.title}</h2>`;
@@ -929,11 +932,38 @@ test('quiet view in style.css hides workspace evidence without hiding review tim
   );
 
   for (const forbidden of ['.review-timing', '.notice', '.why', '.workspace', '#content', '.layout', '.shell', 'main', 'body']) {
-    const offending = allHidingSelectors.filter(selector => selectorTargets(selector, forbidden));
+    const offending = allHidingSelectors.filter(selector => !selector.includes('.consent-pending') && selectorTargets(selector, forbidden));
     assert.deepEqual(
       offending,
       [],
       `Quiet view must not have a rule hiding ${forbidden}`,
     );
   }
+});
+
+
+test('consent replaces workspace and includes every required statement without preselected inputs', () => {
+  const html = consentMarkup();
+  for (const statement of ['answers, hint use, confidence, outside-study notes and timing',
+    'on this computer only', 'not sent to any outside service, including AI models',
+    'draft answer keys', 'provisional', 'not a grade or a judgment of what you know',
+    "One person's answers are not enough evidence", 'teaching method works better',
+    'stop at any time', 'ask for your data to be deleted']) assert.ok(html.includes(statement), statement);
+  assert.doesNotMatch(html, /mastery|<input|checked/i);
+  assert.equal((html.match(/<button/g) || []).length, 1);
+  assert.equal(workspaceMarkup({consentRequired: true}), html);
+});
+
+test('boot stops at consent before loading a lesson or workspace', async () => {
+  const source = readFileSync(new URL('../foreman_web/app.js', import.meta.url), 'utf8');
+  const boot = source.slice(source.indexOf('async function boot()'), source.indexOf('boot().catch(showError)'));
+  const calls = [];
+  const context = { state: {}, api: async () => ({consentRequired: true}),
+    renderConsent: () => calls.push('consent'), renderDeleted: () => calls.push('deleted'),
+    validateOverview: () => { throw new Error('workspace validated before consent'); },
+    refresh: async () => calls.push('workspace'),
+    document: {body: {classList: {remove: () => calls.push('unhidden')}}} };
+  runInNewContext(boot + ';this.boot = boot;', context);
+  await context.boot();
+  assert.deepEqual(calls, ['consent']);
 });

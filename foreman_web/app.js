@@ -562,7 +562,17 @@ export function comparisonHintBlockReason(answer) {
     : null;
 }
 
+export function consentMarkup() {
+  return `<div class="empty consent"><h2>Before you start</h2>
+    <p>Your answers, hint use, confidence, outside-study notes and timing are stored on this computer only. They are not sent to any outside service, including AI models.</p>
+    <p>Results are compared with draft answer keys. They stay provisional and are not a grade or a judgment of what you know.</p>
+    <p>One person's answers are not enough evidence to show which teaching method works better.</p>
+    <p>You can stop at any time, and you can ask for your data to be deleted.</p>
+    <button id="confirm-consent" class="button" type="button">I agree — start learning</button></div>`;
+}
+
 export function workspaceMarkup(view) {
+  if (view.consentRequired) return consentMarkup();
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const index = view.overview.concepts.findIndex(c => c.id === view.conceptId) + 1;
   if (index < 1) throw contractError('overview.concepts', 'selected concept was not found.');
@@ -644,7 +654,7 @@ export function workspaceMarkup(view) {
 if (typeof globalThis.document !== 'undefined') {
 const content = document.querySelector('#content');
 const conceptsEl = document.querySelector('#concepts');
-const state = { deleted: false, overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', view: 'path', comparison: null, comparisonHint: '', started: Date.now(), confidence: null, outsideStudy: 'unknown', outsideStudyDetail: '' };
+const state = { consentRequired: true, deleted: false, overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', view: 'path', comparison: null, comparisonHint: '', started: Date.now(), confidence: null, outsideStudy: 'unknown', outsideStudyDetail: '' };
 const preferenceKey = 'aesop.foreman.preferences.v1';
 let preferences = { minutes: 20, textSize: 'regular', theme: 'system', focus: false };
 try {
@@ -727,7 +737,7 @@ async function chooseMorePractice() {
   await refresh();
 }
 async function refresh() {
-  if (state.deleted) return;
+  if (state.deleted || state.consentRequired) return;
   const cid = encodeURIComponent(state.conceptId);
   const [overview, lesson, session] = await Promise.all([
     api('/api/v2/overview'), api('/api/v2/lesson', {conceptId:state.conceptId}),
@@ -750,7 +760,7 @@ function updateViewNavigation() {
   document.querySelector('#personal-comparison').setAttribute('aria-current', state.view === 'comparison' ? 'page' : 'false');
 }
 async function refreshComparison(report, options = {}) {
-  if (state.deleted) return;
+  if (state.deleted || state.consentRequired) return;
   const comparison = report ?? await api('/api/v2/personal-comparison');
   if (state.deleted) return;
   state.comparison = comparison;
@@ -839,6 +849,7 @@ document.querySelector('#personal-comparison').onclick = async () => {
 };
 function render() {
   if (state.deleted) return;
+  if (state.consentRequired) { renderConsent(); return; }
   try {
     renderWorkspace();
   } catch (error) {
@@ -967,10 +978,25 @@ document.querySelector('#delete').onclick = async () => {
     showError(error);
   }
 };
+function renderConsent() {
+  state.consentRequired = true;
+  document.body.classList.add('consent-pending');
+  conceptsEl.innerHTML = '';
+  content.innerHTML = consentMarkup();
+  const button = document.querySelector('#confirm-consent');
+  button.onclick = async () => {
+    button.disabled = true;
+    try { await api('/api/v2/consent', {}); await boot(); }
+    catch (error) { button.disabled = false; showError(error); }
+  };
+}
 async function boot() {
   if (state.deleted) return;
   const data = await api('/api/v2/overview');
   if (data.deleted) { renderDeleted(); return; }
+  if (data.consentRequired) { renderConsent(); return; }
+  state.consentRequired = false;
+  document.body.classList.remove('consent-pending');
   const overview = validateOverview(data);
   state.overview = overview;
   state.conceptId = overview.pathRecommendation.conceptId;

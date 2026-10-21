@@ -72,6 +72,7 @@ class VersionRegistryTests(unittest.TestCase):
                                      (policy, plain, target, descriptive))
                     preview = foreman.Preview(Path(temp) / (row.content_version + ".db"))
                     try:
+                        preview.consent()
                         preview._activate_pack(row.pack_path)
                         self.assertEqual({s.policy_version for s in preview.services.values()}, {policy})
                         cid = preview.pack.learning_order()[0]
