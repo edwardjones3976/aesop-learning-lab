@@ -133,6 +133,21 @@ These results justify an **availability** threshold of eight checks with a tenta
 Do not promise a reliable winner within two weeks, or disguise small differences with a clear label. Even ideal medium-gap identification needed 64 genuinely new assessed units (70 days at the assumed pace). Near-equal methods needed over two years in this simulation and may never separate within a sustainable course. Keep showing their ordered estimates with a tentative/close explanation instead. The four-method first-answer target can be met around two weeks only after expanding content; current five-concept content cannot meet it. Neither the current pack nor a twenty-concept pack supports the study's long horizons without substantial additional authored and independently reviewed units.
 
 
+### Pacing decides "reasonable time" (integration check)
+
+Claude re-ran the recovery study (200 learners, same seed) with three method-assigned units a day instead of one, for example a lesson plus two practice items, each with its own delayed check:
+
+| Gap | Checks | Day | True best ranked first |
+|---|---:|---:|---|
+| large | 32 | 17 | 77.5% |
+| large | 64 | 28 | 89.0% |
+| medium | 64 | 28 | 84.0% |
+| medium | 128 | 49 | 91.5% |
+| small | 512 | about 177 | the first sustained 80% |
+
+No "clear" label was wrong in either pacing run (400 learners in total).
+
+**Product target:** a tentative ranking from about day 9, a usually right top method by about day 28 when the methods differ meaningfully, and an honest "still tentative" when they barely differ. Meeting this needs about three method-assigned delayed units a day, so content volume is the binding constraint. One unit a day roughly doubles the time.
 ## Learner wording
 
 Tentative: “So far, worked examples are first in your ranking (tentative). You have 8 later checks. The order may change as you answer more.”
