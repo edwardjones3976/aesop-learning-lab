@@ -33,6 +33,34 @@ How the AI agents working on this repository split, check and land work. It comp
 6. The PR is opened. The non-author reviewer merges after checking the exact commit, the tests, green CI, and that any owner decision the PR depends on has been recorded.
 7. Claude integrates across teams, runs every suite and a browser walkthrough, and writes the acceptance record.
 
+## The review lane
+
+Each PR moves through these steps in order. Each step catches mistakes the earlier ones miss: round 1 had a mislabelled arm count, a key that a wrong answer could also produce, and stale version metadata, and each was caught at a later step.
+
+### Capacity
+- **At most two agent jobs at once** on this laptop. Bridge calls, worker runs, Cursor MCP calls and Playwright runs all count. A third job has been killed for low memory.
+- A plan wave names its two jobs and the files each owns. Later steps wait until a slot frees.
+
+### Worktrees
+- **At the start of every task**, count the leftover worktrees (`git worktree list`). Keep them at **four or fewer** before adding one. A session can die before its merge, so cleanup at merge time alone is not enough.
+- **In the merge session**, remove the PR's worktrees: the author's and the reviewer's. Keep the branch.
+
+### Author preflight
+Before handing work to the integrator, the author confirms:
+- **Version pins:** the current pack, content version, protocol version and seed agree everywhere the change touches them.
+- **Arm minimum:** 20 independent learners per arm, matching `minimum_independent_learners_per_arm`.
+- **Wording:** "candidate-key match", never "mastery", "learned" or a bare "correct" for draft keys.
+- **New or changed held-out item:** every common mistake gives an answer different from the key, and the structural-similarity guard (`tests/test_heldout_similarity.py`) passes.
+
+### Integration
+The integrator (Claude) reviews the diff, re-runs every suite (Python, node contract, Playwright), and **breaks each new test on purpose** to show it fails before committing.
+
+### Review and merge
+- **The non-author reviewer** (Cursor) checks the exact head commit against the PR's stated contract. It merges with `gh pr merge N --merge --match-head-commit <sha>`, or returns findings.
+- **The GitHub Codex reviewer:** judge new findings by `created_at` after the latest commit, because old comments move onto new commits.
+- **Convergence rule:** after about four review rounds, only P1 or factually wrong findings block. Other findings are fixed or declined with a written reason.
+- **Bot stall rule:** if the Codex bot shows "running" for more than 30 minutes, comment `@codex review` once. If it is still stalled, the merge may go ahead on a non-author review, green CI and an exact-SHA merge. Any finding it posts later is still fixed or declined.
+
 ## Talking to other agents
 
 Use the agent bridge, `C:\Users\edwar\.claude\skills\agent-bridge\ask.ps1`:
@@ -50,3 +78,6 @@ Bridge calls are read-only. Edits go through the worker route and need a separat
 - Cursor in read-only mode can return an empty reply; ask it to "answer in your reply text".
 - Antigravity may save its answer to its own folder; ask it to "reply in text".
 - Copilot was out of monthly quota on 2026-10-20.
+- Cursor in read-only mode cannot read the owner's plan folder, so paste briefs into the prompt.
+- Grok runs out of turns if a prompt invites it to read files, so give it everything inline and say "do not read files".
+- The worker route rejects text that looks like a credential, including `answer_key:`. Rephrase it as "the answer_key field is" until the filter is fixed.
