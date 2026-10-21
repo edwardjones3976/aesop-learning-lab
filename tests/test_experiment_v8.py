@@ -44,6 +44,13 @@ class ProspectiveV8Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "content version differs from v8"):
             ExposureV8(CONCEPT, "v9", "text", NOW, ())
 
+    def test_v8_findings_reason_mentions_minimum_independent_learners_per_arm(self):
+        findings = analyze_v8([], [], [], {}, learner_id=LEARNER, now=NOW)
+        self.assertIn(
+            f"minimum of {V8.minimum_independent_learners_per_arm} independent learners",
+            findings["reason"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

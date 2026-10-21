@@ -701,6 +701,35 @@ test('workspace wording separates reviewed-key outcomes from candidate-key match
   assert.match(html, /Method B · text with diagram:<\/strong> 2 eligible delayed answers, 2 candidate-key matches;/);
   assert.doesNotMatch(html, /\d correct;/);
 });
+
+test('comparison area explains single learner limits when status is insufficient_evidence', () => {
+  const view = workspaceView();
+  view.lesson.completed = false;
+  view.overview.experiment = {
+    protocol: { id: 'text-vs-labeled-diagram', version: 'v8', minimumIndependentLearnersPerArm: 20 },
+    status: 'insufficient_evidence',
+    reason: 'One local learner supplies at most one independent learner unit per arm; the fixed minimum of 20 independent learners per arm is unreachable in this local analysis.',
+    analysisUnit: 'independent_learner',
+    contentReviewStatus: 'draft',
+    arms: {
+      text: { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 0, independentLearners: 1 },
+      diagram: { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 0, independentLearners: 1 },
+    },
+  };
+  const html = workspaceMarkup(view);
+  const comparisonArea = html.slice(html.indexOf('<section class="experiment-summary" aria-label="Instructional comparison findings">'));
+  assert.match(comparisonArea, /This comparison needs at least 20 learners in each method before it can show a result\. One person(?:'|&#39;)s answers can(?:'|&#39;)t show which method works better\./);
+  assert.doesNotMatch(comparisonArea, /mastery/i);
+  // v1 counts delayed outcomes, not learners: no learner explanation there.
+  view.overview.experiment = { protocol: { id: 'text-vs-labeled-diagram', version: 'v1', minimumPerArm: 30 },
+    status: 'insufficient_evidence', reason: 'Too few outcomes.', contentReviewStatus: 'draft',
+    arms: Object.fromEntries(['text', 'diagram'].map(arm => [arm,
+      { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 0 }])) };
+  const legacy = workspaceMarkup(view);
+  assert.doesNotMatch(legacy, /learners in each method/);
+  assert.match(legacy, /requires 30 eligible delayed outcomes per method/);
+});
+
 test('review timing markup renders overdue status and returns empty string for none', () => {
   const fixedNow = new Date('2026-01-03T12:00:00Z');
   const overdueSchedule = {
