@@ -720,6 +720,14 @@ test('comparison area explains single learner limits when status is insufficient
   const comparisonArea = html.slice(html.indexOf('<section class="experiment-summary" aria-label="Instructional comparison findings">'));
   assert.match(comparisonArea, /This comparison needs at least 20 learners in each method before it can show a result\. One person(?:'|&#39;)s answers can(?:'|&#39;)t show which method works better\./);
   assert.doesNotMatch(comparisonArea, /mastery/i);
+  // v1 counts delayed outcomes, not learners: no learner explanation there.
+  view.overview.experiment = { protocol: { id: 'text-vs-labeled-diagram', version: 'v1', minimumPerArm: 30 },
+    status: 'insufficient_evidence', reason: 'Too few outcomes.', contentReviewStatus: 'draft',
+    arms: Object.fromEntries(['text', 'diagram'].map(arm => [arm,
+      { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 0 }])) };
+  const legacy = workspaceMarkup(view);
+  assert.doesNotMatch(legacy, /learners in each method/);
+  assert.match(legacy, /requires 30 eligible delayed outcomes per method/);
 });
 
 test('review timing markup renders overdue status and returns empty string for none', () => {

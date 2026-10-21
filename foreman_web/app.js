@@ -589,13 +589,11 @@ export function workspaceMarkup(view) {
   const correctLabel = n => finding?.analysisUnit === 'independent_learner' ? `${n} correct on reviewed keys`
     : finding?.contentReviewStatus === 'draft' ? `${n} candidate-key match${n === 1 ? '' : 'es'}` : `${n} correct`;
   const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${correctLabel(finding.arms.text.correct)}; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${correctLabel(finding.arms.diagram.correct)}; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
-  const minLearners = finding?.protocol?.minimumIndependentLearnersPerArm
-    ?? finding?.protocol?.minimumPerArm
-    ?? (finding?.reason?.match(/minimum of (\d+) independent learners/)?.[1] ? Number(finding.reason.match(/minimum of (\d+) independent learners/)[1]) : null);
-  const singleLearnerExplanation = finding?.status === 'insufficient_evidence'
-    ? (minLearners != null
-        ? `This comparison needs at least ${minLearners} learners in each method before it can show a result. One person's answers can't show which method works better.`
-        : (finding?.reason ? `No method result yet: ${finding.reason}` : "This comparison needs more learners in each method before it can show a result. One person's answers can't show which method works better."))
+  // Only protocols that count independent learners (v2+) get the learner explanation; v1's
+  // minimumPerArm counts delayed outcomes and already has its own limitation line below.
+  const minLearners = finding?.protocol?.minimumIndependentLearnersPerArm ?? null;
+  const singleLearnerExplanation = finding?.status === 'insufficient_evidence' && minLearners != null
+    ? `This comparison needs at least ${minLearners} learners in each method before it can show a result. One person's answers can't show which method works better.`
     : null;
   const limitations = [
     singleLearnerExplanation,
