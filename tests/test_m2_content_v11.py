@@ -39,6 +39,12 @@ class M2ContentV11Tests(unittest.TestCase):
         new = without_versions(self.raw)
         old['items'] = [i for i in old['items'] if i['id'] != OLD_ID]
         new['items'] = [i for i in new['items'] if i['id'] != NEW_ID]
+        # The review note is the one pack-level field that must describe the v11 change.
+        note = new.pop('review')['note']
+        old.pop('review')
+        self.assertIn(OLD_ID, note)
+        self.assertIn(NEW_ID, note)
+        self.assertNotIn('unchanged from v9', note)
         self.assertEqual(new, old)
         # Also compare exact serialized item bytes after the sole version replacement.
         old_text = (ROOT / 'pack-m2-draft.10.json').read_text(encoding='utf-8')
