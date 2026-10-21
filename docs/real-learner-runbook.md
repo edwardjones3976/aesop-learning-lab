@@ -103,7 +103,7 @@ The run ends only when the window of **every** started concept has closed.
 16. **Delete,** if the learner asks. Deletion is the learner's or owner's decision, never an agent's.
     1. In the preview, press **Delete data** and confirm. The page shows "Your data was deleted". Do **not** press **Start again**: that would enroll a new learner.
     2. Close the preview tab, then stop the server with Ctrl+C.
-    3. Paste the step 2 block, then delete the now-empty database file at the **exact path recorded in the run log** (`$wt\$db`), plus any `-wal` or `-shm` files beside it.
+    3. Paste the step 2 block, then delete the database file (after the in-app delete it holds only the schema and the deletion marker) at the **exact path recorded in the run log** (`$wt\$db`), plus any `-wal` or `-shm` files beside it.
     4. Clear this site's data in the browser (site settings for `127.0.0.1:8780`).
     5. Delete everything in `$runDir` (the export, the overview and the run log) and every copy of them, including the browser's download folder.
     6. Record only that a deletion took place, with the date.
