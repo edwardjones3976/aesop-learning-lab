@@ -37,6 +37,7 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
         assert.ok(Object.hasOwn(buttons, selector), selector);
         return buttons[selector];
       } },
+      AbortController, apiController: new AbortController(),
       confirm: () => outcome !== 'cancel',
       api: async path => {
         calls.push(path);
@@ -60,6 +61,7 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
     await buttons['#delete'].onclick();
     if (outcome === 'cancel' || outcome === 'failure') {
       assert.deepEqual(calls, outcome === 'cancel' ? [] : ['/api/v2/delete', 'Delete failed']);
+      if (outcome === 'failure') assert.equal(context.state.deleted, false);
       assert.equal(context.content.innerHTML, 'Old lesson');
       assert.equal(context.state.lesson, originalLesson);
       assert.equal(buttons['#start-again'].onclick, undefined);
@@ -104,6 +106,8 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
       if (!nodes.has(selector)) nodes.set(selector, node());
       return nodes.get(selector);
     }, createElement: node, documentElement: node(), body: node() },
+    AbortController,
+    confirm: () => true,
     content, conceptsEl: node(),
     localStorage: { getItem() { return null; }, setItem() {} },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
@@ -114,7 +118,7 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
     showError(new Error('Before deletion'));
     globalThis.retry = content.child.child;
     state.deleted = true;
-    globalThis.actions = { refresh, refreshComparison, select, chooseMorePractice, boot, api };
+    globalThis.actions = { refresh, refreshComparison, select, chooseMorePractice, boot, api, showError };
     globalThis.viewState = state;
   `, context);
   content.innerHTML = 'Your data was deleted';
@@ -134,6 +138,16 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
     assert.equal(content.innerHTML, 'Your data was deleted');
     assert.equal(JSON.stringify(context.viewState), before);
   }
+  runInNewContext(`
+    showError = error => { throw error; };
+    refresh = refreshComparison = boot = () => { throw new Error('Wrapper called enrollment'); };
+  `, context);
+  for (const action of [
+    () => nodes.get('#minutes').onchange({ target: { value: '45' } }),
+    () => nodes.get('#regular-path').onclick(),
+    () => nodes.get('#personal-comparison').onclick(),
+    () => context.retry.onclick(),
+  ]) await action();
   // The shared API guard also blocks detached old lesson/comparison handlers.
   for (const path of ['/api/v2/lesson', '/api/v2/session', '/api/v2/first-answers',
     '/api/v2/lesson-completions', '/api/v2/overrides', '/api/v2/hints',
@@ -142,11 +156,24 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
     '/api/v2/personal-comparison/answer']) {
     await assert.rejects(context.actions.api(path, {}), /Start again/);
   }
+  runInNewContext('showError = actions.showError;', context);
   context.viewState.deleted = false;
-  let finishResponse;
-  context.fetch = () => new Promise(resolve => { finishResponse = resolve; });
+  let finishResponse, finishDelete, oldSignal;
+  context.fetch = (path, options) => new Promise(resolve => {
+    if (path === '/api/v2/delete') finishDelete = resolve;
+    else { finishResponse = resolve; oldSignal = options.signal; }
+  });
   const pending = context.actions.api('/api/v2/personal-comparison');
-  context.viewState.deleted = true;
+  const deleting = nodes.get('#delete').onclick();
+  assert.equal(context.viewState.deleted, true);
+  assert.equal(oldSignal.aborted, true);
+  await nodes.get('#minutes').onchange({ target: { value: '45' } });
+  await assert.rejects(context.actions.api('/api/v2/lesson', {}), /Start again/);
+  finishDelete({ ok: false, json: async () => ({ message: 'Delete failed' }) });
+  await deleting;
+  assert.equal(content.child.textContent, 'Delete failed');
+  assert.equal(context.viewState.deleted, false);
+  // Even after failure restores usability, the previous session's results are ignored.
   finishResponse({ ok: true, json: async () => ({ oldLearner: true }) });
   await assert.rejects(pending, /Start again/);
   assert.equal(content.innerHTML, 'Your data was deleted');
