@@ -140,5 +140,29 @@ class TestOrderV1Pack(unittest.TestCase):
             )
 
 
+    def test_pack_runs_on_the_frozen_order_v1_contrast(self):
+        import tempfile
+        from datetime import datetime, timezone
+        from aesop_lab.contrast.protocol import ORDER_V1
+        from aesop_lab.micro.engine import MicroUnitEngine
+        from aesop_lab.storage.sqlite import SQLiteStore
+
+        at = datetime(2026, 11, 2, 9, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as folder:
+            store = SQLiteStore(Path(folder) / "learner.db")
+            try:
+                store.confirm_consent(at)
+                with store.connection:
+                    store.connection.execute("INSERT INTO learner_identity VALUES (1, 'order-v1-pack-test')")
+                engine = MicroUnitEngine(self.pack, store, lambda: at, contrast=ORDER_V1)
+                lessons = [engine.start_unit(engine.next_activity()["unit_id"]) for _ in range(3)]
+            finally:
+                store.close()
+        for lesson in lessons:
+            self.assertIn(lesson["method_id"], ("worked_then_retrieve", "predict_first"))
+            unit = next(u for u in self.pack.units if u.id == lesson["unit_id"])
+            self.assertEqual(lesson["lesson"], unit.variants[lesson["method_id"]])
+
+
 if __name__ == "__main__":
     unittest.main()
