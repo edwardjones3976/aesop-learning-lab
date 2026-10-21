@@ -1,0 +1,2569 @@
+{
+  "kind": "micro_unit",
+  "schema_version": "micro-unit-pack/1",
+  "pack_id": "invented-vocabulary-order-v1",
+  "methods": [
+    {
+      "id": "worked_then_retrieve",
+      "name": "Worked example then retrieval",
+      "description": "Worked example and explanation, followed by retrieval and feedback."
+    },
+    {
+      "id": "predict_first",
+      "name": "Prediction question first",
+      "description": "Prediction attempt first, followed by worked example, explanation, and feedback."
+    }
+  ],
+  "units": [
+    {
+      "id": "bolobet",
+      "target": {
+        "word": "bolobet",
+        "gloss": "to tremble"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word bolobet means 'to tremble'. Example: Standing in the biting blizzard with only a light jacket made her whole body violently bolobet (tremble).\nQuestion: in this sentence, what does bolobet mean? The frightened kitten began to shiver and bolobet as thunder rumbled loudly overhead.\nAnswer: bolobet means 'to tremble'.",
+        "predict_first": "Question: in this sentence, what does bolobet mean? The frightened kitten began to shiver and bolobet as thunder rumbled loudly overhead.\nThe invented word bolobet means 'to tremble'. Example: Standing in the biting blizzard with only a light jacket made her whole body violently bolobet (tremble).\nAnswer: bolobet means 'to tremble'."
+      },
+      "check": {
+        "id": "bolobet-day7",
+        "family_id": "bolobet-meaning",
+        "prompt": "What does bolobet mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to tremble",
+            "tremble"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "gogi",
+      "target": {
+        "word": "gogi",
+        "gloss": "chimney"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word gogi means 'chimney'. Example: Grey smoke curled into the winter sky from the red brick gogi (chimney) atop the cottage roof.\nQuestion: in this sentence, what does gogi mean? The sweep climbed the steep shingles to clear thick soot from the stone gogi flue.\nAnswer: gogi means 'chimney'.",
+        "predict_first": "Question: in this sentence, what does gogi mean? The sweep climbed the steep shingles to clear thick soot from the stone gogi flue.\nThe invented word gogi means 'chimney'. Example: Grey smoke curled into the winter sky from the red brick gogi (chimney) atop the cottage roof.\nAnswer: gogi means 'chimney'."
+      },
+      "check": {
+        "id": "gogi-day7",
+        "family_id": "gogi-meaning",
+        "prompt": "What does gogi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "chimney"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jetdame",
+      "target": {
+        "word": "jetdame",
+        "gloss": "to polish"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jetdame means 'to polish'. Example: She used a soft flannel cloth and silver cream to jetdame (polish) the antique tea set until it shone brightly.\nQuestion: in this sentence, what does jetdame mean? He spent Sunday afternoon waxing the car hood to thoroughly jetdame away all the light scratches.\nAnswer: jetdame means 'to polish'.",
+        "predict_first": "Question: in this sentence, what does jetdame mean? He spent Sunday afternoon waxing the car hood to thoroughly jetdame away all the light scratches.\nThe invented word jetdame means 'to polish'. Example: She used a soft flannel cloth and silver cream to jetdame (polish) the antique tea set until it shone brightly.\nAnswer: jetdame means 'to polish'."
+      },
+      "check": {
+        "id": "jetdame-day7",
+        "family_id": "jetdame-meaning",
+        "prompt": "What does jetdame mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to polish",
+            "polish"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "riha",
+      "target": {
+        "word": "riha",
+        "gloss": "to stumble"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word riha means 'to stumble'. Example: Walking along the dark, unlit trail caused the weary hiker to riha (stumble) repeatedly over hidden roots.\nQuestion: in this sentence, what does riha mean? In his haste to catch the departing commuter train, he started to riha on the slippery platform.\nAnswer: riha means 'to stumble'.",
+        "predict_first": "Question: in this sentence, what does riha mean? In his haste to catch the departing commuter train, he started to riha on the slippery platform.\nThe invented word riha means 'to stumble'. Example: Walking along the dark, unlit trail caused the weary hiker to riha (stumble) repeatedly over hidden roots.\nAnswer: riha means 'to stumble'."
+      },
+      "check": {
+        "id": "riha-day7",
+        "family_id": "riha-meaning",
+        "prompt": "What does riha mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to stumble",
+            "stumble"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "fasaso",
+      "target": {
+        "word": "fasaso",
+        "gloss": "scissors"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word fasaso means 'scissors'. Example: The tailor used a sharp pair of heavy iron fasaso (scissors) to cut cleanly through the thick wool bolt.\nQuestion: in this sentence, what does fasaso mean? She grabbed the kitchen shears or small crafting fasaso to snip the stubborn plastic tag.\nAnswer: fasaso means 'scissors'.",
+        "predict_first": "Question: in this sentence, what does fasaso mean? She grabbed the kitchen shears or small crafting fasaso to snip the stubborn plastic tag.\nThe invented word fasaso means 'scissors'. Example: The tailor used a sharp pair of heavy iron fasaso (scissors) to cut cleanly through the thick wool bolt.\nAnswer: fasaso means 'scissors'."
+      },
+      "check": {
+        "id": "fasaso-day7",
+        "family_id": "fasaso-meaning",
+        "prompt": "What does fasaso mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "scissors"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jimu",
+      "target": {
+        "word": "jimu",
+        "gloss": "to trickle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jimu means 'to trickle'. Example: A tiny stream of cold melting snow water began to slowly jimu (trickle) down the vertical granite face.\nQuestion: in this sentence, what does jimu mean? Rainwater began to slowly jimu from the broken gutter onto the wooden porch steps.\nAnswer: jimu means 'to trickle'.",
+        "predict_first": "Question: in this sentence, what does jimu mean? Rainwater began to slowly jimu from the broken gutter onto the wooden porch steps.\nThe invented word jimu means 'to trickle'. Example: A tiny stream of cold melting snow water began to slowly jimu (trickle) down the vertical granite face.\nAnswer: jimu means 'to trickle'."
+      },
+      "check": {
+        "id": "jimu-day7",
+        "family_id": "jimu-meaning",
+        "prompt": "What does jimu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to trickle",
+            "trickle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "muspi",
+      "target": {
+        "word": "muspi",
+        "gloss": "compass"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word muspi means 'compass'. Example: The hiker consulted his magnetic pocket muspi (compass) to ensure he was heading due north.\nQuestion: in this sentence, what does muspi mean? The ship navigator followed the steady directional needle of the brass mariner muspi.\nAnswer: muspi means 'compass'.",
+        "predict_first": "Question: in this sentence, what does muspi mean? The ship navigator followed the steady directional needle of the brass mariner muspi.\nThe invented word muspi means 'compass'. Example: The hiker consulted his magnetic pocket muspi (compass) to ensure he was heading due north.\nAnswer: muspi means 'compass'."
+      },
+      "check": {
+        "id": "muspi-day7",
+        "family_id": "muspi-meaning",
+        "prompt": "What does muspi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "compass"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "dunfu",
+      "target": {
+        "word": "dunfu",
+        "gloss": "curtain"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word dunfu means 'curtain'. Example: She drew the heavy velvet dunfu (curtain) shut to block out the blinding morning sunlight.\nQuestion: in this sentence, what does dunfu mean? A gust of evening wind blew through the open window, fluttering the sheer lace dunfu.\nAnswer: dunfu means 'curtain'.",
+        "predict_first": "Question: in this sentence, what does dunfu mean? A gust of evening wind blew through the open window, fluttering the sheer lace dunfu.\nThe invented word dunfu means 'curtain'. Example: She drew the heavy velvet dunfu (curtain) shut to block out the blinding morning sunlight.\nAnswer: dunfu means 'curtain'."
+      },
+      "check": {
+        "id": "dunfu-day7",
+        "family_id": "dunfu-meaning",
+        "prompt": "What does dunfu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "curtain"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "kika",
+      "target": {
+        "word": "kika",
+        "gloss": "to pilfer"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word kika means 'to pilfer'. Example: The dishonest warehouse clerk was caught attempting to kika (pilfer) expensive electronic devices from stock.\nQuestion: in this sentence, what does kika mean? Raccoons crept stealthily into the darkened campsite at night to kika bread left on the picnic bench.\nAnswer: kika means 'to pilfer'.",
+        "predict_first": "Question: in this sentence, what does kika mean? Raccoons crept stealthily into the darkened campsite at night to kika bread left on the picnic bench.\nThe invented word kika means 'to pilfer'. Example: The dishonest warehouse clerk was caught attempting to kika (pilfer) expensive electronic devices from stock.\nAnswer: kika means 'to pilfer'."
+      },
+      "check": {
+        "id": "kika-day7",
+        "family_id": "kika-meaning",
+        "prompt": "What does kika mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to pilfer",
+            "pilfer"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vemzo",
+      "target": {
+        "word": "vemzo",
+        "gloss": "to fasten"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vemzo means 'to fasten'. Example: Please make sure to tightly vemzo (fasten) your seatbelt before the airplane takes off.\nQuestion: in this sentence, what does vemzo mean? She used a brass safety pin to firmly vemzo the loose cloak around her shoulders.\nAnswer: vemzo means 'to fasten'.",
+        "predict_first": "Question: in this sentence, what does vemzo mean? She used a brass safety pin to firmly vemzo the loose cloak around her shoulders.\nThe invented word vemzo means 'to fasten'. Example: Please make sure to tightly vemzo (fasten) your seatbelt before the airplane takes off.\nAnswer: vemzo means 'to fasten'."
+      },
+      "check": {
+        "id": "vemzo-day7",
+        "family_id": "vemzo-meaning",
+        "prompt": "What does vemzo mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to fasten",
+            "fasten"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vammirfi",
+      "target": {
+        "word": "vammirfi",
+        "gloss": "basket"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vammirfi means 'basket'. Example: She carried a woven wicker vammirfi (basket) filled with ripe red apples back from the orchard.\nQuestion: in this sentence, what does vammirfi mean? The children packed sandwiches and bottles of lemonade into the picnic vammirfi.\nAnswer: vammirfi means 'basket'.",
+        "predict_first": "Question: in this sentence, what does vammirfi mean? The children packed sandwiches and bottles of lemonade into the picnic vammirfi.\nThe invented word vammirfi means 'basket'. Example: She carried a woven wicker vammirfi (basket) filled with ripe red apples back from the orchard.\nAnswer: vammirfi means 'basket'."
+      },
+      "check": {
+        "id": "vammirfi-day7",
+        "family_id": "vammirfi-meaning",
+        "prompt": "What does vammirfi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "basket"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jekimu",
+      "target": {
+        "word": "jekimu",
+        "gloss": "cradle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jekimu means 'cradle'. Example: The gentle mother rocked the wooden baby jekimu (cradle) slowly until the infant fell fast asleep.\nQuestion: in this sentence, what does jekimu mean? He carved a decorative rocking jekimu out of seasoned walnut wood for his newborn daughter.\nAnswer: jekimu means 'cradle'.",
+        "predict_first": "Question: in this sentence, what does jekimu mean? He carved a decorative rocking jekimu out of seasoned walnut wood for his newborn daughter.\nThe invented word jekimu means 'cradle'. Example: The gentle mother rocked the wooden baby jekimu (cradle) slowly until the infant fell fast asleep.\nAnswer: jekimu means 'cradle'."
+      },
+      "check": {
+        "id": "jekimu-day7",
+        "family_id": "jekimu-meaning",
+        "prompt": "What does jekimu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "cradle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "kasfe",
+      "target": {
+        "word": "kasfe",
+        "gloss": "ladder"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word kasfe means 'ladder'. Example: He climbed the wooden rungs of the tall kasfe (ladder) to clear dead leaves from the roof gutter.\nQuestion: in this sentence, what does kasfe mean? The firefighter extended the aluminum rescue kasfe toward the second-story window.\nAnswer: kasfe means 'ladder'.",
+        "predict_first": "Question: in this sentence, what does kasfe mean? The firefighter extended the aluminum rescue kasfe toward the second-story window.\nThe invented word kasfe means 'ladder'. Example: He climbed the wooden rungs of the tall kasfe (ladder) to clear dead leaves from the roof gutter.\nAnswer: kasfe means 'ladder'."
+      },
+      "check": {
+        "id": "kasfe-day7",
+        "family_id": "kasfe-meaning",
+        "prompt": "What does kasfe mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "ladder"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "gopu",
+      "target": {
+        "word": "gopu",
+        "gloss": "drawer"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word gopu means 'drawer'. Example: He slid open the top wooden gopu (drawer) of his desk to search for an extra fountain pen.\nQuestion: in this sentence, what does gopu mean? She organized all her silverware neatly inside the kitchen counter gopu.\nAnswer: gopu means 'drawer'.",
+        "predict_first": "Question: in this sentence, what does gopu mean? She organized all her silverware neatly inside the kitchen counter gopu.\nThe invented word gopu means 'drawer'. Example: He slid open the top wooden gopu (drawer) of his desk to search for an extra fountain pen.\nAnswer: gopu means 'drawer'."
+      },
+      "check": {
+        "id": "gopu-day7",
+        "family_id": "gopu-meaning",
+        "prompt": "What does gopu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "drawer"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "pidise",
+      "target": {
+        "word": "pidise",
+        "gloss": "to plunge"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word pidise means 'to plunge'. Example: The brave cliff jumper took a deep breath before preparing to boldly pidise (plunge) into the deep ocean pool.\nQuestion: in this sentence, what does pidise mean? The kingfisher tucked its wings and tilted downward to steeply pidise beneath the river surface.\nAnswer: pidise means 'to plunge'.",
+        "predict_first": "Question: in this sentence, what does pidise mean? The kingfisher tucked its wings and tilted downward to steeply pidise beneath the river surface.\nThe invented word pidise means 'to plunge'. Example: The brave cliff jumper took a deep breath before preparing to boldly pidise (plunge) into the deep ocean pool.\nAnswer: pidise means 'to plunge'."
+      },
+      "check": {
+        "id": "pidise-day7",
+        "family_id": "pidise-meaning",
+        "prompt": "What does pidise mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to plunge",
+            "plunge"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "lasamga",
+      "target": {
+        "word": "lasamga",
+        "gloss": "to squeeze"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word lasamga means 'to squeeze'. Example: She cut the fresh yellow lemon in half and used her hands to firmly lasamga (squeeze) tart juice into the pitcher.\nQuestion: in this sentence, what does lasamga mean? The crowd was so dense that commuters had to tightly lasamga together into the packed subway car.\nAnswer: lasamga means 'to squeeze'.",
+        "predict_first": "Question: in this sentence, what does lasamga mean? The crowd was so dense that commuters had to tightly lasamga together into the packed subway car.\nThe invented word lasamga means 'to squeeze'. Example: She cut the fresh yellow lemon in half and used her hands to firmly lasamga (squeeze) tart juice into the pitcher.\nAnswer: lasamga means 'to squeeze'."
+      },
+      "check": {
+        "id": "lasamga-day7",
+        "family_id": "lasamga-meaning",
+        "prompt": "What does lasamga mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to squeeze",
+            "squeeze"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "gutol",
+      "target": {
+        "word": "gutol",
+        "gloss": "helmet"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word gutol means 'helmet'. Example: The bicycle rider strapped on his protective plastic gutol (helmet) before pedaling down the steep hill.\nQuestion: in this sentence, what does gutol mean? The museum knight wore a polished steel gutol topped with an ornamental horsehair plume.\nAnswer: gutol means 'helmet'.",
+        "predict_first": "Question: in this sentence, what does gutol mean? The museum knight wore a polished steel gutol topped with an ornamental horsehair plume.\nThe invented word gutol means 'helmet'. Example: The bicycle rider strapped on his protective plastic gutol (helmet) before pedaling down the steep hill.\nAnswer: gutol means 'helmet'."
+      },
+      "check": {
+        "id": "gutol-day7",
+        "family_id": "gutol-meaning",
+        "prompt": "What does gutol mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "helmet"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "tetvorwe",
+      "target": {
+        "word": "tetvorwe",
+        "gloss": "to kindle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word tetvorwe means 'to kindle'. Example: The scout struck a spark against the flint stone to quickly tetvorwe (kindle) dry pine needles into flame.\nQuestion: in this sentence, what does tetvorwe mean? He blew gently on the glowing spark to carefully tetvorwe dry birch shavings into a bright campfire.\nAnswer: tetvorwe means 'to kindle'.",
+        "predict_first": "Question: in this sentence, what does tetvorwe mean? He blew gently on the glowing spark to carefully tetvorwe dry birch shavings into a bright campfire.\nThe invented word tetvorwe means 'to kindle'. Example: The scout struck a spark against the flint stone to quickly tetvorwe (kindle) dry pine needles into flame.\nAnswer: tetvorwe means 'to kindle'."
+      },
+      "check": {
+        "id": "tetvorwe-day7",
+        "family_id": "tetvorwe-meaning",
+        "prompt": "What does tetvorwe mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to kindle",
+            "kindle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "gepave",
+      "target": {
+        "word": "gepave",
+        "gloss": "to bestow"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word gepave means 'to bestow'. Example: At the commencement ceremony, the university chancellor chose to gepave (bestow) an honorary doctorate upon her.\nQuestion: in this sentence, what does gepave mean? The generous philanthropist decided to gepave a multi-million-dollar grant upon the local hospital.\nAnswer: gepave means 'to bestow'.",
+        "predict_first": "Question: in this sentence, what does gepave mean? The generous philanthropist decided to gepave a multi-million-dollar grant upon the local hospital.\nThe invented word gepave means 'to bestow'. Example: At the commencement ceremony, the university chancellor chose to gepave (bestow) an honorary doctorate upon her.\nAnswer: gepave means 'to bestow'."
+      },
+      "check": {
+        "id": "gepave-day7",
+        "family_id": "gepave-meaning",
+        "prompt": "What does gepave mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to bestow",
+            "bestow"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "tutmolul",
+      "target": {
+        "word": "tutmolul",
+        "gloss": "to wander"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word tutmolul means 'to wander'. Example: On a lazy Sunday afternoon, they loved to leisurely tutmolul (wander) through the quiet cobblestone alleys.\nQuestion: in this sentence, what does tutmolul mean? The grazing cattle were permitted to freely tutmolul across the open pastures and foothill meadows.\nAnswer: tutmolul means 'to wander'.",
+        "predict_first": "Question: in this sentence, what does tutmolul mean? The grazing cattle were permitted to freely tutmolul across the open pastures and foothill meadows.\nThe invented word tutmolul means 'to wander'. Example: On a lazy Sunday afternoon, they loved to leisurely tutmolul (wander) through the quiet cobblestone alleys.\nAnswer: tutmolul means 'to wander'."
+      },
+      "check": {
+        "id": "tutmolul-day7",
+        "family_id": "tutmolul-meaning",
+        "prompt": "What does tutmolul mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to wander",
+            "wander"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "donu",
+      "target": {
+        "word": "donu",
+        "gloss": "to clamber"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word donu means 'to clamber'. Example: The adventurous boy used his hands and knees to clumsily donu (clamber) over the large seaside rocks.\nQuestion: in this sentence, what does donu mean? Firefighters had to carefully donu onto the steeply pitched slate roof to extinguish the chimney fire.\nAnswer: donu means 'to clamber'.",
+        "predict_first": "Question: in this sentence, what does donu mean? Firefighters had to carefully donu onto the steeply pitched slate roof to extinguish the chimney fire.\nThe invented word donu means 'to clamber'. Example: The adventurous boy used his hands and knees to clumsily donu (clamber) over the large seaside rocks.\nAnswer: donu means 'to clamber'."
+      },
+      "check": {
+        "id": "donu-day7",
+        "family_id": "donu-meaning",
+        "prompt": "What does donu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to clamber",
+            "clamber"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "kulu",
+      "target": {
+        "word": "kulu",
+        "gloss": "hammer"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word kulu means 'hammer'. Example: The carpenter swung the heavy steel kulu (hammer) to drive the iron nail into the oak beam.\nQuestion: in this sentence, what does kulu mean? With one sharp strike of the claw kulu, the bent spike drove flush into the timber.\nAnswer: kulu means 'hammer'.",
+        "predict_first": "Question: in this sentence, what does kulu mean? With one sharp strike of the claw kulu, the bent spike drove flush into the timber.\nThe invented word kulu means 'hammer'. Example: The carpenter swung the heavy steel kulu (hammer) to drive the iron nail into the oak beam.\nAnswer: kulu means 'hammer'."
+      },
+      "check": {
+        "id": "kulu-day7",
+        "family_id": "kulu-meaning",
+        "prompt": "What does kulu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "hammer"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "golsir",
+      "target": {
+        "word": "golsir",
+        "gloss": "to trample"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word golsir means 'to trample'. Example: The stampeding herd of heavy cattle threatened to completely flatten and golsir (trample) the farmer's young crops.\nQuestion: in this sentence, what does golsir mean? Careless tourists walking off the designated trail began to inadvertently golsir fragile alpine flowers.\nAnswer: golsir means 'to trample'.",
+        "predict_first": "Question: in this sentence, what does golsir mean? Careless tourists walking off the designated trail began to inadvertently golsir fragile alpine flowers.\nThe invented word golsir means 'to trample'. Example: The stampeding herd of heavy cattle threatened to completely flatten and golsir (trample) the farmer's young crops.\nAnswer: golsir means 'to trample'."
+      },
+      "check": {
+        "id": "golsir-day7",
+        "family_id": "golsir-meaning",
+        "prompt": "What does golsir mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to trample",
+            "trample"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "pugenir",
+      "target": {
+        "word": "pugenir",
+        "gloss": "lantern"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word pugenir means 'lantern'. Example: The night watchman carried a glowing brass pugenir (lantern) to illuminate the dark cobblestone alleys.\nQuestion: in this sentence, what does pugenir mean? They hung a flickering kerosene pugenir from the branch to light the evening campsite.\nAnswer: pugenir means 'lantern'.",
+        "predict_first": "Question: in this sentence, what does pugenir mean? They hung a flickering kerosene pugenir from the branch to light the evening campsite.\nThe invented word pugenir means 'lantern'. Example: The night watchman carried a glowing brass pugenir (lantern) to illuminate the dark cobblestone alleys.\nAnswer: pugenir means 'lantern'."
+      },
+      "check": {
+        "id": "pugenir-day7",
+        "family_id": "pugenir-meaning",
+        "prompt": "What does pugenir mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "lantern"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "pomu",
+      "target": {
+        "word": "pomu",
+        "gloss": "to scatter"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word pomu means 'to scatter'. Example: The strong autumn gale began to violently pomu (scatter) loose dry leaves all across the front lawn.\nQuestion: in this sentence, what does pomu mean? The farmer walked along the plowed furrows to evenly pomu wildflower seeds by the handful.\nAnswer: pomu means 'to scatter'.",
+        "predict_first": "Question: in this sentence, what does pomu mean? The farmer walked along the plowed furrows to evenly pomu wildflower seeds by the handful.\nThe invented word pomu means 'to scatter'. Example: The strong autumn gale began to violently pomu (scatter) loose dry leaves all across the front lawn.\nAnswer: pomu means 'to scatter'."
+      },
+      "check": {
+        "id": "pomu-day7",
+        "family_id": "pomu-meaning",
+        "prompt": "What does pomu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to scatter",
+            "scatter"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "mufit",
+      "target": {
+        "word": "mufit",
+        "gloss": "window"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word mufit means 'window'. Example: She pushed open the glass sash of the bedroom mufit (window) to let the cool evening breeze into the room.\nQuestion: in this sentence, what does mufit mean? Frost crystals formed intricate, delicate feathery patterns across the cold glass panes of the kitchen mufit.\nAnswer: mufit means 'window'.",
+        "predict_first": "Question: in this sentence, what does mufit mean? Frost crystals formed intricate, delicate feathery patterns across the cold glass panes of the kitchen mufit.\nThe invented word mufit means 'window'. Example: She pushed open the glass sash of the bedroom mufit (window) to let the cool evening breeze into the room.\nAnswer: mufit means 'window'."
+      },
+      "check": {
+        "id": "mufit-day7",
+        "family_id": "mufit-meaning",
+        "prompt": "What does mufit mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "window"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "dupobo",
+      "target": {
+        "word": "dupobo",
+        "gloss": "bridge"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word dupobo means 'bridge'. Example: The stone arch dupobo (bridge) spanned the wide rushing river, connecting the two historic villages.\nQuestion: in this sentence, what does dupobo mean? Traffic came to a complete halt while the raised span portion of the city dupobo opened.\nAnswer: dupobo means 'bridge'.",
+        "predict_first": "Question: in this sentence, what does dupobo mean? Traffic came to a complete halt while the raised span portion of the city dupobo opened.\nThe invented word dupobo means 'bridge'. Example: The stone arch dupobo (bridge) spanned the wide rushing river, connecting the two historic villages.\nAnswer: dupobo means 'bridge'."
+      },
+      "check": {
+        "id": "dupobo-day7",
+        "family_id": "dupobo-meaning",
+        "prompt": "What does dupobo mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "bridge"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "hilebu",
+      "target": {
+        "word": "hilebu",
+        "gloss": "valley"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word hilebu means 'valley'. Example: A peaceful green river hilebu (valley) stretched for miles between two towering snow-capped mountain ridges.\nQuestion: in this sentence, what does hilebu mean? Morning fog settled heavily over the fertile agricultural hilebu, obscuring the farmhouses.\nAnswer: hilebu means 'valley'.",
+        "predict_first": "Question: in this sentence, what does hilebu mean? Morning fog settled heavily over the fertile agricultural hilebu, obscuring the farmhouses.\nThe invented word hilebu means 'valley'. Example: A peaceful green river hilebu (valley) stretched for miles between two towering snow-capped mountain ridges.\nAnswer: hilebu means 'valley'."
+      },
+      "check": {
+        "id": "hilebu-day7",
+        "family_id": "hilebu-meaning",
+        "prompt": "What does hilebu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "valley"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "gufa",
+      "target": {
+        "word": "gufa",
+        "gloss": "shovel"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word gufa means 'shovel'. Example: The landscaper used a pointed steel gufa (shovel) to dig deep trenches for the new rose bushes.\nQuestion: in this sentence, what does gufa mean? He cleared the driveway of heavy snow using a wide plastic snow gufa.\nAnswer: gufa means 'shovel'.",
+        "predict_first": "Question: in this sentence, what does gufa mean? He cleared the driveway of heavy snow using a wide plastic snow gufa.\nThe invented word gufa means 'shovel'. Example: The landscaper used a pointed steel gufa (shovel) to dig deep trenches for the new rose bushes.\nAnswer: gufa means 'shovel'."
+      },
+      "check": {
+        "id": "gufa-day7",
+        "family_id": "gufa-meaning",
+        "prompt": "What does gufa mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "shovel"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vusigan",
+      "target": {
+        "word": "vusigan",
+        "gloss": "to dwindle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vusigan means 'to dwindle'. Example: During the prolonged summer drought, municipal water supplies began to noticeably vusigan (dwindle) week by week.\nQuestion: in this sentence, what does vusigan mean? As midnight approached, the rowdy crowd outside began to steadily vusigan to just a handful of people.\nAnswer: vusigan means 'to dwindle'.",
+        "predict_first": "Question: in this sentence, what does vusigan mean? As midnight approached, the rowdy crowd outside began to steadily vusigan to just a handful of people.\nThe invented word vusigan means 'to dwindle'. Example: During the prolonged summer drought, municipal water supplies began to noticeably vusigan (dwindle) week by week.\nAnswer: vusigan means 'to dwindle'."
+      },
+      "check": {
+        "id": "vusigan-day7",
+        "family_id": "vusigan-meaning",
+        "prompt": "What does vusigan mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to dwindle",
+            "dwindle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "tuwom",
+      "target": {
+        "word": "tuwom",
+        "gloss": "to strangle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word tuwom means 'to strangle'. Example: The constrictor snake coiled around the mouse and squeezed hard to tuwom (strangle) it within minutes.\nQuestion: in this sentence, what does tuwom mean? The nature film showed a python wrapping its prey tightly to slowly tuwom it in the grass.\nAnswer: tuwom means 'to strangle'.",
+        "predict_first": "Question: in this sentence, what does tuwom mean? The nature film showed a python wrapping its prey tightly to slowly tuwom it in the grass.\nThe invented word tuwom means 'to strangle'. Example: The constrictor snake coiled around the mouse and squeezed hard to tuwom (strangle) it within minutes.\nAnswer: tuwom means 'to strangle'."
+      },
+      "check": {
+        "id": "tuwom-day7",
+        "family_id": "tuwom-meaning",
+        "prompt": "What does tuwom mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to strangle",
+            "strangle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "motsivu",
+      "target": {
+        "word": "motsivu",
+        "gloss": "kettle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word motsivu means 'kettle'. Example: She placed the whistling motsivu (kettle) over the gas flame to boil water for morning tea.\nQuestion: in this sentence, what does motsivu mean? He poured hot water straight from the copper motsivu into the ceramic mug.\nAnswer: motsivu means 'kettle'.",
+        "predict_first": "Question: in this sentence, what does motsivu mean? He poured hot water straight from the copper motsivu into the ceramic mug.\nThe invented word motsivu means 'kettle'. Example: She placed the whistling motsivu (kettle) over the gas flame to boil water for morning tea.\nAnswer: motsivu means 'kettle'."
+      },
+      "check": {
+        "id": "motsivu-day7",
+        "family_id": "motsivu-meaning",
+        "prompt": "What does motsivu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "kettle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zikwa",
+      "target": {
+        "word": "zikwa",
+        "gloss": "necklace"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zikwa means 'necklace'. Example: She wore a stunning emerald zikwa (necklace) that caught the shimmering candlelight at the gala dinner.\nQuestion: in this sentence, what does zikwa mean? He fastened the silver chain of the delicate pendant zikwa gently around her neck.\nAnswer: zikwa means 'necklace'.",
+        "predict_first": "Question: in this sentence, what does zikwa mean? He fastened the silver chain of the delicate pendant zikwa gently around her neck.\nThe invented word zikwa means 'necklace'. Example: She wore a stunning emerald zikwa (necklace) that caught the shimmering candlelight at the gala dinner.\nAnswer: zikwa means 'necklace'."
+      },
+      "check": {
+        "id": "zikwa-day7",
+        "family_id": "zikwa-meaning",
+        "prompt": "What does zikwa mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "necklace"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "terjol",
+      "target": {
+        "word": "terjol",
+        "gloss": "sponge"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word terjol means 'sponge'. Example: He soaked the porous yellow kitchen terjol (sponge) in warm soapy water to scrub the dirty dishes.\nQuestion: in this sentence, what does terjol mean? The cleaning crew used a dense absorbent terjol to wipe food grease off the tile counter.\nAnswer: terjol means 'sponge'.",
+        "predict_first": "Question: in this sentence, what does terjol mean? The cleaning crew used a dense absorbent terjol to wipe food grease off the tile counter.\nThe invented word terjol means 'sponge'. Example: He soaked the porous yellow kitchen terjol (sponge) in warm soapy water to scrub the dirty dishes.\nAnswer: terjol means 'sponge'."
+      },
+      "check": {
+        "id": "terjol-day7",
+        "family_id": "terjol-meaning",
+        "prompt": "What does terjol mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "sponge"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "ladonmam",
+      "target": {
+        "word": "ladonmam",
+        "gloss": "to ponder"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word ladonmam means 'to ponder'. Example: The philosopher sat quietly beside the babbling brook to deeply ladonmam (ponder) the great mysteries of human life.\nQuestion: in this sentence, what does ladonmam mean? She needed several undisturbed hours alone to carefully ladonmam the new corporate job offer.\nAnswer: ladonmam means 'to ponder'.",
+        "predict_first": "Question: in this sentence, what does ladonmam mean? She needed several undisturbed hours alone to carefully ladonmam the new corporate job offer.\nThe invented word ladonmam means 'to ponder'. Example: The philosopher sat quietly beside the babbling brook to deeply ladonmam (ponder) the great mysteries of human life.\nAnswer: ladonmam means 'to ponder'."
+      },
+      "check": {
+        "id": "ladonmam-day7",
+        "family_id": "ladonmam-meaning",
+        "prompt": "What does ladonmam mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to ponder",
+            "ponder"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "wemvu",
+      "target": {
+        "word": "wemvu",
+        "gloss": "to untie"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word wemvu means 'to untie'. Example: The sailor had to use both hands and a marlinspike to wemvu (untie) the tight knot from the mooring post.\nQuestion: in this sentence, what does wemvu mean? He bent over his muddy hiking boots to patiently wemvu the double-knotted canvas shoelaces.\nAnswer: wemvu means 'to untie'.",
+        "predict_first": "Question: in this sentence, what does wemvu mean? He bent over his muddy hiking boots to patiently wemvu the double-knotted canvas shoelaces.\nThe invented word wemvu means 'to untie'. Example: The sailor had to use both hands and a marlinspike to wemvu (untie) the tight knot from the mooring post.\nAnswer: wemvu means 'to untie'."
+      },
+      "check": {
+        "id": "wemvu-day7",
+        "family_id": "wemvu-meaning",
+        "prompt": "What does wemvu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to untie",
+            "untie"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "mizanles",
+      "target": {
+        "word": "mizanles",
+        "gloss": "saddle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word mizanles means 'saddle'. Example: The stable hand tightened the leather girth and cinched the western mizanles (saddle) firmly onto the mare.\nQuestion: in this sentence, what does mizanles mean? He polished the fine brown leather of the riding mizanles with conditioning soap until it gleamed.\nAnswer: mizanles means 'saddle'.",
+        "predict_first": "Question: in this sentence, what does mizanles mean? He polished the fine brown leather of the riding mizanles with conditioning soap until it gleamed.\nThe invented word mizanles means 'saddle'. Example: The stable hand tightened the leather girth and cinched the western mizanles (saddle) firmly onto the mare.\nAnswer: mizanles means 'saddle'."
+      },
+      "check": {
+        "id": "mizanles-day7",
+        "family_id": "mizanles-meaning",
+        "prompt": "What does mizanles mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "saddle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "dejus",
+      "target": {
+        "word": "dejus",
+        "gloss": "to fathom"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word dejus means 'to fathom'. Example: Try as he might, the seasoned detective could simply not dejus (fathom) the killer's bizarre, elusive motive.\nQuestion: in this sentence, what does dejus mean? The sheer astronomical scale of the observable universe is almost impossible for the human mind to dejus.\nAnswer: dejus means 'to fathom'.",
+        "predict_first": "Question: in this sentence, what does dejus mean? The sheer astronomical scale of the observable universe is almost impossible for the human mind to dejus.\nThe invented word dejus means 'to fathom'. Example: Try as he might, the seasoned detective could simply not dejus (fathom) the killer's bizarre, elusive motive.\nAnswer: dejus means 'to fathom'."
+      },
+      "check": {
+        "id": "dejus-day7",
+        "family_id": "dejus-meaning",
+        "prompt": "What does dejus mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to fathom",
+            "fathom"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "somu",
+      "target": {
+        "word": "somu",
+        "gloss": "dagger"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word somu means 'dagger'. Example: The assassin concealed a razor-sharp steel somu (dagger) inside the inner pocket of his coat.\nQuestion: in this sentence, what does somu mean? He drew the ceremonial gold-hilted somu from its jeweled sheath during the rite.\nAnswer: somu means 'dagger'.",
+        "predict_first": "Question: in this sentence, what does somu mean? He drew the ceremonial gold-hilted somu from its jeweled sheath during the rite.\nThe invented word somu means 'dagger'. Example: The assassin concealed a razor-sharp steel somu (dagger) inside the inner pocket of his coat.\nAnswer: somu means 'dagger'."
+      },
+      "check": {
+        "id": "somu-day7",
+        "family_id": "somu-meaning",
+        "prompt": "What does somu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "dagger"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zerhe",
+      "target": {
+        "word": "zerhe",
+        "gloss": "pebble"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zerhe means 'pebble'. Example: The boy skipped a smooth, flat zerhe (pebble) seven times across the glassy surface of the lake.\nQuestion: in this sentence, what does zerhe mean? She felt an annoying, sharp little zerhe lodged uncomfortably inside the toe of her boot.\nAnswer: zerhe means 'pebble'.",
+        "predict_first": "Question: in this sentence, what does zerhe mean? She felt an annoying, sharp little zerhe lodged uncomfortably inside the toe of her boot.\nThe invented word zerhe means 'pebble'. Example: The boy skipped a smooth, flat zerhe (pebble) seven times across the glassy surface of the lake.\nAnswer: zerhe means 'pebble'."
+      },
+      "check": {
+        "id": "zerhe-day7",
+        "family_id": "zerhe-meaning",
+        "prompt": "What does zerhe mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "pebble"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jides",
+      "target": {
+        "word": "jides",
+        "gloss": "to tickle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jides means 'to tickle'. Example: The playful older sister used a fluffy feather quill to gently jides (tickle) her sleeping brother's nose.\nQuestion: in this sentence, what does jides mean? A stray wool fiber from his scarf began to persistently jides the inside of his throat until he coughed.\nAnswer: jides means 'to tickle'.",
+        "predict_first": "Question: in this sentence, what does jides mean? A stray wool fiber from his scarf began to persistently jides the inside of his throat until he coughed.\nThe invented word jides means 'to tickle'. Example: The playful older sister used a fluffy feather quill to gently jides (tickle) her sleeping brother's nose.\nAnswer: jides means 'to tickle'."
+      },
+      "check": {
+        "id": "jides-day7",
+        "family_id": "jides-meaning",
+        "prompt": "What does jides mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to tickle",
+            "tickle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "dusokgal",
+      "target": {
+        "word": "dusokgal",
+        "gloss": "fountain"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word dusokgal means 'fountain'. Example: Cool fresh water sprayed high into the afternoon air from the central marble dusokgal (fountain).\nQuestion: in this sentence, what does dusokgal mean? Tourists gathered around the plaza dusokgal and cast copper coins into the reflecting pool.\nAnswer: dusokgal means 'fountain'.",
+        "predict_first": "Question: in this sentence, what does dusokgal mean? Tourists gathered around the plaza dusokgal and cast copper coins into the reflecting pool.\nThe invented word dusokgal means 'fountain'. Example: Cool fresh water sprayed high into the afternoon air from the central marble dusokgal (fountain).\nAnswer: dusokgal means 'fountain'."
+      },
+      "check": {
+        "id": "dusokgal-day7",
+        "family_id": "dusokgal-meaning",
+        "prompt": "What does dusokgal mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "fountain"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vildi",
+      "target": {
+        "word": "vildi",
+        "gloss": "to juggle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vildi means 'to juggle'. Example: The street performer entertained the cheering crowd by learning to easily vildi (juggle) five ripe oranges.\nQuestion: in this sentence, what does vildi mean? The circus acrobat delighted the audience by managing to gracefully vildi four spinning wooden clubs.\nAnswer: vildi means 'to juggle'.",
+        "predict_first": "Question: in this sentence, what does vildi mean? The circus acrobat delighted the audience by managing to gracefully vildi four spinning wooden clubs.\nThe invented word vildi means 'to juggle'. Example: The street performer entertained the cheering crowd by learning to easily vildi (juggle) five ripe oranges.\nAnswer: vildi means 'to juggle'."
+      },
+      "check": {
+        "id": "vildi-day7",
+        "family_id": "vildi-meaning",
+        "prompt": "What does vildi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to juggle",
+            "juggle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "nowike",
+      "target": {
+        "word": "nowike",
+        "gloss": "cauldron"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word nowike means 'cauldron'. Example: The alchemist hung a heavy black iron nowike (cauldron) directly over the roaring fireplace coals.\nQuestion: in this sentence, what does nowike mean? A savory stew of venison and root vegetables simmered quietly in the large bronze nowike.\nAnswer: nowike means 'cauldron'.",
+        "predict_first": "Question: in this sentence, what does nowike mean? A savory stew of venison and root vegetables simmered quietly in the large bronze nowike.\nThe invented word nowike means 'cauldron'. Example: The alchemist hung a heavy black iron nowike (cauldron) directly over the roaring fireplace coals.\nAnswer: nowike means 'cauldron'."
+      },
+      "check": {
+        "id": "nowike-day7",
+        "family_id": "nowike-meaning",
+        "prompt": "What does nowike mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "cauldron"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vikte",
+      "target": {
+        "word": "vikte",
+        "gloss": "to bounce"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vikte means 'to bounce'. Example: The children watched the bright red rubber ball vikte (bounce) energetically down the concrete steps.\nQuestion: in this sentence, what does vikte mean? If you drop that hollow tennis ball onto hard pavement, it will immediately vikte above your head.\nAnswer: vikte means 'to bounce'.",
+        "predict_first": "Question: in this sentence, what does vikte mean? If you drop that hollow tennis ball onto hard pavement, it will immediately vikte above your head.\nThe invented word vikte means 'to bounce'. Example: The children watched the bright red rubber ball vikte (bounce) energetically down the concrete steps.\nAnswer: vikte means 'to bounce'."
+      },
+      "check": {
+        "id": "vikte-day7",
+        "family_id": "vikte-meaning",
+        "prompt": "What does vikte mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to bounce",
+            "bounce"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jubivom",
+      "target": {
+        "word": "jubivom",
+        "gloss": "to wrestle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jubivom means 'to wrestle'. Example: The two spirited boys went out onto the front lawn to playfully jubivom (wrestle) and pin each other down.\nQuestion: in this sentence, what does jubivom mean? At the county fair, two strong farmers stepped into the sawdust ring to jubivom for a blue ribbon.\nAnswer: jubivom means 'to wrestle'.",
+        "predict_first": "Question: in this sentence, what does jubivom mean? At the county fair, two strong farmers stepped into the sawdust ring to jubivom for a blue ribbon.\nThe invented word jubivom means 'to wrestle'. Example: The two spirited boys went out onto the front lawn to playfully jubivom (wrestle) and pin each other down.\nAnswer: jubivom means 'to wrestle'."
+      },
+      "check": {
+        "id": "jubivom-day7",
+        "family_id": "jubivom-meaning",
+        "prompt": "What does jubivom mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to wrestle",
+            "wrestle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "meki",
+      "target": {
+        "word": "meki",
+        "gloss": "to crumble"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word meki means 'to crumble'. Example: The ancient limestone castle walls began to slowly meki (crumble) into dust after centuries of neglect.\nQuestion: in this sentence, what does meki mean? Under the pressure of his fingers, the dry oatmeal cookie started to meki into sweet little pieces.\nAnswer: meki means 'to crumble'.",
+        "predict_first": "Question: in this sentence, what does meki mean? Under the pressure of his fingers, the dry oatmeal cookie started to meki into sweet little pieces.\nThe invented word meki means 'to crumble'. Example: The ancient limestone castle walls began to slowly meki (crumble) into dust after centuries of neglect.\nAnswer: meki means 'to crumble'."
+      },
+      "check": {
+        "id": "meki-day7",
+        "family_id": "meki-meaning",
+        "prompt": "What does meki mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to crumble",
+            "crumble"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "talpore",
+      "target": {
+        "word": "talpore",
+        "gloss": "candle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word talpore means 'candle'. Example: When the electric lights failed, he lit a small wax talpore (candle) to illuminate the dark hallway.\nQuestion: in this sentence, what does talpore mean? The gentle flame of the scented talpore flickered quietly in the evening breeze.\nAnswer: talpore means 'candle'.",
+        "predict_first": "Question: in this sentence, what does talpore mean? The gentle flame of the scented talpore flickered quietly in the evening breeze.\nThe invented word talpore means 'candle'. Example: When the electric lights failed, he lit a small wax talpore (candle) to illuminate the dark hallway.\nAnswer: talpore means 'candle'."
+      },
+      "check": {
+        "id": "talpore-day7",
+        "family_id": "talpore-meaning",
+        "prompt": "What does talpore mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "candle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zoku",
+      "target": {
+        "word": "zoku",
+        "gloss": "to shatter"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zoku means 'to shatter'. Example: Dropping the delicate porcelain teacup onto the hard tile floor caused it to instantly zoku (shatter) to bits.\nQuestion: in this sentence, what does zoku mean? A heavy falling icicle struck the greenhouse skylight, causing the glass pane to loudly zoku.\nAnswer: zoku means 'to shatter'.",
+        "predict_first": "Question: in this sentence, what does zoku mean? A heavy falling icicle struck the greenhouse skylight, causing the glass pane to loudly zoku.\nThe invented word zoku means 'to shatter'. Example: Dropping the delicate porcelain teacup onto the hard tile floor caused it to instantly zoku (shatter) to bits.\nAnswer: zoku means 'to shatter'."
+      },
+      "check": {
+        "id": "zoku-day7",
+        "family_id": "zoku-meaning",
+        "prompt": "What does zoku mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to shatter",
+            "shatter"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "herbulse",
+      "target": {
+        "word": "herbulse",
+        "gloss": "quiver"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word herbulse means 'quiver'. Example: The skilled archer reached over her shoulder and drew a straight arrow from her leather herbulse (quiver).\nQuestion: in this sentence, what does herbulse mean? He strapped the embossed leather arrow herbulse securely across his back before entering the woods.\nAnswer: herbulse means 'quiver'.",
+        "predict_first": "Question: in this sentence, what does herbulse mean? He strapped the embossed leather arrow herbulse securely across his back before entering the woods.\nThe invented word herbulse means 'quiver'. Example: The skilled archer reached over her shoulder and drew a straight arrow from her leather herbulse (quiver).\nAnswer: herbulse means 'quiver'."
+      },
+      "check": {
+        "id": "herbulse-day7",
+        "family_id": "herbulse-meaning",
+        "prompt": "What does herbulse mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "quiver"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "buvathil",
+      "target": {
+        "word": "buvathil",
+        "gloss": "castle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word buvathil means 'castle'. Example: High upon the rocky cliff stood the ancient stone buvathil (castle), overlooking the stormy sea.\nQuestion: in this sentence, what does buvathil mean? The royal family retreated behind the fortified walls and deep moat of the medieval buvathil.\nAnswer: buvathil means 'castle'.",
+        "predict_first": "Question: in this sentence, what does buvathil mean? The royal family retreated behind the fortified walls and deep moat of the medieval buvathil.\nThe invented word buvathil means 'castle'. Example: High upon the rocky cliff stood the ancient stone buvathil (castle), overlooking the stormy sea.\nAnswer: buvathil means 'castle'."
+      },
+      "check": {
+        "id": "buvathil-day7",
+        "family_id": "buvathil-meaning",
+        "prompt": "What does buvathil mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "castle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "loka",
+      "target": {
+        "word": "loka",
+        "gloss": "garlic"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word loka means 'garlic'. Example: The chef peeled and crushed three aromatic cloves of fresh loka (garlic) for the pasta sauce.\nQuestion: in this sentence, what does loka mean? A pungent, savory aroma of sizzling loka and olive oil filled the busy restaurant kitchen.\nAnswer: loka means 'garlic'.",
+        "predict_first": "Question: in this sentence, what does loka mean? A pungent, savory aroma of sizzling loka and olive oil filled the busy restaurant kitchen.\nThe invented word loka means 'garlic'. Example: The chef peeled and crushed three aromatic cloves of fresh loka (garlic) for the pasta sauce.\nAnswer: loka means 'garlic'."
+      },
+      "check": {
+        "id": "loka-day7",
+        "family_id": "loka-meaning",
+        "prompt": "What does loka mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "garlic"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "fasfumu",
+      "target": {
+        "word": "fasfumu",
+        "gloss": "tunnel"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word fasfumu means 'tunnel'. Example: The express commuter train plunged into the dark subterranean fasfumu (tunnel) beneath the mountain pass.\nQuestion: in this sentence, what does fasfumu mean? Miners dug a reinforced underground transit fasfumu extending two miles through solid granite.\nAnswer: fasfumu means 'tunnel'.",
+        "predict_first": "Question: in this sentence, what does fasfumu mean? Miners dug a reinforced underground transit fasfumu extending two miles through solid granite.\nThe invented word fasfumu means 'tunnel'. Example: The express commuter train plunged into the dark subterranean fasfumu (tunnel) beneath the mountain pass.\nAnswer: fasfumu means 'tunnel'."
+      },
+      "check": {
+        "id": "fasfumu-day7",
+        "family_id": "fasfumu-meaning",
+        "prompt": "What does fasfumu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "tunnel"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "junfura",
+      "target": {
+        "word": "junfura",
+        "gloss": "to engulf"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word junfura means 'to engulf'. Example: Within minutes of ignition, ferocious wildfire flames threatened to completely junfura (engulf) the pine cabin.\nQuestion: in this sentence, what does junfura mean? A sudden thick bank of coastal ocean fog rolled inland to quickly junfura the entire harbor town.\nAnswer: junfura means 'to engulf'.",
+        "predict_first": "Question: in this sentence, what does junfura mean? A sudden thick bank of coastal ocean fog rolled inland to quickly junfura the entire harbor town.\nThe invented word junfura means 'to engulf'. Example: Within minutes of ignition, ferocious wildfire flames threatened to completely junfura (engulf) the pine cabin.\nAnswer: junfura means 'to engulf'."
+      },
+      "check": {
+        "id": "junfura-day7",
+        "family_id": "junfura-meaning",
+        "prompt": "What does junfura mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to engulf",
+            "engulf"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "lihanta",
+      "target": {
+        "word": "lihanta",
+        "gloss": "bucket"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word lihanta means 'bucket'. Example: The milkmaid carried a sloshing lihanta (bucket) of warm milk back to the dairy barn.\nQuestion: in this sentence, what does lihanta mean? He lowered the empty wooden lihanta down into the darkness of the old stone well.\nAnswer: lihanta means 'bucket'.",
+        "predict_first": "Question: in this sentence, what does lihanta mean? He lowered the empty wooden lihanta down into the darkness of the old stone well.\nThe invented word lihanta means 'bucket'. Example: The milkmaid carried a sloshing lihanta (bucket) of warm milk back to the dairy barn.\nAnswer: lihanta means 'bucket'."
+      },
+      "check": {
+        "id": "lihanta-day7",
+        "family_id": "lihanta-meaning",
+        "prompt": "What does lihanta mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "bucket"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "dusohul",
+      "target": {
+        "word": "dusohul",
+        "gloss": "anchor"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word dusohul means 'anchor'. Example: The sailors dropped the heavy iron dusohul (anchor) overboard to keep the sailboat steady in the bay.\nQuestion: in this sentence, what does dusohul mean? Strong ocean currents tested the grip of the mooring dusohul embedded deep in the seabed.\nAnswer: dusohul means 'anchor'.",
+        "predict_first": "Question: in this sentence, what does dusohul mean? Strong ocean currents tested the grip of the mooring dusohul embedded deep in the seabed.\nThe invented word dusohul means 'anchor'. Example: The sailors dropped the heavy iron dusohul (anchor) overboard to keep the sailboat steady in the bay.\nAnswer: dusohul means 'anchor'."
+      },
+      "check": {
+        "id": "dusohul-day7",
+        "family_id": "dusohul-meaning",
+        "prompt": "What does dusohul mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "anchor"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "famlinel",
+      "target": {
+        "word": "famlinel",
+        "gloss": "bottle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word famlinel means 'bottle'. Example: He pulled the tight cork from the vintage glass famlinel (bottle) and poured red wine into two glasses.\nQuestion: in this sentence, what does famlinel mean? The hiker filled his aluminum water famlinel from the cold mountain stream.\nAnswer: famlinel means 'bottle'.",
+        "predict_first": "Question: in this sentence, what does famlinel mean? The hiker filled his aluminum water famlinel from the cold mountain stream.\nThe invented word famlinel means 'bottle'. Example: He pulled the tight cork from the vintage glass famlinel (bottle) and poured red wine into two glasses.\nAnswer: famlinel means 'bottle'."
+      },
+      "check": {
+        "id": "famlinel-day7",
+        "family_id": "famlinel-meaning",
+        "prompt": "What does famlinel mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "bottle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "kemi",
+      "target": {
+        "word": "kemi",
+        "gloss": "to harvest"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word kemi means 'to harvest'. Example: The farming family worked from dawn until dusk to kemi (harvest) the golden wheat before autumn rains fell.\nQuestion: in this sentence, what does kemi mean? In late October, workers gathered in the vineyard to kemi clusters of sweet, ripe purple grapes.\nAnswer: kemi means 'to harvest'.",
+        "predict_first": "Question: in this sentence, what does kemi mean? In late October, workers gathered in the vineyard to kemi clusters of sweet, ripe purple grapes.\nThe invented word kemi means 'to harvest'. Example: The farming family worked from dawn until dusk to kemi (harvest) the golden wheat before autumn rains fell.\nAnswer: kemi means 'to harvest'."
+      },
+      "check": {
+        "id": "kemi-day7",
+        "family_id": "kemi-meaning",
+        "prompt": "What does kemi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to harvest",
+            "harvest"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "budomha",
+      "target": {
+        "word": "budomha",
+        "gloss": "meadow"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word budomha means 'meadow'. Example: Cattle grazed contentedly upon the lush clover growing across the wide mountain budomha (meadow).\nQuestion: in this sentence, what does budomha mean? Bright yellow buttercups and purple lupines blanketed the sunny alpine budomha in late spring.\nAnswer: budomha means 'meadow'.",
+        "predict_first": "Question: in this sentence, what does budomha mean? Bright yellow buttercups and purple lupines blanketed the sunny alpine budomha in late spring.\nThe invented word budomha means 'meadow'. Example: Cattle grazed contentedly upon the lush clover growing across the wide mountain budomha (meadow).\nAnswer: budomha means 'meadow'."
+      },
+      "check": {
+        "id": "budomha-day7",
+        "family_id": "budomha-meaning",
+        "prompt": "What does budomha mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "meadow"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zujarmu",
+      "target": {
+        "word": "zujarmu",
+        "gloss": "to paddle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zujarmu means 'to paddle'. Example: The two scouts picked up their wooden oars and began to steadily zujarmu (paddle) their canoe across the calm lake.\nQuestion: in this sentence, what does zujarmu mean? When the motor failed, the stranded fishermen had to manually zujarmu their small dinghy back to shore.\nAnswer: zujarmu means 'to paddle'.",
+        "predict_first": "Question: in this sentence, what does zujarmu mean? When the motor failed, the stranded fishermen had to manually zujarmu their small dinghy back to shore.\nThe invented word zujarmu means 'to paddle'. Example: The two scouts picked up their wooden oars and began to steadily zujarmu (paddle) their canoe across the calm lake.\nAnswer: zujarmu means 'to paddle'."
+      },
+      "check": {
+        "id": "zujarmu-day7",
+        "family_id": "zujarmu-meaning",
+        "prompt": "What does zujarmu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to paddle",
+            "paddle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "ropowu",
+      "target": {
+        "word": "ropowu",
+        "gloss": "pillow"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word ropowu means 'pillow'. Example: She fluffed the soft down ropowu (pillow) before resting her tired neck for the night.\nQuestion: in this sentence, what does ropowu mean? He slept soundly with his head nestled deep into the embroidered ropowu.\nAnswer: ropowu means 'pillow'.",
+        "predict_first": "Question: in this sentence, what does ropowu mean? He slept soundly with his head nestled deep into the embroidered ropowu.\nThe invented word ropowu means 'pillow'. Example: She fluffed the soft down ropowu (pillow) before resting her tired neck for the night.\nAnswer: ropowu means 'pillow'."
+      },
+      "check": {
+        "id": "ropowu-day7",
+        "family_id": "ropowu-meaning",
+        "prompt": "What does ropowu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "pillow"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zukofus",
+      "target": {
+        "word": "zukofus",
+        "gloss": "to muster"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zukofus means 'to muster'. Example: The field general sounded the bugle call to immediately zukofus (muster) all available infantry regiments.\nQuestion: in this sentence, what does zukofus mean? The sailing captain blew his silver whistle to promptly zukofus every crew member on the upper deck.\nAnswer: zukofus means 'to muster'.",
+        "predict_first": "Question: in this sentence, what does zukofus mean? The sailing captain blew his silver whistle to promptly zukofus every crew member on the upper deck.\nThe invented word zukofus means 'to muster'. Example: The field general sounded the bugle call to immediately zukofus (muster) all available infantry regiments.\nAnswer: zukofus means 'to muster'."
+      },
+      "check": {
+        "id": "zukofus-day7",
+        "family_id": "zukofus-meaning",
+        "prompt": "What does zukofus mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to muster",
+            "muster"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "penmu",
+      "target": {
+        "word": "penmu",
+        "gloss": "ribbon"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word penmu means 'ribbon'. Example: She tied a bright scarlet satin penmu (ribbon) into an elegant bow around the wrapped birthday present.\nQuestion: in this sentence, what does penmu mean? The championship prize horse wore a wide blue silk penmu pinned proudly to its bridle.\nAnswer: penmu means 'ribbon'.",
+        "predict_first": "Question: in this sentence, what does penmu mean? The championship prize horse wore a wide blue silk penmu pinned proudly to its bridle.\nThe invented word penmu means 'ribbon'. Example: She tied a bright scarlet satin penmu (ribbon) into an elegant bow around the wrapped birthday present.\nAnswer: penmu means 'ribbon'."
+      },
+      "check": {
+        "id": "penmu-day7",
+        "family_id": "penmu-meaning",
+        "prompt": "What does penmu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "ribbon"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zulkis",
+      "target": {
+        "word": "zulkis",
+        "gloss": "to saunter"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zulkis means 'to saunter'. Example: On warm summer evenings, locals loved to casually zulkis (saunter) down the wide, tree-lined avenue.\nQuestion: in this sentence, what does zulkis mean? Without any urgency, the leisurely tourists continued to zulkis through the historic marketplace.\nAnswer: zulkis means 'to saunter'.",
+        "predict_first": "Question: in this sentence, what does zulkis mean? Without any urgency, the leisurely tourists continued to zulkis through the historic marketplace.\nThe invented word zulkis means 'to saunter'. Example: On warm summer evenings, locals loved to casually zulkis (saunter) down the wide, tree-lined avenue.\nAnswer: zulkis means 'to saunter'."
+      },
+      "check": {
+        "id": "zulkis-day7",
+        "family_id": "zulkis-meaning",
+        "prompt": "What does zulkis mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to saunter",
+            "saunter"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "pemba",
+      "target": {
+        "word": "pemba",
+        "gloss": "to linger"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word pemba means 'to linger'. Example: After the delicious banquet concluded, guests were happy to relax and pemba (linger) around the cozy hearth.\nQuestion: in this sentence, what does pemba mean? After the school play ended, the proud parents chose to pemba in the lobby and chat.\nAnswer: pemba means 'to linger'.",
+        "predict_first": "Question: in this sentence, what does pemba mean? After the school play ended, the proud parents chose to pemba in the lobby and chat.\nThe invented word pemba means 'to linger'. Example: After the delicious banquet concluded, guests were happy to relax and pemba (linger) around the cozy hearth.\nAnswer: pemba means 'to linger'."
+      },
+      "check": {
+        "id": "pemba-day7",
+        "family_id": "pemba-meaning",
+        "prompt": "What does pemba mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to linger",
+            "linger"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "mamnata",
+      "target": {
+        "word": "mamnata",
+        "gloss": "to swallow"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word mamnata means 'to swallow'. Example: He had to take a large sip of cold water to easily mamnata (swallow) the bitter medicine tablet.\nQuestion: in this sentence, what does mamnata mean? The hungry pelican tilted its head back to quickly mamnata the entire wriggling fish in one motion.\nAnswer: mamnata means 'to swallow'.",
+        "predict_first": "Question: in this sentence, what does mamnata mean? The hungry pelican tilted its head back to quickly mamnata the entire wriggling fish in one motion.\nThe invented word mamnata means 'to swallow'. Example: He had to take a large sip of cold water to easily mamnata (swallow) the bitter medicine tablet.\nAnswer: mamnata means 'to swallow'."
+      },
+      "check": {
+        "id": "mamnata-day7",
+        "family_id": "mamnata-meaning",
+        "prompt": "What does mamnata mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to swallow",
+            "swallow"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "zahaskin",
+      "target": {
+        "word": "zahaskin",
+        "gloss": "to borrow"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word zahaskin means 'to borrow'. Example: He went next door to politely zahaskin (borrow) a cup of sugar and an extra egg from his neighbor.\nQuestion: in this sentence, what does zahaskin mean? Can I temporarily zahaskin your lawnmower this weekend while mine is in the repair shop?\nAnswer: zahaskin means 'to borrow'.",
+        "predict_first": "Question: in this sentence, what does zahaskin mean? Can I temporarily zahaskin your lawnmower this weekend while mine is in the repair shop?\nThe invented word zahaskin means 'to borrow'. Example: He went next door to politely zahaskin (borrow) a cup of sugar and an extra egg from his neighbor.\nAnswer: zahaskin means 'to borrow'."
+      },
+      "check": {
+        "id": "zahaskin-day7",
+        "family_id": "zahaskin-meaning",
+        "prompt": "What does zahaskin mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to borrow",
+            "borrow"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "wuluhi",
+      "target": {
+        "word": "wuluhi",
+        "gloss": "carpet"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word wuluhi means 'carpet'. Example: The thick oriental wuluhi (carpet) muffled footsteps and kept the living room floor pleasantly warm.\nQuestion: in this sentence, what does wuluhi mean? He vacuumed the plush wool wuluhi thoroughly before the evening guests arrived.\nAnswer: wuluhi means 'carpet'.",
+        "predict_first": "Question: in this sentence, what does wuluhi mean? He vacuumed the plush wool wuluhi thoroughly before the evening guests arrived.\nThe invented word wuluhi means 'carpet'. Example: The thick oriental wuluhi (carpet) muffled footsteps and kept the living room floor pleasantly warm.\nAnswer: wuluhi means 'carpet'."
+      },
+      "check": {
+        "id": "wuluhi-day7",
+        "family_id": "wuluhi-meaning",
+        "prompt": "What does wuluhi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "carpet"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "rinufa",
+      "target": {
+        "word": "rinufa",
+        "gloss": "to garner"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word rinufa means 'to garner'. Example: Through tireless community organizing, the young candidate managed to rinufa (garner) massive popular support.\nQuestion: in this sentence, what does rinufa mean? The innovative research documentary succeeded to quickly rinufa critical acclaim at the film festival.\nAnswer: rinufa means 'to garner'.",
+        "predict_first": "Question: in this sentence, what does rinufa mean? The innovative research documentary succeeded to quickly rinufa critical acclaim at the film festival.\nThe invented word rinufa means 'to garner'. Example: Through tireless community organizing, the young candidate managed to rinufa (garner) massive popular support.\nAnswer: rinufa means 'to garner'."
+      },
+      "check": {
+        "id": "rinufa-day7",
+        "family_id": "rinufa-meaning",
+        "prompt": "What does rinufa mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to garner",
+            "garner"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jotzo",
+      "target": {
+        "word": "jotzo",
+        "gloss": "anvil"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jotzo means 'anvil'. Example: The blacksmith placed the glowing red iron horseshoe onto the heavy steel jotzo (anvil) and began pounding.\nQuestion: in this sentence, what does jotzo mean? Ring after ring of hammer blows resonated loudly from the hardened iron horn of the workshop jotzo.\nAnswer: jotzo means 'anvil'.",
+        "predict_first": "Question: in this sentence, what does jotzo mean? Ring after ring of hammer blows resonated loudly from the hardened iron horn of the workshop jotzo.\nThe invented word jotzo means 'anvil'. Example: The blacksmith placed the glowing red iron horseshoe onto the heavy steel jotzo (anvil) and began pounding.\nAnswer: jotzo means 'anvil'."
+      },
+      "check": {
+        "id": "jotzo-day7",
+        "family_id": "jotzo-meaning",
+        "prompt": "What does jotzo mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "anvil"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "hojosva",
+      "target": {
+        "word": "hojosva",
+        "gloss": "mattress"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word hojosva means 'mattress'. Example: He collapsed onto the soft foam hojosva (mattress) after hiking twenty miles through rough mountains.\nQuestion: in this sentence, what does hojosva mean? They bought a firm inner-spring hojosva to help relieve chronic morning lower back pain.\nAnswer: hojosva means 'mattress'.",
+        "predict_first": "Question: in this sentence, what does hojosva mean? They bought a firm inner-spring hojosva to help relieve chronic morning lower back pain.\nThe invented word hojosva means 'mattress'. Example: He collapsed onto the soft foam hojosva (mattress) after hiking twenty miles through rough mountains.\nAnswer: hojosva means 'mattress'."
+      },
+      "check": {
+        "id": "hojosva-day7",
+        "family_id": "hojosva-meaning",
+        "prompt": "What does hojosva mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "mattress"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "besumbem",
+      "target": {
+        "word": "besumbem",
+        "gloss": "furnace"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word besumbem means 'furnace'. Example: Workers shoveled coal into the fiery industrial besumbem (furnace) to melt the raw scrap iron.\nQuestion: in this sentence, what does besumbem mean? In the depths of winter, the basement central heating besumbem ran day and night.\nAnswer: besumbem means 'furnace'.",
+        "predict_first": "Question: in this sentence, what does besumbem mean? In the depths of winter, the basement central heating besumbem ran day and night.\nThe invented word besumbem means 'furnace'. Example: Workers shoveled coal into the fiery industrial besumbem (furnace) to melt the raw scrap iron.\nAnswer: besumbem means 'furnace'."
+      },
+      "check": {
+        "id": "besumbem-day7",
+        "family_id": "besumbem-meaning",
+        "prompt": "What does besumbem mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "furnace"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "nifik",
+      "target": {
+        "word": "nifik",
+        "gloss": "to splash"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word nifik means 'to splash'. Example: The energetic children loved to jump into muddy rain puddles and nifik (splash) murky water onto each other.\nQuestion: in this sentence, what does nifik mean? When the speeding delivery truck hit the deep puddle, it began to noisily nifik murky water across the sidewalk.\nAnswer: nifik means 'to splash'.",
+        "predict_first": "Question: in this sentence, what does nifik mean? When the speeding delivery truck hit the deep puddle, it began to noisily nifik murky water across the sidewalk.\nThe invented word nifik means 'to splash'. Example: The energetic children loved to jump into muddy rain puddles and nifik (splash) murky water onto each other.\nAnswer: nifik means 'to splash'."
+      },
+      "check": {
+        "id": "nifik-day7",
+        "family_id": "nifik-meaning",
+        "prompt": "What does nifik mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to splash",
+            "splash"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "nevifut",
+      "target": {
+        "word": "nevifut",
+        "gloss": "whistle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word nevifut means 'whistle'. Example: The soccer referee blew a loud, piercing blast on his metal nevifut (whistle) to halt play immediately.\nQuestion: in this sentence, what does nevifut mean? He gave a sharp two-finger signal and a shrill pocket nevifut blast to call his sheepdog back.\nAnswer: nevifut means 'whistle'.",
+        "predict_first": "Question: in this sentence, what does nevifut mean? He gave a sharp two-finger signal and a shrill pocket nevifut blast to call his sheepdog back.\nThe invented word nevifut means 'whistle'. Example: The soccer referee blew a loud, piercing blast on his metal nevifut (whistle) to halt play immediately.\nAnswer: nevifut means 'whistle'."
+      },
+      "check": {
+        "id": "nevifut-day7",
+        "family_id": "nevifut-meaning",
+        "prompt": "What does nevifut mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "whistle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "pekpa",
+      "target": {
+        "word": "pekpa",
+        "gloss": "orchard"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word pekpa means 'orchard'. Example: Rows of mature apple and cherry trees stood laden with ripe fruit throughout the pekpa (orchard).\nQuestion: in this sentence, what does pekpa mean? The family spent a sunny autumn afternoon picking crisp Honeycrisp apples in the local pekpa.\nAnswer: pekpa means 'orchard'.",
+        "predict_first": "Question: in this sentence, what does pekpa mean? The family spent a sunny autumn afternoon picking crisp Honeycrisp apples in the local pekpa.\nThe invented word pekpa means 'orchard'. Example: Rows of mature apple and cherry trees stood laden with ripe fruit throughout the pekpa (orchard).\nAnswer: pekpa means 'orchard'."
+      },
+      "check": {
+        "id": "pekpa-day7",
+        "family_id": "pekpa-meaning",
+        "prompt": "What does pekpa mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "orchard"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "dahassi",
+      "target": {
+        "word": "dahassi",
+        "gloss": "to scramble"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word dahassi means 'to scramble'. Example: The energetic hikers had to use both hands and feet to dahassi (scramble) up the steep, slippery gravel slope.\nQuestion: in this sentence, what does dahassi mean? The children had to dahassi over the large boulders on hands and knees to reach the beach.\nAnswer: dahassi means 'to scramble'.",
+        "predict_first": "Question: in this sentence, what does dahassi mean? The children had to dahassi over the large boulders on hands and knees to reach the beach.\nThe invented word dahassi means 'to scramble'. Example: The energetic hikers had to use both hands and feet to dahassi (scramble) up the steep, slippery gravel slope.\nAnswer: dahassi means 'to scramble'."
+      },
+      "check": {
+        "id": "dahassi-day7",
+        "family_id": "dahassi-meaning",
+        "prompt": "What does dahassi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to scramble",
+            "scramble"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "mokipe",
+      "target": {
+        "word": "mokipe",
+        "gloss": "to sharpen"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word mokipe means 'to sharpen'. Example: The carpenter used a whetstone and fine oil to mokipe (sharpen) the dull iron blade of his block plane.\nQuestion: in this sentence, what does mokipe mean? Before carving the roast turkey, the chef took time to carefully mokipe his long carving knife.\nAnswer: mokipe means 'to sharpen'.",
+        "predict_first": "Question: in this sentence, what does mokipe mean? Before carving the roast turkey, the chef took time to carefully mokipe his long carving knife.\nThe invented word mokipe means 'to sharpen'. Example: The carpenter used a whetstone and fine oil to mokipe (sharpen) the dull iron blade of his block plane.\nAnswer: mokipe means 'to sharpen'."
+      },
+      "check": {
+        "id": "mokipe-day7",
+        "family_id": "mokipe-meaning",
+        "prompt": "What does mokipe mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to sharpen",
+            "sharpen"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "roli",
+      "target": {
+        "word": "roli",
+        "gloss": "to whisper"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word roli means 'to whisper'. Example: She leaned close to her friend's ear to softly roli (whisper) the surprising secret so no one overheard.\nQuestion: in this sentence, what does roli mean? In the quiet university library, students had to roli quietly to avoid disturbing other readers.\nAnswer: roli means 'to whisper'.",
+        "predict_first": "Question: in this sentence, what does roli mean? In the quiet university library, students had to roli quietly to avoid disturbing other readers.\nThe invented word roli means 'to whisper'. Example: She leaned close to her friend's ear to softly roli (whisper) the surprising secret so no one overheard.\nAnswer: roli means 'to whisper'."
+      },
+      "check": {
+        "id": "roli-day7",
+        "family_id": "roli-meaning",
+        "prompt": "What does roli mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to whisper",
+            "whisper"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "pomrime",
+      "target": {
+        "word": "pomrime",
+        "gloss": "wagon"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word pomrime means 'wagon'. Example: Two strong draft horses pulled the heavy wooden pomrime (wagon) loaded high with fresh golden hay.\nQuestion: in this sentence, what does pomrime mean? The pioneer family packed all their household belongings into a sturdy canvas-covered prairie pomrime.\nAnswer: pomrime means 'wagon'.",
+        "predict_first": "Question: in this sentence, what does pomrime mean? The pioneer family packed all their household belongings into a sturdy canvas-covered prairie pomrime.\nThe invented word pomrime means 'wagon'. Example: Two strong draft horses pulled the heavy wooden pomrime (wagon) loaded high with fresh golden hay.\nAnswer: pomrime means 'wagon'."
+      },
+      "check": {
+        "id": "pomrime-day7",
+        "family_id": "pomrime-meaning",
+        "prompt": "What does pomrime mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "wagon"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "tilubo",
+      "target": {
+        "word": "tilubo",
+        "gloss": "feather"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word tilubo means 'feather'. Example: A single fluffy hawk tilubo (feather) floated gently downward through the still autumn air.\nQuestion: in this sentence, what does tilubo mean? She dipped the tip of the goose tilubo quill into black ink to sign the parchment.\nAnswer: tilubo means 'feather'.",
+        "predict_first": "Question: in this sentence, what does tilubo mean? She dipped the tip of the goose tilubo quill into black ink to sign the parchment.\nThe invented word tilubo means 'feather'. Example: A single fluffy hawk tilubo (feather) floated gently downward through the still autumn air.\nAnswer: tilubo means 'feather'."
+      },
+      "check": {
+        "id": "tilubo-day7",
+        "family_id": "tilubo-meaning",
+        "prompt": "What does tilubo mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "feather"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "woge",
+      "target": {
+        "word": "woge",
+        "gloss": "to unravel"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word woge means 'to unravel'. Example: If you tug on that loose thread on your wool sweater, the knitted cuff will rapidly begin to woge (unravel).\nQuestion: in this sentence, what does woge mean? As the old rope frayed against the sharp rock edge, its braided strands started to slowly woge.\nAnswer: woge means 'to unravel'.",
+        "predict_first": "Question: in this sentence, what does woge mean? As the old rope frayed against the sharp rock edge, its braided strands started to slowly woge.\nThe invented word woge means 'to unravel'. Example: If you tug on that loose thread on your wool sweater, the knitted cuff will rapidly begin to woge (unravel).\nAnswer: woge means 'to unravel'."
+      },
+      "check": {
+        "id": "woge-day7",
+        "family_id": "woge-meaning",
+        "prompt": "What does woge mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to unravel",
+            "unravel"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "sajahu",
+      "target": {
+        "word": "sajahu",
+        "gloss": "blanket"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word sajahu means 'blanket'. Example: During the freezing night, she pulled an extra wool sajahu (blanket) over the bed.\nQuestion: in this sentence, what does sajahu mean? They spread a checkered picnic sajahu over the cool grass under the oak tree.\nAnswer: sajahu means 'blanket'.",
+        "predict_first": "Question: in this sentence, what does sajahu mean? They spread a checkered picnic sajahu over the cool grass under the oak tree.\nThe invented word sajahu means 'blanket'. Example: During the freezing night, she pulled an extra wool sajahu (blanket) over the bed.\nAnswer: sajahu means 'blanket'."
+      },
+      "check": {
+        "id": "sajahu-day7",
+        "family_id": "sajahu-meaning",
+        "prompt": "What does sajahu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "blanket"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "futu",
+      "target": {
+        "word": "futu",
+        "gloss": "to gallop"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word futu means 'to gallop'. Example: The cavalry riders gave their mounts free rein to let them futu (gallop) swiftly across the open meadow.\nQuestion: in this sentence, what does futu mean? Hearing the distant crack of thunder, the frightened wild horses began to futu away from the ridge.\nAnswer: futu means 'to gallop'.",
+        "predict_first": "Question: in this sentence, what does futu mean? Hearing the distant crack of thunder, the frightened wild horses began to futu away from the ridge.\nThe invented word futu means 'to gallop'. Example: The cavalry riders gave their mounts free rein to let them futu (gallop) swiftly across the open meadow.\nAnswer: futu means 'to gallop'."
+      },
+      "check": {
+        "id": "futu-day7",
+        "family_id": "futu-meaning",
+        "prompt": "What does futu mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to gallop",
+            "gallop"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "poszogak",
+      "target": {
+        "word": "poszogak",
+        "gloss": "to vanish"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word poszogak means 'to vanish'. Example: The stage magician waved his silver wand over the locked black box and caused the white dove to poszogak (vanish).\nQuestion: in this sentence, what does poszogak mean? As morning sunshine warmed the tranquil valley, the thick white river fog began to rapidly poszogak.\nAnswer: poszogak means 'to vanish'.",
+        "predict_first": "Question: in this sentence, what does poszogak mean? As morning sunshine warmed the tranquil valley, the thick white river fog began to rapidly poszogak.\nThe invented word poszogak means 'to vanish'. Example: The stage magician waved his silver wand over the locked black box and caused the white dove to poszogak (vanish).\nAnswer: poszogak means 'to vanish'."
+      },
+      "check": {
+        "id": "poszogak-day7",
+        "family_id": "poszogak-meaning",
+        "prompt": "What does poszogak mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to vanish",
+            "vanish"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vodom",
+      "target": {
+        "word": "vodom",
+        "gloss": "mirror"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vodom means 'mirror'. Example: She paused in the front hallway to inspect her appearance in the oval wall vodom (mirror).\nQuestion: in this sentence, what does vodom mean? The polished silver vodom reflected morning sunlight directly across the bedroom.\nAnswer: vodom means 'mirror'.",
+        "predict_first": "Question: in this sentence, what does vodom mean? The polished silver vodom reflected morning sunlight directly across the bedroom.\nThe invented word vodom means 'mirror'. Example: She paused in the front hallway to inspect her appearance in the oval wall vodom (mirror).\nAnswer: vodom means 'mirror'."
+      },
+      "check": {
+        "id": "vodom-day7",
+        "family_id": "vodom-meaning",
+        "prompt": "What does vodom mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "mirror"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "romeksi",
+      "target": {
+        "word": "romeksi",
+        "gloss": "locket"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word romeksi means 'locket'. Example: She opened the tiny hinged gold romeksi (locket) to gaze upon the black-and-white portrait inside.\nQuestion: in this sentence, what does romeksi mean? The antique silver heart-shaped romeksi was a precious family keepsake passed down for generations.\nAnswer: romeksi means 'locket'.",
+        "predict_first": "Question: in this sentence, what does romeksi mean? The antique silver heart-shaped romeksi was a precious family keepsake passed down for generations.\nThe invented word romeksi means 'locket'. Example: She opened the tiny hinged gold romeksi (locket) to gaze upon the black-and-white portrait inside.\nAnswer: romeksi means 'locket'."
+      },
+      "check": {
+        "id": "romeksi-day7",
+        "family_id": "romeksi-meaning",
+        "prompt": "What does romeksi mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "locket"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "rofel",
+      "target": {
+        "word": "rofel",
+        "gloss": "to wither"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word rofel means 'to wither'. Example: Deprived of fresh water during the severe summer drought, the potted ferns began to shrivel and rofel (wither).\nQuestion: in this sentence, what does rofel mean? Without regular watering, even hardy garden crops will rapidly droop and rofel under the hot sun.\nAnswer: rofel means 'to wither'.",
+        "predict_first": "Question: in this sentence, what does rofel mean? Without regular watering, even hardy garden crops will rapidly droop and rofel under the hot sun.\nThe invented word rofel means 'to wither'. Example: Deprived of fresh water during the severe summer drought, the potted ferns began to shrivel and rofel (wither).\nAnswer: rofel means 'to wither'."
+      },
+      "check": {
+        "id": "rofel-day7",
+        "family_id": "rofel-meaning",
+        "prompt": "What does rofel mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to wither",
+            "wither"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "vilza",
+      "target": {
+        "word": "vilza",
+        "gloss": "barrel"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word vilza means 'barrel'. Example: The cellar master rolled a heavy wooden vilza (barrel) of aged red wine across the stone floor.\nQuestion: in this sentence, what does vilza mean? Rain poured down the roof spout straight into a large wooden water vilza.\nAnswer: vilza means 'barrel'.",
+        "predict_first": "Question: in this sentence, what does vilza mean? Rain poured down the roof spout straight into a large wooden water vilza.\nThe invented word vilza means 'barrel'. Example: The cellar master rolled a heavy wooden vilza (barrel) of aged red wine across the stone floor.\nAnswer: vilza means 'barrel'."
+      },
+      "check": {
+        "id": "vilza-day7",
+        "family_id": "vilza-meaning",
+        "prompt": "What does vilza mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "barrel"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "jolzo",
+      "target": {
+        "word": "jolzo",
+        "gloss": "to shimmer"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word jolzo means 'to shimmer'. Example: The calm surface of the mountain lake seemed to beautifully jolzo (shimmer) in the warm afternoon sunlight.\nQuestion: in this sentence, what does jolzo mean? Her elegant silk evening gown caught the candlelight and appeared to gently jolzo as she walked.\nAnswer: jolzo means 'to shimmer'.",
+        "predict_first": "Question: in this sentence, what does jolzo mean? Her elegant silk evening gown caught the candlelight and appeared to gently jolzo as she walked.\nThe invented word jolzo means 'to shimmer'. Example: The calm surface of the mountain lake seemed to beautifully jolzo (shimmer) in the warm afternoon sunlight.\nAnswer: jolzo means 'to shimmer'."
+      },
+      "check": {
+        "id": "jolzo-day7",
+        "family_id": "jolzo-meaning",
+        "prompt": "What does jolzo mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to shimmer",
+            "shimmer"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "miva",
+      "target": {
+        "word": "miva",
+        "gloss": "to glisten"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word miva means 'to glisten'. Example: Morning dew drops caused the delicate silk spiderwebs in the garden hedge to brightly miva (glisten).\nQuestion: in this sentence, what does miva mean? After the passing summer storm, wet asphalt roads began to brightly miva under the returning sunshine.\nAnswer: miva means 'to glisten'.",
+        "predict_first": "Question: in this sentence, what does miva mean? After the passing summer storm, wet asphalt roads began to brightly miva under the returning sunshine.\nThe invented word miva means 'to glisten'. Example: Morning dew drops caused the delicate silk spiderwebs in the garden hedge to brightly miva (glisten).\nAnswer: miva means 'to glisten'."
+      },
+      "check": {
+        "id": "miva-day7",
+        "family_id": "miva-meaning",
+        "prompt": "What does miva mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to glisten",
+            "glisten"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "wehesom",
+      "target": {
+        "word": "wehesom",
+        "gloss": "jacket"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word wehesom means 'jacket'. Example: He zipped up his heavy winter wehesom (jacket) against the freezing gusts blowing from the north.\nQuestion: in this sentence, what does wehesom mean? She hung her waterproof rain wehesom on the wooden coat rack near the front entry.\nAnswer: wehesom means 'jacket'.",
+        "predict_first": "Question: in this sentence, what does wehesom mean? She hung her waterproof rain wehesom on the wooden coat rack near the front entry.\nThe invented word wehesom means 'jacket'. Example: He zipped up his heavy winter wehesom (jacket) against the freezing gusts blowing from the north.\nAnswer: wehesom means 'jacket'."
+      },
+      "check": {
+        "id": "wehesom-day7",
+        "family_id": "wehesom-meaning",
+        "prompt": "What does wehesom mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "jacket"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "wiko",
+      "target": {
+        "word": "wiko",
+        "gloss": "to ignite"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word wiko means 'to ignite'. Example: He struck a flint spark against dry tinder shavings to quickly wiko (ignite) the campfire for cooking.\nQuestion: in this sentence, what does wiko mean? A single stray electrical spark was enough to instantly wiko the leaking gasoline vapors in the garage.\nAnswer: wiko means 'to ignite'.",
+        "predict_first": "Question: in this sentence, what does wiko mean? A single stray electrical spark was enough to instantly wiko the leaking gasoline vapors in the garage.\nThe invented word wiko means 'to ignite'. Example: He struck a flint spark against dry tinder shavings to quickly wiko (ignite) the campfire for cooking.\nAnswer: wiko means 'to ignite'."
+      },
+      "check": {
+        "id": "wiko-day7",
+        "family_id": "wiko-meaning",
+        "prompt": "What does wiko mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to ignite",
+            "ignite"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "fuju",
+      "target": {
+        "word": "fuju",
+        "gloss": "to throttle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word fuju means 'to throttle'. Example: The race car driver pressed the pedal to fuju (throttle) the roaring engine up to full speed.\nQuestion: in this sentence, what does fuju mean? Before docking, the captain moved the brass lever to fuju the boat's diesel engine down slowly.\nAnswer: fuju means 'to throttle'.",
+        "predict_first": "Question: in this sentence, what does fuju mean? Before docking, the captain moved the brass lever to fuju the boat's diesel engine down slowly.\nThe invented word fuju means 'to throttle'. Example: The race car driver pressed the pedal to fuju (throttle) the roaring engine up to full speed.\nAnswer: fuju means 'to throttle'."
+      },
+      "check": {
+        "id": "fuju-day7",
+        "family_id": "fuju-meaning",
+        "prompt": "What does fuju mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to throttle",
+            "throttle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "bisa",
+      "target": {
+        "word": "bisa",
+        "gloss": "to sprout"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word bisa means 'to sprout'. Example: After days of warm spring rain, tiny green shoots began to eagerly bisa (sprout) from the rich garden soil.\nQuestion: in this sentence, what does bisa mean? If you leave raw potatoes in a warm, dark cupboard, they will quickly bisa small white buds.\nAnswer: bisa means 'to sprout'.",
+        "predict_first": "Question: in this sentence, what does bisa mean? If you leave raw potatoes in a warm, dark cupboard, they will quickly bisa small white buds.\nThe invented word bisa means 'to sprout'. Example: After days of warm spring rain, tiny green shoots began to eagerly bisa (sprout) from the rich garden soil.\nAnswer: bisa means 'to sprout'."
+      },
+      "check": {
+        "id": "bisa-day7",
+        "family_id": "bisa-meaning",
+        "prompt": "What does bisa mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to sprout",
+            "sprout"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "romra",
+      "target": {
+        "word": "romra",
+        "gloss": "to ravage"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word romra means 'to ravage'. Example: A massive swarm of hungry desert locusts descended upon the countryside to romra (ravage) fertile grain crops.\nQuestion: in this sentence, what does romra mean? The category five coastal hurricane struck the barrier island, threatening to severely romra seaside homes.\nAnswer: romra means 'to ravage'.",
+        "predict_first": "Question: in this sentence, what does romra mean? The category five coastal hurricane struck the barrier island, threatening to severely romra seaside homes.\nThe invented word romra means 'to ravage'. Example: A massive swarm of hungry desert locusts descended upon the countryside to romra (ravage) fertile grain crops.\nAnswer: romra means 'to ravage'."
+      },
+      "check": {
+        "id": "romra-day7",
+        "family_id": "romra-meaning",
+        "prompt": "What does romra mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to ravage",
+            "ravage"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "gorvase",
+      "target": {
+        "word": "gorvase",
+        "gloss": "to slumber"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word gorvase means 'to slumber'. Example: After a long day of strenuous mountain trekking, he lay down to deeply gorvase (slumber) until morning.\nQuestion: in this sentence, what does gorvase mean? The newborn kitten curled up beside its mother to gorvase through the warm afternoon.\nAnswer: gorvase means 'to slumber'.",
+        "predict_first": "Question: in this sentence, what does gorvase mean? The newborn kitten curled up beside its mother to gorvase through the warm afternoon.\nThe invented word gorvase means 'to slumber'. Example: After a long day of strenuous mountain trekking, he lay down to deeply gorvase (slumber) until morning.\nAnswer: gorvase means 'to slumber'."
+      },
+      "check": {
+        "id": "gorvase-day7",
+        "family_id": "gorvase-meaning",
+        "prompt": "What does gorvase mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to slumber",
+            "slumber"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "rilwe",
+      "target": {
+        "word": "rilwe",
+        "gloss": "fence"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word rilwe means 'fence'. Example: The farmer built a sturdy wooden boundary rilwe (fence) around the perimeter of the cow pasture.\nQuestion: in this sentence, what does rilwe mean? The golden retriever leaped clean over the white picket garden rilwe into the yard.\nAnswer: rilwe means 'fence'.",
+        "predict_first": "Question: in this sentence, what does rilwe mean? The golden retriever leaped clean over the white picket garden rilwe into the yard.\nThe invented word rilwe means 'fence'. Example: The farmer built a sturdy wooden boundary rilwe (fence) around the perimeter of the cow pasture.\nAnswer: rilwe means 'fence'."
+      },
+      "check": {
+        "id": "rilwe-day7",
+        "family_id": "rilwe-meaning",
+        "prompt": "What does rilwe mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "fence"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "waga",
+      "target": {
+        "word": "waga",
+        "gloss": "to beckon"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word waga means 'to beckon'. Example: The friendly innkeeper held a warm candle high in the doorway to warmly waga (beckon) tired travelers inside.\nQuestion: in this sentence, what does waga mean? From across the crowded lobby, she waved her hand vigorously to waga her colleague over to her table.\nAnswer: waga means 'to beckon'.",
+        "predict_first": "Question: in this sentence, what does waga mean? From across the crowded lobby, she waved her hand vigorously to waga her colleague over to her table.\nThe invented word waga means 'to beckon'. Example: The friendly innkeeper held a warm candle high in the doorway to warmly waga (beckon) tired travelers inside.\nAnswer: waga means 'to beckon'."
+      },
+      "check": {
+        "id": "waga-day7",
+        "family_id": "waga-meaning",
+        "prompt": "What does waga mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "to beckon",
+            "beckon"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "lulmat",
+      "target": {
+        "word": "lulmat",
+        "gloss": "button"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word lulmat means 'button'. Example: He fastened the top horn lulmat (button) on his winter overcoat to keep out the biting frost.\nQuestion: in this sentence, what does lulmat mean? A loose mother-of-pearl lulmat popped off her silk shirt and rolled under the sofa.\nAnswer: lulmat means 'button'.",
+        "predict_first": "Question: in this sentence, what does lulmat mean? A loose mother-of-pearl lulmat popped off her silk shirt and rolled under the sofa.\nThe invented word lulmat means 'button'. Example: He fastened the top horn lulmat (button) on his winter overcoat to keep out the biting frost.\nAnswer: lulmat means 'button'."
+      },
+      "check": {
+        "id": "lulmat-day7",
+        "family_id": "lulmat-meaning",
+        "prompt": "What does lulmat mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "button"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    },
+    {
+      "id": "widija",
+      "target": {
+        "word": "widija",
+        "gloss": "needle"
+      },
+      "variants": {
+        "worked_then_retrieve": "The invented word widija means 'needle'. Example: The tailor threaded fine blue thread through the tiny eye of the sharp sewing widija (needle).\nQuestion: in this sentence, what does widija mean? She mended the torn jacket sleeve using a slender steel widija and sturdy yarn.\nAnswer: widija means 'needle'.",
+        "predict_first": "Question: in this sentence, what does widija mean? She mended the torn jacket sleeve using a slender steel widija and sturdy yarn.\nThe invented word widija means 'needle'. Example: The tailor threaded fine blue thread through the tiny eye of the sharp sewing widija (needle).\nAnswer: widija means 'needle'."
+      },
+      "check": {
+        "id": "widija-day7",
+        "family_id": "widija-meaning",
+        "prompt": "What does widija mean?",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "needle"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": []
+    }
+  ]
+}
