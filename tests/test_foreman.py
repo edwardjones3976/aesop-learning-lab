@@ -15,6 +15,30 @@ from aesop_lab.storage.sqlite import SQLiteStore
 
 
 class ForemanPreviewTests(unittest.TestCase):
+    def test_deletion_marker_survives_reopen_and_blocks_stale_comparison(self):
+        path = Path(self.temp.name) / "deleted.db"
+        preview = Preview(path)
+        cid = preview.pack.learning_order()[0]
+        comparison = preview.personal_comparison()
+        preview.lesson(cid)
+        preview.delete_data()
+        for action in (lambda: preview.lesson(cid), lambda: preview._method_for(cid),
+                       comparison.enroll, lambda: comparison.start_exposure("scope"),
+                       lambda: comparison.open_question("scope", "practice")):
+            with self.assertRaises(ApiError) as error:
+                action()
+            self.assertEqual(error.exception.status, 409)
+            self.assertEqual(error.exception.code, "learner_deleted")
+        preview.store.close()
+        reopened = Preview(path)
+        self.addCleanup(reopened.store.close)
+        self.assertTrue(reopened.overview()["deleted"])
+        self.assertIsNone(reopened.store.existing_learner_id())
+        self.assertEqual(reopened.store.list_exposures(), ())
+        reopened.restart()
+        reopened.lesson(cid)
+        self.assertIsNotNone(reopened.store.existing_learner_id())
+
     def test_fresh_overview_and_findings_do_not_create_learner_identity(self):
         preview = Preview(Path(self.temp.name) / "fresh.db")
         self.addCleanup(preview.store.close)

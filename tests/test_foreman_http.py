@@ -110,6 +110,29 @@ class ForemanHttpJourney(unittest.TestCase):
                 self.assertEqual(exported["derived"]["overview"], overview)
                 self.assertEqual(exported["derived"]["packVersion"], overview["packVersion"])
                 self.assertTrue(exported["derived"]["computedAt"].endswith("Z"))
+                request("/api/v2/delete", {})
+                self.assertTrue(request("/api/v2/overview")["deleted"])
+                for endpoint, body in [
+                    ("lesson", {"conceptId": concept}),
+                    ("personal-comparison/enroll", {}),
+                    ("personal-comparison/start", {"unitId": "scope"}),
+                    ("personal-comparison/open", {"unitId": "scope", "phase": "practice"}),
+                ]:
+                    with self.assertRaises(HTTPError) as error:
+                        request("/api/v2/" + endpoint, body)
+                    self.assertEqual(error.exception.code, 409)
+                    self.assertEqual(json.load(error.exception)["error"], "learner_deleted")
+                exported = request("/api/v2/export")
+                for key in ("learnerIdentity", "experimentAssignments", "experimentExposures",
+                            "personalAssignments", "personalExposures", "personalQuestionViews"):
+                    self.assertEqual(exported[key], [])
+                rejected("/api/v2/restart", data=b"{}",
+                         headers={"Content-Type": "application/json", "Origin": "https://foreign.example"},
+                         status=403)
+                self.assertTrue(request("/api/v2/overview")["deleted"])
+                request("/api/v2/restart", {})
+                request("/api/v2/lesson", {"conceptId": concept})
+                self.assertEqual(len(request("/api/v2/export")["learnerIdentity"]), 1)
             finally:
                 server.terminate()
                 server.wait(timeout=5)

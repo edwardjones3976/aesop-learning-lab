@@ -236,3 +236,30 @@ for (const c of testCases) {
     }
   });
 }
+
+
+test('deletion survives reload until explicit restart and keeps minutes preferences', async ({ page }) => {
+  const server = await startServerForLearner('delete-reload-test');
+  try {
+    await page.goto(server.serverBaseUrl, { waitUntil: 'networkidle' });
+    await page.locator('details.settings-panel > summary').click();
+    await expect(page.locator('#content')).not.toBeEmpty();
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#delete').click();
+    await expect(page.locator('#start-again')).toBeVisible();
+    await page.locator('#minutes').selectOption('45');
+    await page.reload();
+    await expect(page.getByText('Your data was deleted', { exact: true })).toBeVisible();
+    await expect(page.locator('#minutes')).toHaveValue('45');
+    const data = await page.request.get(server.serverBaseUrl + '/api/v2/export');
+    expect((await data.json()).learnerIdentity).toEqual([]);
+    await page.locator('#start-again').click();
+    await expect(page.locator('#start-again')).toHaveCount(0);
+    await expect.poll(async () => {
+      const response = await page.request.get(server.serverBaseUrl + '/api/v2/export');
+      return (await response.json()).learnerIdentity.length;
+    }).toBe(1);
+  } finally {
+    await server.cleanup();
+  }
+});

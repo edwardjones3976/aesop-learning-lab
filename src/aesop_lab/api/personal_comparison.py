@@ -173,6 +173,7 @@ class PersonalComparison:
                     (PROTOCOL_ID, PROTOCOL_VERSION))}
 
     def enroll(self) -> dict:
+        self.store.require_active_learner()
         if self._rows("personal_assignments"):
             return self.report()
         prior_version = self.store.connection.execute(
@@ -202,6 +203,7 @@ class PersonalComparison:
         return row
 
     def start_exposure(self, unit_id: str) -> dict:
+        self.store.require_active_learner()
         assignment = self._assigned(unit_id)
         exposures = self._rows("personal_exposures")
         responses = self._responses()
@@ -262,6 +264,7 @@ class PersonalComparison:
         return {"hint": PRACTICE_HINTS[level], "level": next_level, "assisted": True}
 
     def open_question(self, unit_id: str, phase: str) -> dict:
+        self.store.require_active_learner()
         self._assigned(unit_id)
         if phase not in ("practice", "delayed"):
             raise ValueError("Unknown comparison response phase.")
