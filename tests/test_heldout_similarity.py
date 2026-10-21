@@ -24,11 +24,11 @@ CURRENT_PACK_ALLOWLIST = {
         "Same day-1 near-transfer item; the savings practice also multiplies a decremented call."
     ),
     ("scope-week-01-v9", "scope-keyword-transfer-01-v9"): (
-        "OWNER DECISION PENDING. The day-7 primary check and the day-1 check (answered first) are "
+        "OWNER DECISION 2026-10-21: keep as is. The day-7 primary check and the day-1 check (answered first) are "
         "both two-parameter functions appending a string default. The day-7 item's tested idea, "
         "rebinding a parameter locally while the caller's variable is unchanged, is absent from "
-        "the day-1 item, and Codex's step-7 review accepted it; replacing it needs a new content "
-        "and protocol version, which is held until round-2 steps 1-3 land."
+        "the day-1 item, and Codex's step-7 review accepted it. The owner decided to keep it "
+        "rather than replace it in a new content version."
     ),
 }
 
