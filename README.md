@@ -5,7 +5,7 @@ A personal learning app that runs on your computer. It helps you study, answer a
 The [project brief](docs/project-brief.md), [module contracts](docs/module-contracts.md), and [delivery board](docs/delivery-board.md) define the first prototype. This is a new project, separate from Aesop Cognitive Core and Director Orchestrator.
 
 The [five-concept adaptive development pilot](docs/adaptive-cycle-v1.md) documents the current local learning loop, fixed instructional comparison, delayed checks, and evidence limits.
-The [personal-learning pilot update](docs/personal-intelligence-pilot.md) describes the earlier v9 content and v6 comparison rules. New learners get the plain-language v10 draft content under the [v7 comparison rules](docs/descriptive-pilot-v7.md). Earlier learners keep their original content and records. The [single-learner scope comparison](docs/single-learner-comparison-v2.md) remains a separate draft.
+The [personal-learning pilot update](docs/personal-intelligence-pilot.md) describes the earlier v9 content and v6 comparison rules. New learners get the v11 draft content under the [v8 comparison rules](docs/descriptive-pilot-v8.md). Earlier learners keep their original content and records. The [single-learner scope comparison](docs/single-learner-comparison-v2.md) remains a separate draft.
 
 Source concept: https://chatgpt.com/s/t_6accfb5560548191bdc0ba8d133d8b8d
 
