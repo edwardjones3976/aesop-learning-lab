@@ -135,7 +135,9 @@ Do not promise a reliable winner within two weeks, or disguise small differences
 
 ### Pacing decides "reasonable time" (integration check)
 
-Claude re-ran the recovery study (200 learners, same seed) with three method-assigned units a day instead of one, for example a lesson plus two practice items, each with its own delayed check:
+Claude re-ran the recovery study with `--units-per-day 3` (200 learners per gap, 600 histories, same seed).
+
+**What a unit is.** A unit means an independent micro-unit: its own exposure, taught by its own assigned method, and checked once at day 7 at weight 1. Practice items and checks that share an exposure do not count as separate units, under this document's own unit rules. They add at most weight 1 per exposure, so a lesson plus two practice items is still **one** unit. Three units a day therefore requires three separately taught items a day. A vocabulary pack can supply that, for example three new words a day, each with its own method and day-7 check. The current Python pack, with one lesson per concept, cannot.
 
 | Gap | Checks | Day | True best ranked first |
 |---|---:|---:|---|
@@ -145,9 +147,14 @@ Claude re-ran the recovery study (200 learners, same seed) with three method-ass
 | medium | 128 | 49 | 91.5% |
 | small | 512 | about 177 | the first sustained 80% |
 
-No "clear" label was wrong in either pacing run (400 learners in total).
+No learner in Claude's runs ever received a wrong "clear" label: 0 of 200 per gap, at both one and three units a day. Codex's 500-per-gap run likewise showed no wrong "clear" label at the sampled checkpoints.
 
-**Product target:** a tentative ranking from about day 9, a usually right top method by about day 28 when the methods differ meaningfully, and an honest "still tentative" when they barely differ. Meeting this needs about three method-assigned delayed units a day, so content volume is the binding constraint. One unit a day roughly doubles the time.
+**Product target, at three independent micro-units a day:**
+- a tentative ranking from about day 9;
+- a usually right top method by about day 28 when the methods differ meaningfully;
+- an honest "still tentative" when they barely differ.
+
+At one unit a day, which is what the current Python pack can supply, the same accuracy takes about day 38 for a large gap and about day 70 for a medium one. Content that supplies many independent, separately taught units is therefore the binding constraint.
 ## Learner wording
 
 Tentative: “So far, worked examples are first in your ranking (tentative). You have 8 later checks. The order may change as you answer more.”
