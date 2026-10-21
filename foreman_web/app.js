@@ -209,6 +209,7 @@ export function validateOverview(data) {
     }
     if (protocol?.exposureDurationControlled != null) requireBoolean(protocol.exposureDurationControlled, 'overview.experiment.protocol.exposureDurationControlled');
     if (protocol?.minimumPerArm != null) requireNumber(protocol.minimumPerArm, 'overview.experiment.protocol.minimumPerArm');
+    if (protocol?.minimumIndependentLearnersPerArm != null) requireNumber(protocol.minimumIndependentLearnersPerArm, 'overview.experiment.protocol.minimumIndependentLearnersPerArm');
   }
   return {
     ...overview,
@@ -588,7 +589,16 @@ export function workspaceMarkup(view) {
   const correctLabel = n => finding?.analysisUnit === 'independent_learner' ? `${n} correct on reviewed keys`
     : finding?.contentReviewStatus === 'draft' ? `${n} candidate-key match${n === 1 ? '' : 'es'}` : `${n} correct`;
   const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${correctLabel(finding.arms.text.correct)}; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${correctLabel(finding.arms.diagram.correct)}; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
+  const minLearners = finding?.protocol?.minimumIndependentLearnersPerArm
+    ?? finding?.protocol?.minimumPerArm
+    ?? (finding?.reason?.match(/minimum of (\d+) independent learners/)?.[1] ? Number(finding.reason.match(/minimum of (\d+) independent learners/)[1]) : null);
+  const singleLearnerExplanation = finding?.status === 'insufficient_evidence'
+    ? (minLearners != null
+        ? `This comparison needs at least ${minLearners} learners in each method before it can show a result. One person's answers can't show which method works better.`
+        : (finding?.reason ? `No method result yet: ${finding.reason}` : "This comparison needs more learners in each method before it can show a result. One person's answers can't show which method works better."))
+    : null;
   const limitations = [
+    singleLearnerExplanation,
     finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
     finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
     finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
