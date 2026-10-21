@@ -1,5 +1,6 @@
 """Outside-study exclusion follows the first explicit rule in protocol v5."""
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from importlib import import_module
 import unittest
@@ -11,7 +12,8 @@ from aesop_lab.domain.models import (
 
 
 class DescriptiveOutsideStudyTests(unittest.TestCase):
-    def check_response(self, version, outside_study, review, expected):
+    def check_response(self, version, outside_study, review, expected,
+                       protocol_version=None):
         module = import_module(f"aesop_lab.experiment.descriptive_v{version}")
         protocol = getattr(module, f"DESCRIPTIVE_V{version}")
         start = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
@@ -36,6 +38,16 @@ class DescriptiveOutsideStudyTests(unittest.TestCase):
             "assessment-v1", "outside-study regression",
             outside_study=outside_study, outside_study_detail="Optional annotation",
         )
+        if protocol_version is not None:
+            from aesop_lab.experiment.descriptive_v2 import _classify_first
+
+            classification, elapsed = _classify_first(
+                first, activity, exposure, set(), first.occurred_at, review,
+                replace(protocol, version=protocol_version),
+            )
+            self.assertEqual(classification, expected)
+            self.assertIsNone(elapsed)
+            return
         report = getattr(module, f"analyze_v{version}")(
             [assignment], [exposure], [first], {activity.id: activity},
             learner_id=learner, now=first.occurred_at, content_review_status=review,
@@ -72,3 +84,16 @@ class DescriptiveOutsideStudyTests(unittest.TestCase):
                 with self.subTest(version=version, review=review):
                     expected = "eligible" if review == "reviewed" else "provisional"
                     self.check_response(version, OutsideStudy.SOME, review, expected)
+
+    def test_future_protocol_excludes_reported_study(self):
+        for review in ("draft", "reviewed"):
+            with self.subTest(review=review):
+                self.check_response(7, OutsideStudy.SOME, review, "contaminated",
+                                    protocol_version="v8")
+
+    def test_malformed_protocol_version_fails_loudly(self):
+        for version in ("", "8", "v", "v8.0", "v+8", "v8 "):
+            with self.subTest(version=version):
+                with self.assertRaisesRegex(ValueError, "protocol version"):
+                    self.check_response(7, OutsideStudy.SOME, "draft", "contaminated",
+                                        protocol_version=version)

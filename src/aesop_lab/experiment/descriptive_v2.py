@@ -186,6 +186,12 @@ def _classify_first(
 ) -> tuple[str, float | None]:
     """Classify first-family response without moving the primary time window."""
 
+    if (not protocol.version.startswith("v") or
+            not protocol.version[1:] or
+            any(char not in "0123456789" for char in protocol.version[1:])):
+        raise ValueError("protocol version must be v followed by an integer")
+    protocol_number = int(protocol.version[1:])
+
     if exposure.completed_at is None or first.occurred_at > now:
         return "invalid", None
     if (first.activity_id != activity.id or
@@ -205,7 +211,7 @@ def _classify_first(
     # V5 first explicitly excludes outside study; preserve earlier protocols.
     # Only SOME reports study. UNKNOWN and missing (None) are not reports of
     # study, and optional free-text detail does not override the structured value.
-    if (protocol.version in ("v5", "v6", "v7") and
+    if (protocol_number >= 5 and
             first.outside_study is OutsideStudy.SOME):
         return "contaminated", None
     if first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT):
