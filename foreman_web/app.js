@@ -583,7 +583,11 @@ export function workspaceMarkup(view) {
       (row.invalid ? `; ${row.invalid} invalid response${row.invalid === 1 ? '' : 's'}` : '') +
       (row.exposureIncomparable ? `; ${row.exposureIncomparable} exposure${row.exposureIncomparable === 1 ? '' : 's'} without verified comparability` : '');
   };
-  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} candidate-key match${finding.arms.text.correct === 1 ? '' : 'es'}; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} candidate-key match${finding.arms.diagram.correct === 1 ? '' : 'es'}; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
+  // From v2 the arm's `correct` counts only reviewed-key outcomes (draft-key matches are
+  // counted as candidateKeyMatches); v1 counts every match, so with draft keys it is a candidate match.
+  const correctLabel = n => finding?.analysisUnit === 'independent_learner' ? `${n} correct on reviewed keys`
+    : finding?.contentReviewStatus === 'draft' ? `${n} candidate-key match${n === 1 ? '' : 'es'}` : `${n} correct`;
+  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${correctLabel(finding.arms.text.correct)}; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${correctLabel(finding.arms.diagram.correct)}; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
   const limitations = [
     finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
     finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,

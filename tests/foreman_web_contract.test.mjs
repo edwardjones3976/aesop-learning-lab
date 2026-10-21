@@ -674,20 +674,32 @@ for (const screen of ['lesson', 'practice question', 'saved draft', 'result', 'c
     }
   });
 }
-test('workspace wording calls draft-key matches candidate-key matches, not correct answers', () => {
+test('workspace wording separates reviewed-key outcomes from candidate-key matches', () => {
   const view = workspaceView();
   view.lesson.completed = false;
+  // v2+: `correct` counts reviewed-key outcomes only; draft-key matches are provisional.
   view.overview.experiment = { protocol: { id: 'text-vs-labeled-diagram', version: 'v2' },
     status: 'insufficient_evidence', reason: 'One learner.', analysisUnit: 'independent_learner',
+    contentReviewStatus: 'draft',
     arms: {
-      text: { assigned: 1, exposed: 1, eligible: 2, correct: 1, missing: 0, independentLearners: 1 },
-      diagram: { assigned: 1, exposed: 1, eligible: 2, correct: 2, missing: 0, independentLearners: 1 },
+      text: { assigned: 1, exposed: 1, eligible: 0, correct: 0, missing: 0, independentLearners: 1,
+        provisional: 2, candidateKeyMatches: 1 },
+      diagram: { assigned: 1, exposed: 1, eligible: 1, correct: 1, missing: 0, independentLearners: 1 },
     } };
-  const html = workspaceMarkup(view);
+  let html = workspaceMarkup(view);
   assert.match(html, /does not count as an independent candidate-key match\./);
-  assert.match(html, /Method A · text:<\/strong> 2 correlated concept observations, 1 candidate-key match;/);
-  assert.match(html, /Method B · text with diagram:<\/strong> 2 correlated concept observations, 2 candidate-key matches;/);
-  assert.doesNotMatch(html, /\d correct;|independent correct answer/);
+  assert.match(html, /Method A · text:<\/strong> 0 correlated concept observations, 0 correct on reviewed keys; 0 missing; 1 independent learner; 2 provisional draft-key checks \(1 candidate match\)/);
+  assert.match(html, /Method B · text with diagram:<\/strong> 1 correlated concept observations, 1 correct on reviewed keys;/);
+  assert.doesNotMatch(html, /independent correct answer/);
+  // v1: `correct` counts every key match, so with draft keys it is a candidate-key match.
+  view.overview.experiment = { protocol: { id: 'text-vs-labeled-diagram', version: 'v1' },
+    status: 'insufficient_evidence', reason: 'One learner.', contentReviewStatus: 'draft',
+    arms: Object.fromEntries(['text', 'diagram'].map((arm, i) => [arm,
+      { assigned: 1, exposed: 1, eligible: 2, correct: i + 1, missing: 0 }])) };
+  html = workspaceMarkup(view);
+  assert.match(html, /Method A · text:<\/strong> 2 eligible delayed answers, 1 candidate-key match;/);
+  assert.match(html, /Method B · text with diagram:<\/strong> 2 eligible delayed answers, 2 candidate-key matches;/);
+  assert.doesNotMatch(html, /\d correct;/);
 });
 test('review timing markup renders overdue status and returns empty string for none', () => {
   const fixedNow = new Date('2026-01-03T12:00:00Z');
