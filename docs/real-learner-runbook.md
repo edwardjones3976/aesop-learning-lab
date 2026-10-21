@@ -35,7 +35,9 @@ Three software gaps found while reviewing this runbook have been fixed in the ap
      Set-Location -LiteralPath $wt
      if ((Get-Location).Path -ne (Resolve-Path -LiteralPath $wt).Path) { throw "not inside $wt" }
      if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
-     if (git status --porcelain) { throw 'worktree has local changes' }
+     $changes = git status --porcelain
+     if ($LASTEXITCODE -ne 0) { throw 'git status failed' }
+     if ($changes) { throw 'worktree has local changes' }
      if (Test-Path $db) { throw "$db already exists: choose a new learner code" }
      New-Item -ItemType Directory $runDir | Out-Null
      py scripts/run_foreman.py --port 8780 --db $db
@@ -52,7 +54,9 @@ Three software gaps found while reviewing this runbook have been fixed in the ap
      Set-Location -LiteralPath $wt
      if ((Get-Location).Path -ne (Resolve-Path -LiteralPath $wt).Path) { throw "not inside $wt" }
      if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
-     if (git status --porcelain) { throw 'worktree has local changes: do not run' }
+     $changes = git status --porcelain
+     if ($LASTEXITCODE -ne 0) { throw 'git status failed: do not run' }
+     if ($changes) { throw 'worktree has local changes: do not run' }
      if (-not (Test-Path $db)) { throw "$db is missing" }
      py scripts/run_foreman.py --port 8780 --db $db
    }
