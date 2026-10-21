@@ -632,7 +632,7 @@ export function workspaceMarkup(view) {
 if (typeof globalThis.document !== 'undefined') {
 const content = document.querySelector('#content');
 const conceptsEl = document.querySelector('#concepts');
-const state = { overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', view: 'path', comparison: null, comparisonHint: '', started: Date.now(), confidence: null, outsideStudy: 'unknown', outsideStudyDetail: '' };
+const state = { deleted: false, overview: null, conceptId: null, lesson: null, session: null, answer: '', result: null, review: null, mode: 'recommended', view: 'path', comparison: null, comparisonHint: '', started: Date.now(), confidence: null, outsideStudy: 'unknown', outsideStudyDetail: '' };
 const preferenceKey = 'aesop.foreman.preferences.v1';
 let preferences = { minutes: 20, textSize: 'regular', theme: 'system', focus: false };
 try {
@@ -654,7 +654,7 @@ function applyPreferences() {
   document.body.classList.toggle('quiet', preferences.focus);
   try { localStorage.setItem(preferenceKey, JSON.stringify(preferences)); } catch (_) { /* Settings remain usable for this tab. */ }
 }
-document.querySelector('#minutes').onchange = async event => { preferences.minutes = Number(event.target.value); applyPreferences(); await refresh().catch(showError); };
+document.querySelector('#minutes').onchange = async event => { if (state.deleted) return; preferences.minutes = Number(event.target.value); applyPreferences(); await refresh().catch(showError); };
 document.querySelector('#text-size').onchange = event => { preferences.textSize = event.target.value; applyPreferences(); };
 document.querySelector('#theme').onchange = event => { preferences.theme = event.target.value; applyPreferences(); };
 document.querySelector('#focus').onchange = event => { preferences.focus = event.target.checked; applyPreferences(); };
@@ -663,6 +663,7 @@ applyPreferences();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function api(path, body) {
+  if (state.deleted) throw new Error('Start again to enroll as a new learner.');
   const options = body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
   const response = await fetch(path, options);
   let data;
@@ -671,15 +672,17 @@ async function api(path, body) {
   } catch (_) {
     throw new Error(`Request failed: response was not JSON (${response.status}).`);
   }
+  if (state.deleted) throw new Error('Start again to enroll as a new learner.');
   if (!response.ok) throw new Error(data.message || data.error || `Request failed (${response.status})`);
   return data;
 }
 function showError(error) {
+  if (state.deleted) return;
   document.querySelector('.error')?.remove();
   const el = document.createElement('div'); el.className = 'error'; el.role = 'alert'; el.textContent = error.message || String(error);
   const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'button secondary';
   retry.textContent = 'Try loading again';
-  retry.onclick = async () => { try { if (state.view === 'comparison') await refreshComparison(); else if (state.conceptId) await refresh(); else await boot(); } catch (next) { showError(next); } };
+  retry.onclick = async () => { if (state.deleted) return; try { if (state.view === 'comparison') await refreshComparison(); else if (state.conceptId) await refresh(); else await boot(); } catch (next) { showError(next); } };
   el.append(retry);
   content.replaceChildren(el);
 }
@@ -694,6 +697,7 @@ function concepts() {
   conceptsEl.querySelectorAll('[data-concept]').forEach(button => button.onclick = () => select(button.dataset.concept));
 }
 async function select(cid) {
+  if (state.deleted) return;
   try {
     state.view = 'path'; updateViewNavigation();
     state.conceptId = cid; state.answer = ''; state.result = null; state.review = null; state.mode = 'recommended'; state.started = Date.now(); state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
@@ -701,6 +705,7 @@ async function select(cid) {
   } catch (error) { showError(error); }
 }
 async function chooseMorePractice() {
+  if (state.deleted) return;
   const learnerReason = document.querySelector('#override-note')?.value.trim() || null;
   await api('/api/v2/overrides', { conceptId: state.conceptId, mode: 'practice', reason: 'learner_choice', learnerReason });
   state.result = null; state.review = null; state.answer = ''; state.mode = 'practice';
@@ -708,11 +713,13 @@ async function chooseMorePractice() {
   await refresh();
 }
 async function refresh() {
+  if (state.deleted) return;
   const cid = encodeURIComponent(state.conceptId);
   const [overview, lesson, session] = await Promise.all([
     api('/api/v2/overview'), api('/api/v2/lesson', {conceptId:state.conceptId}),
     api(`/api/v2/session?conceptId=${cid}&mode=${state.mode}&availableMinutes=${preferences.minutes}`)
   ]);
+  if (state.deleted) return;
   const validOverview = validateOverview(overview);
   const validLesson = validateLesson(lesson);
   const validSession = validateSession(session);
@@ -729,11 +736,15 @@ function updateViewNavigation() {
   document.querySelector('#personal-comparison').setAttribute('aria-current', state.view === 'comparison' ? 'page' : 'false');
 }
 async function refreshComparison(report, options = {}) {
-  state.comparison = report ?? await api('/api/v2/personal-comparison');
+  if (state.deleted) return;
+  const comparison = report ?? await api('/api/v2/personal-comparison');
+  if (state.deleted) return;
+  state.comparison = comparison;
   content.innerHTML = personalComparisonMarkup(state.comparison, state.comparisonHint,
     new Date(), options.justOpenedDelayed === true);
   const next = state.comparison.next;
   const comparisonError = error => {
+    if (state.deleted) return;
     content.querySelector('.comparison-action-error')?.remove();
     const message = document.createElement('p');
     message.className = 'error comparison-action-error';
@@ -805,12 +816,15 @@ async function refreshComparison(report, options = {}) {
   }
 }
 document.querySelector('#regular-path').onclick = async () => {
+  if (state.deleted) return;
   try { state.view = 'path'; updateViewNavigation(); await refresh(); } catch (error) { showError(error); }
 };
 document.querySelector('#personal-comparison').onclick = async () => {
+  if (state.deleted) return;
   try { state.view = 'comparison'; updateViewNavigation(); await refreshComparison(); } catch (error) { showError(error); }
 };
 function render() {
+  if (state.deleted) return;
   try {
     renderWorkspace();
   } catch (error) {
@@ -912,17 +926,22 @@ document.querySelector('#delete').onclick = async () => {
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
   try {
     await api('/api/v2/delete',{});
+    state.deleted = true;
     try { localStorage.removeItem(preferenceKey); } catch (_) {}
     preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences();
-    state.result = null; state.answer = ''; state.lesson = null; state.session = null; state.review = null; state.comparison = null;
+    state.overview = null; state.result = null; state.answer = ''; state.lesson = null; state.session = null; state.review = null; state.comparison = null;
+    state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
+    state.mode = 'recommended'; state.comparisonHint = ''; state.started = Date.now();
     conceptsEl.innerHTML = '';
     content.innerHTML = '<div class="empty"><h2>Your data was deleted</h2><p>No lesson is loaded. Start again to enroll as a new learner.</p><button id="start-again" class="button">Start again</button></div>';
     document.querySelector('#start-again').onclick = async () => {
+      state.deleted = false; state.started = Date.now(); state.view = 'path'; updateViewNavigation();
       try { await refresh(); } catch(error){showError(error)}
     };
   } catch(error){showError(error)}
 };
 async function boot() {
+  if (state.deleted) return;
   const overview = validateOverview(await api('/api/v2/overview'));
   state.overview = overview;
   state.conceptId = overview.pathRecommendation.conceptId;

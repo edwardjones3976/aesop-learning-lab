@@ -49,7 +49,8 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
       } },
       preferenceKey: 'preferences', preferences: {},
       applyPreferences: () => calls.push('apply preferences'),
-      state: { lesson: originalLesson, session: {}, result: {}, answer: 'saved', review: {}, comparison: {} },
+      state: { lesson: originalLesson, session: {}, result: {}, answer: 'saved', review: {}, comparison: {}, confidence: 0.75, outsideStudy: 'some', outsideStudyDetail: 'Old study', mode: 'practice', comparisonHint: 'Old hint', view: 'comparison', started: 1 },
+      updateViewNavigation: () => calls.push('navigation'),
       conceptsEl: { innerHTML: 'Old navigation' },
       content: { innerHTML: 'Old lesson' },
       refresh: async () => { calls.push('refresh'); },
@@ -68,14 +69,87 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
     assert.equal(context.state.lesson, null);
     assert.equal(context.state.session, null);
     assert.equal(context.state.answer, '');
+    assert.equal(context.state.deleted, true);
+    assert.equal(context.state.confidence, null);
+    assert.equal(context.state.outsideStudy, 'unknown');
+    assert.equal(context.state.outsideStudyDetail, '');
+    assert.equal(context.state.mode, 'recommended');
+    assert.equal(context.state.comparisonHint, '');
+    assert.equal(context.state.result, null);
+    assert.equal(context.state.review, null);
     assert.equal(context.conceptsEl.innerHTML, '');
     assert.match(context.content.innerHTML, /<h2>Your data was deleted<\/h2>/);
     assert.match(context.content.innerHTML, /No lesson is loaded/);
     assert.match(context.content.innerHTML, /<button id="start-again" class="button">Start again<\/button>/);
+    context.state.started = 1;
     await buttons['#start-again'].onclick();
+    assert.equal(context.state.deleted, false);
+    assert.equal(context.state.view, 'path');
+    assert.ok(context.state.started > 1);
+    assert.equal(calls.at(-2), 'navigation');
     assert.equal(calls.at(-1), 'refresh');
     assert.equal(calls.filter(call => call === 'refresh').length, 1);
   }
+});
+
+test('deleted state blocks refresh, navigation, retry and all API requests', async () => {
+  const source = readFileSync(new URL('../foreman_web/app.js', import.meta.url), 'utf8');
+  const nodes = new Map();
+  const node = () => ({ dataset: {}, classList: { toggle() {} }, setAttribute() {},
+    addEventListener() {}, remove() {}, append(child) { this.child = child; }, innerHTML: '' });
+  const content = node();
+  content.replaceChildren = child => { content.child = child; };
+  const context = {
+    document: { querySelector: selector => {
+      if (!nodes.has(selector)) nodes.set(selector, node());
+      return nodes.get(selector);
+    }, createElement: node, documentElement: node(), body: node() },
+    content, conceptsEl: node(),
+    localStorage: { getItem() { return null; }, setItem() {} },
+    matchMedia: () => ({ matches: false, addEventListener() {} }),
+    fetch: () => { assert.fail('deleted state must not send a request'); },
+  };
+  const runtime = source.slice(source.indexOf('const state ='), source.lastIndexOf('boot().catch(showError);'));
+  runInNewContext(runtime + `
+    showError(new Error('Before deletion'));
+    globalThis.retry = content.child.child;
+    state.deleted = true;
+    globalThis.actions = { refresh, refreshComparison, select, chooseMorePractice, boot, api };
+    globalThis.viewState = state;
+  `, context);
+  content.innerHTML = 'Your data was deleted';
+  const before = JSON.stringify(context.viewState);
+  for (const action of [
+    () => nodes.get('#minutes').onchange({ target: { value: '45' } }),
+    () => nodes.get('#regular-path').onclick(),
+    () => nodes.get('#personal-comparison').onclick(),
+    () => context.retry.onclick(),
+    () => context.actions.select('old-concept'),
+    () => context.actions.refresh(),
+    () => context.actions.refreshComparison(),
+    () => context.actions.chooseMorePractice(),
+    () => context.actions.boot(),
+  ]) {
+    await action();
+    assert.equal(content.innerHTML, 'Your data was deleted');
+    assert.equal(JSON.stringify(context.viewState), before);
+  }
+  // The shared API guard also blocks detached old lesson/comparison handlers.
+  for (const path of ['/api/v2/lesson', '/api/v2/session', '/api/v2/first-answers',
+    '/api/v2/lesson-completions', '/api/v2/overrides', '/api/v2/hints',
+    '/api/v2/attempts', '/api/v2/self-reviews', '/api/v2/personal-comparison/enroll',
+    '/api/v2/personal-comparison/start', '/api/v2/personal-comparison/open',
+    '/api/v2/personal-comparison/answer']) {
+    await assert.rejects(context.actions.api(path, {}), /Start again/);
+  }
+  context.viewState.deleted = false;
+  let finishResponse;
+  context.fetch = () => new Promise(resolve => { finishResponse = resolve; });
+  const pending = context.actions.api('/api/v2/personal-comparison');
+  context.viewState.deleted = true;
+  finishResponse({ ok: true, json: async () => ({ oldLearner: true }) });
+  await assert.rejects(pending, /Start again/);
+  assert.equal(content.innerHTML, 'Your data was deleted');
 });
 
 const emptyEvidence = () => ({
