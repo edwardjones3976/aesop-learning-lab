@@ -24,6 +24,27 @@ class ForemanPreviewTests(unittest.TestCase):
         self.assertEqual(preview.store.connection.execute(
             "SELECT COUNT(*) FROM learner_identity").fetchone()[0], 0)
 
+    def test_export_on_empty_database_creates_no_learner_or_exposure_and_matches_overview(self):
+        preview = Preview(Path(self.temp.name) / "empty_export.db")
+        self.addCleanup(preview.store.close)
+        raw_before = preview.store.export_all()
+        exported = preview.export()
+        self.assertIsNone(preview.store.existing_learner_id())
+        self.assertEqual(preview.store.list_assignments("text-vs-labeled-diagram"), ())
+        self.assertEqual(preview.store.list_exposures(), ())
+        self.assertEqual(preview.store.connection.execute(
+            "SELECT COUNT(*) FROM learner_identity").fetchone()[0], 0)
+        # Raw export keys remain unchanged and first
+        self.assertEqual(list(exported.keys())[:-1], list(raw_before.keys()))
+        self.assertEqual(list(exported.keys())[-1], "derived")
+        for key in raw_before:
+            self.assertEqual(exported[key], raw_before[key])
+        # Derived payload matches overview and has required metadata
+        derived = exported["derived"]
+        self.assertEqual(derived["packVersion"], preview.pack.pack_version)
+        self.assertEqual(derived["overview"], preview.overview())
+        self.assertTrue(derived["computedAt"].endswith("Z"))
+
     def test_current_cannot_complete_experimental_exposure_without_opening_lesson(self):
         path = Path(self.temp.name) / "unopened.db"
         preview = Preview(path)
@@ -63,6 +84,14 @@ class ForemanPreviewTests(unittest.TestCase):
                 preview.hint({"draftId": did})
             preview.submit({"draftId": did, "outsideStudy": "none"})
         initial = preview.store.export_all()
+        exported_payload = preview.export()
+        self.assertEqual(list(exported_payload.keys())[:-1], list(initial.keys()))
+        self.assertEqual(list(exported_payload.keys())[-1], "derived")
+        for key in initial:
+            self.assertEqual(exported_payload[key], initial[key])
+        self.assertEqual(exported_payload["derived"]["packVersion"], preview.pack.pack_version)
+        self.assertEqual(exported_payload["derived"]["overview"], preview.overview())
+        self.assertTrue(exported_payload["derived"]["computedAt"].endswith("Z"))
         self.assertEqual(len(initial["attempts"]), 5)
         self.assertEqual(len(initial["experimentAssignments"]), 5)
         self.assertEqual(len(initial["experimentExposures"]), 5)
