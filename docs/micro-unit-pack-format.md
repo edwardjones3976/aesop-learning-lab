@@ -52,13 +52,14 @@ candidate answer list, integer delay 7, and literal boolean `true` held-out.
 Duplicate accepted strings are rejected. Practice is optional and never adds
 units, checks, families, or weights.
 
-Leak detection uses literal, case-sensitive substring matching, without answer
-normalization. Every accepted answer is checked against its own check prompt.
-Variants may reveal an accepted answer exactly equal to the target word or
-gloss: teaching the target is necessary. Other accepted answers must not occur
-verbatim in any variant. This is the interpretation of the work order's reveal
-exception; it is not a semantic independence or paraphrase detector. Independent
-review must still assess target independence and teaching quality.
+Leak detection guards only the check prompt. Every accepted answer is matched
+against its own check prompt as a whole word or phrase, ignoring case, so "me"
+does not match "mean". Variants are not checked: a vocabulary lesson exists to
+teach the answer, including accepted synonyms. For example, gloss "to borrow"
+with the accepted answer "borrow" is legitimate in every variant. Integration
+(Claude) removed an earlier variant rule, because it would have rejected exactly
+such synonyms. This is not a semantic independence or paraphrase detector.
+Independent review must still assess target independence and teaching quality.
 
 Mapping to design #60's unit rules: the unit ID denotes one independent target,
 not a method variant or practice item. A2 must select exactly one variant for
@@ -88,5 +89,7 @@ break checks temporarily suppressed the specific path/code from each of these
 11 guards in memory: missing variant, unknown method, duplicate unit/family/check
 IDs, missing key, non-candidate key, wrong delay, held-out flag, prompt leak,
 and non-target variant leak. Every corresponding test failed: 11/11 detected.
+Integration then replaced the variant-leak rule with whole-word, case-insensitive
+prompt matching. Restoring the old substring rule fails the two new prompt tests.
 The source files were not modified by those break checks. These checks verify
 guard sensitivity; they do not establish semantic independence of the fixture.

@@ -69,10 +69,20 @@ class MicroUnitPackTests(unittest.TestCase):
         self.check['prompt'] += ' river'
         self.rejects('units[0].check.prompt', 'answer_leak')
 
-    def test_variant_leak_outside_target(self):
+    def test_prompt_leak_ignores_case_but_needs_whole_words(self):
+        self.check['prompt'] += ' RIVER'
+        self.rejects('units[0].check.prompt', 'answer_leak')
+
+    def test_partial_word_in_prompt_is_not_a_leak(self):
+        # An accepted answer inside a longer prompt word ("me" in "mean") is not a leak.
+        self.check['answer_key']['accepted'].append('me')
+        self.assertNotIn('answer_leak', [issue.code for issue in validate_micro_unit_pack(self.raw)])
+
+    def test_lessons_may_teach_synonym_answers(self):
+        # Vocabulary lessons teach the answer; an accepted synonym in a lesson is expected.
         self.check['answer_key']['accepted'].append('hidden phrase')
         self.unit['variants']['cued_retrieval'] += ' hidden phrase'
-        self.rejects('units[0].variants.cued_retrieval', 'answer_leak')
+        self.assertNotIn('answer_leak', [issue.code for issue in validate_micro_unit_pack(self.raw)])
 
     def test_schema_and_kind(self):
         for field in ('schema_version', 'kind'):

@@ -1,6 +1,7 @@
 """Strict standalone micro-unit packs. No scheduling or scoring side effects."""
 from __future__ import annotations
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -121,13 +122,11 @@ class _Reader:
             self.issue(cp + ".check_delay_days", "invalid_delay", "expected integer 7")
         if c.get("held_out") is not True:
             self.issue(cp + ".held_out", "held_out_required", "check must be held out")
+        # Lessons exist to teach the answer, so only the check prompt is guarded. Whole
+        # words, ignoring case, so "me" does not match "mean".
         for answer in accepted:
-            if answer and answer in prompt:
-                self.issue(cp + ".prompt", "answer_leak", "prompt contains its accepted answer verbatim")
-            if answer and answer not in (target.word, target.gloss):
-                for mid, body in lessons.items():
-                    if answer in body:
-                        self.issue(p + ".variants." + str(mid), "answer_leak", "lesson reveals a non-target check answer verbatim")
+            if answer and re.search(rf"(?<!\w){re.escape(answer)}(?!\w)", prompt, re.IGNORECASE):
+                self.issue(cp + ".prompt", "answer_leak", "prompt contains its accepted answer")
         practice = []
         for j, value in enumerate(self.array(u.get("practice", []), p + ".practice")):
             pp = f"{p}.practice[{j}]"
