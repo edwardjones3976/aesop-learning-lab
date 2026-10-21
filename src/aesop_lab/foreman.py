@@ -83,6 +83,7 @@ class Preview:
         self._activate_pack(PACK_BY_VERSION[next(iter(versions))] if versions else CURRENT_PACK_PATH)
 
     def personal_comparison(self) -> PersonalComparison | LegacyPersonalComparison:
+        self.store.require_active_learner()
         prior = bool(self.store.list_attempts(PERSONAL_CONCEPT_ID)) or bool(
             self.store.connection.execute(
                 "SELECT 1 FROM lesson_completions WHERE concept_id = ? LIMIT 1",
@@ -132,6 +133,8 @@ class Preview:
         }
 
     def overview(self) -> dict:
+        if self.store.learner_deleted():
+            return {"deleted": True, "packVersion": self.pack.pack_version}
         order = self.pack.learning_order()
         def summary(cid: str) -> dict:
             service = self.services[cid]
@@ -208,9 +211,13 @@ class Preview:
                 "experiment": self.experiment_findings()}
 
     def delete_data(self) -> dict:
-        self.store.delete_all()
+        self.store.delete_all(mark_deleted=True)
         self._activate_pack(CURRENT_PACK_PATH)
         return {"deleted": True, "packVersion": self.pack.pack_version}
+
+    def restart(self) -> dict:
+        self.store.restart_learner()
+        return {"deleted": False}
 
     def _path_recommendation(self, concepts: list[dict]) -> dict:
         by_id = {concept["id"]: concept for concept in concepts}
@@ -252,6 +259,7 @@ class Preview:
                 "reason": "Begin with the first lesson."}
 
     def lesson(self, cid: str) -> dict:
+        self.store.require_active_learner()
         service = self._service(cid)
         lesson = next(x for x in self.pack.lessons if x.concept_id == cid)
         sources = {s.id: s for s in self.pack.sources}
@@ -284,6 +292,7 @@ class Preview:
         return {"completedAt": stamp.isoformat(), "developmentOnly": True}
 
     def _method_for(self, cid: str) -> dict | None:
+        self.store.require_active_learner()
         version = self.pack.concept(cid).content_version
         if version not in ("v4", "v5", "v6", "v7", "v8", "v9", "v10"):
             return None
@@ -594,7 +603,8 @@ def make_handler(preview: Preview, *, port: int = PORT):
                               "/api/v2/personal-comparison/answer": lambda: preview.personal_comparison().answer(body.get("unitId"), body.get("phase"), body.get("answer"), body.get("outsideStudy"), body.get("confidence")),
                               "/api/v2/personal-comparison/reveal": lambda: preview.reveal_comparison_solution(body.get("unitId"), body.get("phase")),
                               "/api/v2/personal-comparison/override": lambda: preview.personal_comparison().override(body.get("recommendedUnitId"), body.get("recommendedStage"), body.get("selectedUnitId"), body.get("selectedStage"), body.get("learnerReason")),
-                              "/api/v2/delete": preview.delete_data}
+                              "/api/v2/delete": preview.delete_data,
+                              "/api/v2/restart": preview.restart}
                     if path in routes:
                         return self._json(200, routes[path]())
             except (ApiError, ValueError, json.JSONDecodeError) as exc:

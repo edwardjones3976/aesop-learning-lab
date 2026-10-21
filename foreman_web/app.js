@@ -654,7 +654,7 @@ function applyPreferences() {
   document.body.classList.toggle('quiet', preferences.focus);
   try { localStorage.setItem(preferenceKey, JSON.stringify(preferences)); } catch (_) { /* Settings remain usable for this tab. */ }
 }
-document.querySelector('#minutes').onchange = async event => { if (state.deleted) return; preferences.minutes = Number(event.target.value); applyPreferences(); await refresh().catch(showError); };
+document.querySelector('#minutes').onchange = async event => { preferences.minutes = Number(event.target.value); applyPreferences(); if (state.deleted) return; await refresh().catch(showError); };
 document.querySelector('#text-size').onchange = event => { preferences.textSize = event.target.value; applyPreferences(); };
 document.querySelector('#theme').onchange = event => { preferences.theme = event.target.value; applyPreferences(); };
 document.querySelector('#focus').onchange = event => { preferences.focus = event.target.checked; applyPreferences(); };
@@ -664,7 +664,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 
 let apiController = new AbortController();
 async function api(path, body) {
-  if (state.deleted && path !== '/api/v2/delete') throw new Error('Start again to enroll as a new learner.');
+  if (state.deleted && !['/api/v2/delete', '/api/v2/restart'].includes(path)) throw new Error('Start again to enroll as a new learner.');
   const options = body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
   const signal = apiController.signal;
   const response = await fetch(path, { ...options, signal });
@@ -674,7 +674,7 @@ async function api(path, body) {
   } catch (_) {
     throw new Error(`Request failed: response was not JSON (${response.status}).`);
   }
-  if (signal.aborted || (state.deleted && path !== '/api/v2/delete')) throw new Error('Start again to enroll as a new learner.');
+  if (signal.aborted || (state.deleted && !['/api/v2/delete', '/api/v2/restart'].includes(path))) throw new Error('Start again to enroll as a new learner.');
   if (!response.ok) throw new Error(data.message || data.error || `Request failed (${response.status})`);
   return data;
 }
@@ -924,6 +924,20 @@ function drawAfterSave(a, draft) {
 document.querySelector('#export').onclick = async () => {
   try { const data=await api('/api/v2/export'); data.displayPreferences = {...preferences}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='aesop-foreman-data.json'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); } catch(error){showError(error)}
 };
+function renderDeleted() {
+  state.deleted = true;
+  state.overview = null; state.result = null; state.answer = ''; state.lesson = null; state.session = null; state.review = null; state.comparison = null;
+  state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
+  state.mode = 'recommended'; state.comparisonHint = ''; state.started = Date.now();
+  conceptsEl.innerHTML = '';
+  content.innerHTML = '<div class="empty"><h2>Your data was deleted</h2><p>No lesson is loaded. Start again to enroll as a new learner.</p><button id="start-again" class="button">Start again</button></div>';
+  document.querySelector('#start-again').onclick = async () => {
+    apiController = new AbortController();
+    try { await api('/api/v2/restart', {}); } catch (error) { content.querySelector('p').textContent = error.message; return; }
+    state.deleted = false; state.started = Date.now(); state.view = 'path'; updateViewNavigation();
+    try { await boot(); } catch(error){showError(error)}
+  };
+}
 document.querySelector('#delete').onclick = async () => {
   if (state.deleted) return;
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
@@ -934,16 +948,7 @@ document.querySelector('#delete').onclick = async () => {
     await api('/api/v2/delete',{});
     try { localStorage.removeItem(preferenceKey); } catch (_) {}
     preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences();
-    state.overview = null; state.result = null; state.answer = ''; state.lesson = null; state.session = null; state.review = null; state.comparison = null;
-    state.confidence = null; state.outsideStudy = 'unknown'; state.outsideStudyDetail = '';
-    state.mode = 'recommended'; state.comparisonHint = ''; state.started = Date.now();
-    conceptsEl.innerHTML = '';
-    content.innerHTML = '<div class="empty"><h2>Your data was deleted</h2><p>No lesson is loaded. Start again to enroll as a new learner.</p><button id="start-again" class="button">Start again</button></div>';
-    document.querySelector('#start-again').onclick = async () => {
-      apiController = new AbortController();
-      state.deleted = false; state.started = Date.now(); state.view = 'path'; updateViewNavigation();
-      try { await refresh(); } catch(error){showError(error)}
-    };
+    renderDeleted();
   } catch(error){
     apiController = new AbortController();
     state.deleted = false;
@@ -952,7 +957,9 @@ document.querySelector('#delete').onclick = async () => {
 };
 async function boot() {
   if (state.deleted) return;
-  const overview = validateOverview(await api('/api/v2/overview'));
+  const data = await api('/api/v2/overview');
+  if (data.deleted) { renderDeleted(); return; }
+  const overview = validateOverview(data);
   state.overview = overview;
   state.conceptId = overview.pathRecommendation.conceptId;
   await refresh();

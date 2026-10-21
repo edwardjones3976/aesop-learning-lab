@@ -26,7 +26,7 @@ const sourcePath = fileURLToPath(new URL('../src/', import.meta.url));
 
 test('delete leaves no lesson and refreshes only after explicitly starting again', async () => {
   const source = readFileSync(new URL('../foreman_web/app.js', import.meta.url), 'utf8');
-  const handler = source.slice(source.indexOf("document.querySelector('#delete').onclick"),
+  const handler = source.slice(source.indexOf("function renderDeleted()"),
     source.indexOf('async function boot()'));
   for (const outcome of ['success', 'cancel', 'failure', 'storage unavailable']) {
     const buttons = { '#delete': {}, '#start-again': {} };
@@ -41,6 +41,7 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
       confirm: () => outcome !== 'cancel',
       api: async path => {
         calls.push(path);
+        if (path === '/api/v2/restart' && context.failRestart) throw new Error('Restart failed');
         if (outcome === 'failure') throw new Error('Delete failed');
       },
       localStorage: { removeItem: key => {
@@ -53,8 +54,9 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
       state: { lesson: originalLesson, session: {}, result: {}, answer: 'saved', review: {}, comparison: {}, confidence: 0.75, outsideStudy: 'some', outsideStudyDetail: 'Old study', mode: 'practice', comparisonHint: 'Old hint', view: 'comparison', started: 1 },
       updateViewNavigation: () => calls.push('navigation'),
       conceptsEl: { innerHTML: 'Old navigation' },
-      content: { innerHTML: 'Old lesson' },
-      refresh: async () => { calls.push('refresh'); },
+      content: { innerHTML: 'Old lesson', querySelector: () => context.restartMessage },
+      restartMessage: {},
+      boot: async () => { calls.push('refresh'); },
       showError: error => calls.push(error.message),
     };
     runInNewContext(handler, context);
@@ -83,11 +85,18 @@ test('delete leaves no lesson and refreshes only after explicitly starting again
     assert.match(context.content.innerHTML, /<h2>Your data was deleted<\/h2>/);
     assert.match(context.content.innerHTML, /No lesson is loaded/);
     assert.match(context.content.innerHTML, /<button id="start-again" class="button">Start again<\/button>/);
+    context.failRestart = true;
+    await buttons['#start-again'].onclick();
+    assert.equal(context.state.deleted, true);
+    assert.equal(context.restartMessage.textContent, 'Restart failed');
+    assert.ok(!calls.includes('refresh'));
+    context.failRestart = false;
     context.state.started = 1;
     await buttons['#start-again'].onclick();
     assert.equal(context.state.deleted, false);
     assert.equal(context.state.view, 'path');
     assert.ok(context.state.started > 1);
+    assert.ok(calls.includes('/api/v2/restart'));
     assert.equal(calls.at(-2), 'navigation');
     assert.equal(calls.at(-1), 'refresh');
     assert.equal(calls.filter(call => call === 'refresh').length, 1);
@@ -109,7 +118,7 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
     AbortController,
     confirm: () => true,
     content, conceptsEl: node(),
-    localStorage: { getItem() { return null; }, setItem() {} },
+    localStorage: { getItem() { return null; }, setItem(key, value) { context.savedPreferences = JSON.parse(value); } },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     fetch: () => { assert.fail('deleted state must not send a request'); },
   };
@@ -138,6 +147,7 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
     assert.equal(content.innerHTML, 'Your data was deleted');
     assert.equal(JSON.stringify(context.viewState), before);
   }
+  assert.equal(context.savedPreferences.minutes, 45);
   runInNewContext(`
     showError = error => { throw error; };
     refresh = refreshComparison = boot = () => { throw new Error('Wrapper called enrollment'); };
@@ -156,6 +166,15 @@ test('deleted state blocks refresh, navigation, retry and all API requests', asy
     '/api/v2/personal-comparison/answer']) {
     await assert.rejects(context.actions.api(path, {}), /Start again/);
   }
+  // Simulate a full page reload against a persisted deletion marker.
+  runInNewContext('state.deleted = false; boot = actions.boot;', context);
+  const bootCalls = [];
+  context.fetch = async path => { bootCalls.push(path); return { ok: true, json: async () => ({ deleted: true }) }; };
+  await context.actions.boot();
+  assert.deepEqual(bootCalls, ['/api/v2/overview']);
+  assert.equal(context.viewState.deleted, true);
+  assert.match(content.innerHTML, /Your data was deleted/);
+  content.innerHTML = 'Your data was deleted';
   runInNewContext('showError = actions.showError;', context);
   context.viewState.deleted = false;
   let finishResponse, finishDelete, oldSignal;
