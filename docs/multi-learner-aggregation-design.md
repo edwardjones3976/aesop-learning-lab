@@ -10,6 +10,8 @@ The existing application analyzes one learner per SQLite database. Its export co
 
 The owner derives a strict, allowlisted JSON summary locally from each learner's export. **Only that per-learner summary leaves the learner's computer; never the raw export, SQLite database or complete overview.** One summary describes one learner and one protocol/content cohort.
 
+**A summary may be made only after every started concept's own primary window has closed.** `_analyze` labels a concept `missing` as soon as it has no primary-family response, even before its window opens (`src/aesop_lab/experiment/descriptive_v2.py:_analyze`). The runbook says to ignore that label until the concept's day-14 window closes (`docs/real-learner-runbook.md`, step 11). Because the summary drops timestamps and the aggregator rejects a second file under the same learner code, an early summary would freeze a premature `missing`. The converter must therefore refuse to produce a summary while any started concept's window is still open, and the aggregator must reject any row without `windowClosed: true`. The run ends only when every started concept's window has closed (`docs/real-learner-runbook.md`, After the run).
+
 | Field | Required meaning |
 | --- | --- |
 | `summarySchemaVersion` | Fixed summary contract version, initially `aggregation-summary-v1`. |
@@ -19,14 +21,15 @@ The owner derives a strict, allowlisted JSON summary locally from each learner's
 | `contentReviewStatus` | `draft` or `reviewed`, verified against the pinned material and owner policy; candidate keys require `draft`. |
 | `evidenceOrigin` | `real_human_observations` or `synthetic_software_validation`; separate cohorts, never pooled. A declaration is not proof of provenance. |
 | `verification` | Fixed fields: converter version, source code revision, `localClassificationVerified: true`, and `ownerChecked: true`. No arbitrary strings or embedded logs. |
-| `concepts[]` | One row per assigned concept, including missing outcomes; no repeated concept IDs. |
+| `concepts[]` | One row per assigned concept, including missing outcomes; no repeated concept IDs. Every row requires `windowClosed: true` (see below). |
+| `concepts[].windowClosed` | Must be `true`: the converter verified locally, from the raw lesson-completion time and the protocol window, that this concept's primary window (day 7 through day 14 after its own lesson completion) had fully closed when the summary was made. |
 | `concepts[].conceptId` | Fixed concept ID from the pinned protocol. |
 | `concepts[].arm` | Persisted `text` or `diagram` assignment. |
 | `concepts[].classification` | Verified category from section 4. |
 | `concepts[].targetDelayDays` | Integer protocol target, currently 7. |
 | `concepts[].actualDelayDays` | Whole completed elapsed days from exposure completion to the decisive first-family response: floor of elapsed seconds / 86400; null when no valid pair exists. Never a negative number. |
 | `concepts[].hintAssisted` | Boolean for assistance on that decisive response; null if no response exists. |
-| `concepts[].outsideStudy` | `some`, `none`, `unknown` or null; preserves unknown/missing rather than treating them as no study. `some` includes study for that concept reported by the decisive response, including a report made to the owner. |
+| `concepts[].outsideStudy` | `some`, `none`, `unknown` or null; preserves unknown/missing rather than treating them as no study. `some` when study for that concept was reported as `some` on the decisive response **or on any earlier attempt for the same concept**, matching v8 contamination (`src/aesop_lab/experiment/descriptive_v2.py:_analyze`, prior same-concept outside-study check), or when it was reported to the owner. |
 | `concepts[].outsideStudyReportedToOwner` | Boolean; records a structured owner exclusion without transmitting the learner's explanation. |
 | `concepts[].keyMatch` | `match`, `nonmatch` or null, derived locally; only retained for provisional, eligible or late scored observations. No answer or answer key. |
 | `concepts[].exposureComparability` | `unavailable`, `mismatched` or `unverified`, as applicable; this design cannot establish controlled exposure. |
@@ -57,7 +60,7 @@ An outside-study report made only to the owner is an additional, explicitly flag
 
 ## 5. Privacy and separate sharing consent
 
-Step 8's `consent-v1` covers storing data **on this computer only**. It is not permission to transmit a learner summary to a collector, repository, AI service or other processor. At this branch baseline the consent gate is separate pending work, not an implemented sharing mechanism. The runbook's local aggregate guidance is not a substitute for specific sharing consent. No summary is shared until the owner has approved wording and the learner has explicitly agreed.
+Step 8's `consent-v1` covers storing data **on this computer only**. It is not permission to transmit a learner summary to a collector, repository, AI service or other processor. The in-app gate merged in #57 (schema v16 `learner_consent`, text version `consent-v1`) records only that local consent; it is not a sharing mechanism. The runbook's local aggregate guidance is not a substitute for specific sharing consent. No summary is shared until the owner has approved wording and the learner has explicitly agreed.
 
 **OWNER-REVIEW — draft separate consent, not approved or active:**
 
@@ -82,6 +85,7 @@ No tests or implementation are added by this design. After the step-9 go, requir
 - Refusal fixtures for raw exports, nested answers/notes/UUIDs, fractional delays, fine timestamps, unknown fields, unsupported schemas, missing verification/consent checks, malformed values, foreign protocol/content versions and altered classifications. Ensure refusal logs do not leak their contents.
 - Duplicate tests: repeated file, changed filename, same code with conflicting values, repeated concept, cross-cohort repeated code and owner-register detection of the same person under two codes. No evidence claim when independence is unresolved.
 - Boundary tests at day 7 and day 14 and one second either side: classify locally before flooring; ensure identical whole-day values cannot override different verified classes. Include absent completion/response, invalid metadata, ties ordered by attempt ID, prior family exposure, hints, ungraded scoring, outside study before versus after the decisive response, and an owner-only report.
+- Window-closure tests: the converter refuses while any started concept's window is open, including the case where `_analyze` already reports `missing`. A summary made one second after day 14 for each concept is accepted. A row without `windowClosed: true` is rejected.
 - Threshold tests with 19/20/21 qualifying independent learners in each concept-arm; more concepts from one learner never increase that count. Candidate keys always yield zero eligible outcomes, including when assigned totals exceed 20. Exposure limitations retain `insufficient_evidence`.
 - Deliberately break classification verification, raw-field refusal, deduplication and provisional-only counting to prove the new tests fail. Non-author review and repository CI gates remain required; synthetic success is never human-learning evidence.
 
