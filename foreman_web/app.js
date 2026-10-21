@@ -910,7 +910,17 @@ document.querySelector('#export').onclick = async () => {
 };
 document.querySelector('#delete').onclick = async () => {
   if (!confirm('Delete all local learner data for this preview? This cannot be undone.')) return;
-  try { await api('/api/v2/delete',{}); try { localStorage.removeItem(preferenceKey); } catch (_) {} preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences(); state.result=null;state.answer='';await refresh(); } catch(error){showError(error)}
+  try {
+    await api('/api/v2/delete',{});
+    try { localStorage.removeItem(preferenceKey); } catch (_) {}
+    preferences = {minutes:20,textSize:'regular',theme:'system',focus:false}; applyPreferences();
+    state.result = null; state.answer = ''; state.lesson = null; state.session = null; state.review = null; state.comparison = null;
+    conceptsEl.innerHTML = '';
+    content.innerHTML = '<div class="empty"><h2>Your data was deleted</h2><p>No lesson is loaded. Start again to enroll as a new learner.</p><button id="start-again" class="button">Start again</button></div>';
+    document.querySelector('#start-again').onclick = async () => {
+      try { await refresh(); } catch(error){showError(error)}
+    };
+  } catch(error){showError(error)}
 };
 async function boot() {
   const overview = validateOverview(await api('/api/v2/overview'));

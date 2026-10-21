@@ -24,6 +24,60 @@ import {
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const sourcePath = fileURLToPath(new URL('../src/', import.meta.url));
 
+test('delete leaves no lesson and refreshes only after explicitly starting again', async () => {
+  const source = readFileSync(new URL('../foreman_web/app.js', import.meta.url), 'utf8');
+  const handler = source.slice(source.indexOf("document.querySelector('#delete').onclick"),
+    source.indexOf('async function boot()'));
+  for (const outcome of ['success', 'cancel', 'failure', 'storage unavailable']) {
+    const buttons = { '#delete': {}, '#start-again': {} };
+    const calls = [];
+    const originalLesson = { title: 'Old lesson' };
+    const context = {
+      document: { querySelector: selector => {
+        assert.ok(Object.hasOwn(buttons, selector), selector);
+        return buttons[selector];
+      } },
+      confirm: () => outcome !== 'cancel',
+      api: async path => {
+        calls.push(path);
+        if (outcome === 'failure') throw new Error('Delete failed');
+      },
+      localStorage: { removeItem: key => {
+        assert.equal(key, 'preferences');
+        calls.push('clear preferences');
+        if (outcome === 'storage unavailable') throw new Error('Storage unavailable');
+      } },
+      preferenceKey: 'preferences', preferences: {},
+      applyPreferences: () => calls.push('apply preferences'),
+      state: { lesson: originalLesson, session: {}, result: {}, answer: 'saved', review: {}, comparison: {} },
+      conceptsEl: { innerHTML: 'Old navigation' },
+      content: { innerHTML: 'Old lesson' },
+      refresh: async () => { calls.push('refresh'); },
+      showError: error => calls.push(error.message),
+    };
+    runInNewContext(handler, context);
+    await buttons['#delete'].onclick();
+    if (outcome === 'cancel' || outcome === 'failure') {
+      assert.deepEqual(calls, outcome === 'cancel' ? [] : ['/api/v2/delete', 'Delete failed']);
+      assert.equal(context.content.innerHTML, 'Old lesson');
+      assert.equal(context.state.lesson, originalLesson);
+      assert.equal(buttons['#start-again'].onclick, undefined);
+      continue;
+    }
+    assert.deepEqual(calls, ['/api/v2/delete', 'clear preferences', 'apply preferences']);
+    assert.equal(context.state.lesson, null);
+    assert.equal(context.state.session, null);
+    assert.equal(context.state.answer, '');
+    assert.equal(context.conceptsEl.innerHTML, '');
+    assert.match(context.content.innerHTML, /<h2>Your data was deleted<\/h2>/);
+    assert.match(context.content.innerHTML, /No lesson is loaded/);
+    assert.match(context.content.innerHTML, /<button id="start-again" class="button">Start again<\/button>/);
+    await buttons['#start-again'].onclick();
+    assert.equal(calls.at(-1), 'refresh');
+    assert.equal(calls.filter(call => call === 'refresh').length, 1);
+  }
+});
+
 const emptyEvidence = () => ({
   byKind: Object.fromEntries(['recognition', 'recall', 'explanation', 'application', 'transfer']
     .map(kind => [kind, { unassistedCorrect: 0, assistedCorrect: 0, incorrect: 0, ungraded: 0 }])),
