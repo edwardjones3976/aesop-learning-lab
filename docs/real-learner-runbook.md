@@ -1,8 +1,8 @@
 # First real learner run: runbook
 
-This runbook covers one real person using the Foreman preview on content `m2-draft.9` over at least 14 days. It records first answers and actual delays faithfully. It does not test whether the method works: one learner gives dependent, descriptive observations, and the answer keys are still candidates until independent human review.
+This runbook covers one real person using the Foreman preview on content `m2-draft.10` (protocol v7, the default for a fresh database) over at least 14 days. It records first answers and actual delays faithfully. It does not test whether the method works: one learner gives dependent, descriptive observations, and the answer keys are still candidates until independent human review.
 
-Known software gaps this runbook works around are listed at the end. Each is tracked for a fix.
+Three software gaps found while reviewing this runbook have been fixed in the app; they are listed at the end.
 
 ## Before day 0
 
@@ -46,11 +46,11 @@ Known software gaps this runbook works around are listed at the end. Each is tra
    if (-not (Test-Path $db)) { throw "$db is missing" }
    py scripts/run_foreman.py --port 8780 --db $db
    ```
-5. **Record the setup in a run log** kept in `$runDir`: the learner code, the approved SHA, the worktree path, the **exact database path** (`$wt\$db`), the start date and time zone, the content version shown in the notice (`m2-draft.9`), and the browser.
+5. **Record the setup in a run log** kept in `$runDir`: the learner code, the approved SHA, the worktree path, the **exact database path** (`$wt\$db`), the start date and time zone, the content version shown in the notice (`m2-draft.10`), and the browser. If the notice shows any other version, stop: the setup is not the approved one.
 6. **Brief the learner, and say nothing more:**
    - Answer first, before opening any hint.
    - Confidence is optional.
-   - Please **don't study these topics outside the app** during the run. If you do, tell the owner which concept, and that concept's later checks will be excluded.
+   - Please **don't study these topics outside the app** during the run. If you do, choose **some** in the app's outside-study question when it is offered, and tell the owner which concept. That concept's later checks will be excluded.
    - There are no grades: matches are compared with draft keys.
 
 ## Day 0: study and first practice
@@ -75,7 +75,7 @@ If the prerequisites are not met, the app offers practice or the still-unused ea
 10. **Day 1 of each concept:** return at least 24 hours after that concept's lesson, without reviewing its answer first.
     - If a day-1 check is scheduled, the review box reads **Delayed review due** on the first day after the due time, and **Delayed review overdue** after that. The learner takes the offered check unaided first.
     - If not, record "no qualifying day-0 answer, no day-1 check offered", and let the learner continue with what the app suggests.
-11. **Days 7 to 14 of each concept:** this is the primary window for protocol v6. Plan a return inside it for every started concept.
+11. **Days 7 to 14 of each concept:** this is the primary window (protocol v7 keeps v6's windows). Plan a return inside it for every started concept.
     - If the week check's prerequisites are met, it is offered. A check taken before day 7 shows as **early**, and one after day 14 as **late**. Both are kept but excluded from the primary observation.
     - If they are not met yet, let the learner take whatever is offered (practice, or the unused day-1 check), then press **Continue** and look again. Answering the day-1 check completes that interval, so the week check may be offered straight away. If it is offered within that concept's days 7 to 14, it is a valid in-window observation: take it.
     - A concept's outcome is **missing** only if its week check is still unanswered when **that concept's** window closes. The overview may show `missing` earlier, before the window has even opened; ignore that until the window closes. Note which prerequisite was missing.
@@ -89,8 +89,8 @@ The run ends only when the window of **every** started concept has closed.
 14. **Capture the data locally,** while the server is still running. The server keeps its own window busy, so:
     1. Open a **second** PowerShell window.
     2. Paste the step 2 block there first; without it the paths below are empty.
-    3. **Export data** in the preview downloads `aesop-foreman-data.json`: raw records plus display preferences. Move it from the browser's download folder into `$runDir` straight away.
-    4. The computed classifications (provisional, contaminated, invalid, early, late, missing) are **not** in that export. Save them **directly** into `$runDir`, never into the worktree, because the file holds raw answers and timestamps:
+    3. **Export data** in the preview downloads `aesop-foreman-data.json`: raw records, display preferences, and the computed classifications (`derived.overview`). Move it from the browser's download folder into `$runDir` straight away.
+    4. Optional cross-check: save the live `/api/v2/overview` endpoint directly into `$runDir`, never into the worktree, because the file holds raw answers and timestamps:
 
        ```powershell
        if (-not (Test-Path $runDir)) { throw 'run variables are not set: paste the step 2 block' }
@@ -100,10 +100,10 @@ The run ends only when the window of **every** started concept has closed.
     - The owner produces a **de-identified aggregate** on this computer: counts and delays per category, with no answer text, free-text notes or timestamps finer than a day.
     - Only that aggregate may be shared with an agent (e.g. Codex) for drafting or review.
     - Raw exports, the overview file and the run log never leave this computer unless the learner has explicitly consented to the specific processor and its retention.
-16. **Delete,** if the learner asks. Deletion is the learner's or owner's decision, never an agent's. Do **not** use the preview's **Delete data** button: after deleting, it calls refresh(), which enrolls a new learner. Instead:
-    1. Close the preview tab.
-    2. Stop the server with Ctrl+C.
-    3. Paste the step 2 block, then delete the **exact database path recorded in the run log** (`$wt\$db`), plus any `-wal` or `-shm` files beside it.
+16. **Delete,** if the learner asks. Deletion is the learner's or owner's decision, never an agent's.
+    1. In the preview, press **Delete data** and confirm. The page shows "Your data was deleted". Do **not** press **Start again**: that would enroll a new learner.
+    2. Close the preview tab, then stop the server with Ctrl+C.
+    3. Paste the step 2 block, then delete the now-empty database file at the **exact path recorded in the run log** (`$wt\$db`), plus any `-wal` or `-shm` files beside it.
     4. Clear this site's data in the browser (site settings for `127.0.0.1:8780`).
     5. Delete everything in `$runDir` (the export, the overview and the run log) and every copy of them, including the browser's download folder.
     6. Record only that a deletion took place, with the date.
@@ -111,7 +111,7 @@ The run ends only when the window of **every** started concept has closed.
 ## Report rules
 
 - Report each classification as its own category; never fold them together. That includes independent (unassisted), assisted, early, late, missing and ungraded, plus **provisional**, **contaminated** and **invalid**. With draft keys, otherwise eligible on-time answers are classified **provisional**, not eligible.
-- **Outside study:** any delayed outcome on a concept the learner studied outside the app is **ineligible**. Label it "outside study" and exclude it from every primary count, even if the app shows it as provisional or eligible (see gap 3 below).
+- **Outside study:** from protocol v5 the app classifies a delayed check given after outside study reported in the app as **contaminated**. If the learner told the owner about outside study but it was **not** entered in the app, exclude that concept's later outcomes by hand, labeled "outside study (reported to owner)".
 - Say "candidate-key match", never "mastery" or "learned", until the keys are human-reviewed.
 - Keep `insufficient_evidence` wherever the protocol's thresholds are not met. One learner never meets the 20-learners-per-arm gate.
 - Report the actual delay next to the target delay.
@@ -128,8 +128,10 @@ The run ends only when the window of **every** started concept has closed.
 | Step 16: deletion | learner or owner only |
 | Fixing software problems found | normal PR flow: one author and one non-author reviewer |
 
-## Known software gaps (tracked for fixes)
+## Software gaps found in review, now fixed
 
-1. **Delete data re-enrolls immediately:** the button calls refresh() after deleting, which enrolls a new learner. The workaround is step 16.
-2. **The export omits computed classifications.** The workaround is step 14's overview capture.
-3. **Outside study is not used by the classifier:** responses after reported outside study are not marked ineligible automatically. The workaround is the manual outside-study rule.
+These were found during review of this runbook. Each has been fixed in the app, so the earlier workarounds are no longer needed:
+
+1. **Delete data re-enrolled the learner immediately** (fixed in #42). After deleting, the app now shows "Your data was deleted". Nothing enrolls until **Start again** is pressed, including changes to settings and navigation.
+2. **The export omitted the computed classifications** (fixed in #41). The download now includes them in `derived.overview`.
+3. **The classifier ignored reported outside study** (fixed in #40). From protocol v5 onward, a delayed check given after outside study reported in the app for that concept is classified `contaminated`.
