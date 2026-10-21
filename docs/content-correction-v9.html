@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v9 recursive-return practice correction</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="v9-recursive-return-practice-correction">v9 recursive-return practice correction</h1>
+<p><strong>Candidate:</strong> <code>python-functions-recursion</code>, <code>m2-draft.9</code> (<code>v9</code>). This is an author correction, not independent review or human subject-matter approval. The pack remains <code>draft</code>; scored keys remain <code>candidate</code>; review receipts remain empty.</p>
+<p>The v8 <code>recursive-case-application-02</code> asked both for a pass count and for <code>result</code>, although both answers were the same number. A learner could count the three visible scores without tracing a recursive return. Its <code>scores[1:]</code> stimulus also repeated the slice pattern in the one-day held-out <code>reverse(text[1:])</code> task. V9 replaces only this practice stimulus with <code>savings(month)</code>, whose return depends on the smaller call's returned value: 5, 11, 24, then 51. The prompt requests one value, <code>result</code>; the candidate key is <code>51</code>. The hints and explanation trace each return and explain the distinct local <code>previous</code> values. Whitespace around the answer is normalized by the existing assessment rule; embedded whitespace does not turn <code>5 1</code> into <code>51</code>.</p>
+<p>This is a new item family, <code>recursive-case-savings-growth-a</code>, because the algorithm and response process differ from v8's count-passes family. Other family IDs are unchanged, including both held-out families for each of the five concepts. The new practice does not reveal the one-day string reversal or seven-day state-toggle answers. Structural separation is an author judgment; a non-author subject-matter reviewer must still assess human difficulty and whether the tasks are sufficiently independent.</p>
+<p>Two ungraded prompt/rubric gaps are corrected prospectively. <code>recursive-case-design-01-v9</code> now names the required empty-list result, correct nonempty result, progress toward a base case, and the prompt's no-loop constraint. It permits an index-based recursive helper as an alternative valid solution. <code>recursion-explain-01-v9</code> now assesses the prompt's three demands separately: identifying a self-call, explaining progress toward a reachable stopping condition, and explaining the stopping return. Previously a combined self-call/progress criterion could not distinguish a learner who named recursion but did not explain progress. These remain guided self-reviews; open-ended answers and code are not automatically scored as objectively correct.</p>
+<p><code>scope-local-trace-01-v9</code> and <code>scope-global-choice-01-v9</code> intentionally keep one item-family ID: both use essentially the same <code>add_five(total)</code> stimulus and cannot honestly serve as independent families. The held-out <code>scope-keyword-transfer-01-v9</code> candidate key accepts <code>Hi Ana?</code>. The current global assessment normalization collapses all whitespace, so <code>Hi  Ana?</code> (two internal spaces) can match that key. The numeric <code>51</code> whitespace check in the focused test verifies the new practice key only; it does not repair this existing false-accept boundary. Fixing normalization requires an assessment-engine change outside this content-only correction. Until then, the affected scope outcome has a grading limitation, and no content-review receipt should claim exact string grading.</p>
+<p>V9 uses new lesson, item, rubric, and content-version IDs while leaving v5 through v8 files untouched. Existing learners must remain pinned to their assigned historical pack. A prospective protocol must explicitly route new assignments to v9; this document does not perform routing or reclassify older observations. No actual delayed human outcomes or instructional effect are claimed.</p>
+<h2 id="verification-and-remaining-review">Verification and remaining review</h2>
+<p><code>tests/test_m2_content_v9.py</code> validates pack parsing, v8 byte identity, v9 IDs, candidate status, family preservation, the authored snippet's executed return, numeric-answer normalization, and both revised rubric fields. These checks establish the authored candidate's internal consistency, not educational efficacy. Independent technical/content review should check the Python result, alternative interpretations, hint timing, rubric adequacy, family separation, and approximate difficulty before any reviewed-content status is claimed.</p>
+
+</main></body>
+</html>

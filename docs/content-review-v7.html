@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v7 trace-key correction</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="v7-trace-key-correction">v7 trace-key correction</h1>
+<p><strong>Candidate:</strong> <code>python-functions-recursion</code>, <code>m2-draft.7</code> (<code>v7</code> content). This is an author correction, not independent or human approval. The pack remains <code>draft</code>, all 26 scored keys remain <code>candidate</code>, and there are no approval receipts.</p>
+<p>An independent review found that <code>recursion-week-01-v6</code> (and <code>-v5</code>) listed <code>'[[[core]]]</code> with no closing quote among its accepted answers. A learner who typed the correctly quoted Python result <code>'[[[core]]]'</code> was therefore scored incorrect on the day-7 check. V7 is a new pack that copies the then-current v6, relabels lesson and activity IDs <code>-v7</code>, and replaces the malformed entry with <code>'[[[core]]]'</code>. Prompts, bodies, explanations, hints, and family IDs are identical; the <code>base-case-grow-threshold-day-v6</code> and <code>recursive-case-lamp-toggle-week-v6</code> family IDs are kept because their tasks did not change. V5 and v6 had each been edited after their first commits (<code>ec1f0ba</code> after <code>a513641</code> for v5; <code>bd27e34</code> after <code>9fcd925</code> for v6). Their current files are left untouched here, but impact on any real learners who may have seen earlier blobs is unknown.</p>
+<p>Existing v5 and v6 learners stay pinned to their original packs and protocols (v2 and v3). Only learners with no recorded history, or who delete their local data, open v7 under the new prospective protocol v4 (<code>docs/descriptive-pilot-v4.html</code>). No recorded attempt, assignment, or outcome is rewritten. The key correction does not make any v6 observation retroactively valid; a quoted answer already scored incorrect on v6 stays as recorded.</p>
+<p>A non-author subject-matter reviewer must still check keys, wording, and family judgments before any reviewed-content claim or scoring receipt.</p>
+
+</main></body>
+</html>

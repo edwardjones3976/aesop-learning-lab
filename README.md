@@ -2,10 +2,12 @@
 
 A personal learning app that runs on your computer. It helps you study, answer a different question on your own, and check what you remember later. AI may help build the app, but you do not need AI to use it.
 
-The [project brief](docs/project-brief.md), [module contracts](docs/module-contracts.md), and [delivery board](docs/delivery-board.md) define the first prototype. This is a new project, separate from Aesop Cognitive Core and Director Orchestrator.
+All project documentation is HTML in `docs/`; open [docs/index.html](docs/index.html) in a browser for the full list. GitHub shows `.html` files as source, so view them locally or through GitHub Pages.
 
-The [five-concept adaptive development pilot](docs/adaptive-cycle-v1.md) documents the current local learning loop, fixed instructional comparison, delayed checks, and evidence limits.
-The [personal-learning pilot update](docs/personal-intelligence-pilot.md) describes the earlier v9 content and v6 comparison rules. New learners get the v11 draft content under the [v8 comparison rules](docs/descriptive-pilot-v8.md). Earlier learners keep their original content and records. The [single-learner scope comparison](docs/single-learner-comparison-v2.md) remains a separate draft.
+The [project brief](docs/project-brief.html), [module contracts](docs/module-contracts.html), and [delivery board](docs/delivery-board.html) define the first prototype. This is a new project, separate from Aesop Cognitive Core and Director Orchestrator.
+
+The [five-concept adaptive development pilot](docs/adaptive-cycle-v1.html) documents the current local learning loop, fixed instructional comparison, delayed checks, and evidence limits.
+The [personal-learning pilot update](docs/personal-intelligence-pilot.html) describes the earlier v9 content and v6 comparison rules. New learners get the v11 draft content under the [v8 comparison rules](docs/descriptive-pilot-v8.html). Earlier learners keep their original content and records. The [single-learner scope comparison](docs/single-learner-comparison-v2.html) remains a separate draft.
 
 Source concept: https://chatgpt.com/s/t_6accfb5560548191bdc0ba8d133d8b8d
 

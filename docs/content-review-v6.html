@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v6 content author audit</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="v6-content-author-audit">v6 content author audit</h1>
+<p><strong>Candidate:</strong> <code>python-functions-recursion</code>, <code>m2-draft.6</code> (<code>v6</code> content). This is an author audit, not independent or human approval. The pack remains <code>draft</code>, all 26 scored keys remain <code>candidate</code>, and there are no approval receipts.</p>
+<p>The v6 pack preserves the five v5 lessons, their common text and labeled diagrams, 32 activities, cited Python sources, and the one-day/seven-day review structure in a separate content version. Lesson and activity IDs end in <code>-v6</code>. Each scored item now has a specific <code>common_mistakes</code> list for post-submission feedback in addition to its candidate key and worked <code>explanation</code>. The six explanation/code-design items remain ungraded and retain rubrics. The API/UI must not expose keys, worked explanations, or mistake rationales before answer submission.</p>
+<p><strong>Historical provenance correction:</strong> v5 was edited in commit <code>ec1f0ba</code> after its initial commit <code>a513641</code>, changing a scope week item and a rubric prompt. V6 was also edited in commit <code>bd27e34</code> after its initial commit <code>9fcd925</code>, correcting a recursive-case misconception. Therefore an unconditional claim that these version IDs were immutable from first publication would be inaccurate. Their current files are preserved by later prospective versions, but whether any real learner saw an earlier blob is unknown. No historical attempts are rewritten by this note.</p>
+<h2 id="corrected-evidence-family-boundaries">Corrected evidence-family boundaries</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Correction</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scope-global-choice-01-v6</code></td>
+<td>Shares family <code>scope-local-trace-a</code> with <code>scope-local-trace-01-v6</code></td>
+<td>Both use the same <code>add_five(total)</code> stimulus; they cannot count as independent item families.</td>
+</tr>
+<tr>
+<td><code>base-case-transfer-01-v6</code></td>
+<td>New family <code>base-case-grow-threshold-day-v6</code>; traces 3 → 10 → 17 → 24 toward <code>n &gt;= 20</code></td>
+<td>The prior list-slice recursion overlapped routine <code>sum_list</code> design practice. The new item uses neither list slicing nor the seven-day factor-of-two recurrence.</td>
+</tr>
+<tr>
+<td><code>recursive-case-week-01-v6</code></td>
+<td>New family <code>recursive-case-lamp-toggle-week-v6</code>; alternates <code>off</code>/<code>on</code> using the prior call's result</td>
+<td>The v5 digit-count recurrence resembled another concept's seven-day floor-division-and-additive-unwind item. The new item requires a different combination rule.</td>
+</tr>
+</tbody>
+</table>
+<p>The other seven-day family IDs remain <code>def-return-shipping-week-v4</code>, <code>scope-caller-local-default-week-v5</code>, <code>recursion-nested-wrap-week-v5</code>, and <code>base-case-threshold-halving-week-v4</code>. A prospective protocol must explicitly pin the v6 pack and new recursive-case family; v1/v2 outcomes remain tied to their original materials.</p>
+<h2 id="verification-and-limits">Verification and limits</h2>
+<p>The content regression test parses both versions; confirms new IDs, five lessons, 32 activities, 26 candidate scored keys, complete hint ladders, and separation between held-out families, worked examples, and routine practice; and executes only the repository-authored trace snippets to compare actual results with candidate keys. It does not execute learner-submitted code. The family check is a finite content audit, not proof that every human learner will find a problem unfamiliar. A non-author subject-matter reviewer must check the new item wording, pedagogical fit, candidate keys, hints, misconceptions, and family judgments before any reviewed-content claim or scoring receipt.</p>
+
+</main></body>
+</html>

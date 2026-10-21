@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First real learner run: runbook</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="first-real-learner-run-runbook">First real learner run: runbook</h1>
+<p>This runbook covers one real person using the Foreman preview on content <code>m2-draft.11</code> (protocol v8, the default for a fresh database) over at least 14 days. It records first answers and actual delays faithfully. It does not test whether the method works: one learner gives dependent, descriptive observations, and the answer keys are still candidates until independent human review.</p>
+<p>Three software gaps found while reviewing this runbook have been fixed in the app; they are listed at the end.</p>
+<h2 id="before-day-0">Before day 0</h2>
+<ol>
+<li>
+<p><strong>Have the consent conversation with the learner.</strong> The app shows a consent screen before enrollment. The owner still talks through all of the following with the learner:</p>
+<ul>
+<li>Their answers, hint use, confidence, outside-study notes and timing are stored <strong>on this computer only</strong>, and are not sent to any outside service, including AI models. Only a de-identified aggregate summary, written locally by the owner, may leave this computer or appear in a project report.</li>
+<li>Results are compared with draft answer keys, stay provisional, and are not a grade or a judgment of what they know. One person's answers are not enough evidence to show which teaching method works better (the app reports <code>insufficient_evidence</code>).</li>
+<li>They can stop at any time and ask for deletion of the database, the export and the run log (step 16).
+When the app is opened, the learner confirms with <strong>I agree — start learning</strong>. The app records the consent text version (<code>consent-v1</code>) and confirmation timestamp locally before enrollment; the raw record is included in export. Returning pre-gate identities receive <code>legacy-pre-gate</code> during migration, so an existing run is not interrupted.</li>
+</ul>
+</li>
+<li>
+<p><strong>Set the run variables.</strong> Paste this block at the start of <strong>every</strong> PowerShell window used for this run, on day 0, at each return, and in any second window. Every later command depends on it.</p>
+<pre><code class="language-powershell">$code   = 'L01'                                # this learner's code; must be new
+$sha    = '&lt;approved 40-character commit SHA&gt;'  # the revision approved for this run
+$wt     = &quot;$HOME\aesop-learner-$code&quot;          # dedicated worktree for this run
+$db     = &quot;.local/learner-$code.sqlite3&quot;       # database path, relative to $wt
+$runDir = &quot;$HOME\aesop-runs\$code&quot;             # run data, outside every repository
+</code></pre>
+<p>The owner chooses <code>$sha</code> before day 0: a specific reviewed commit, never a moving branch such as <code>origin/master</code>.</p>
+</li>
+<li>
+<p><strong>Create a fresh, pinned setup, and refuse anything already in use.</strong> The preview silently reopens an existing database, and an existing run folder would mix two learners' files. So the setup stops if either one exists, or if the pinned worktree does not match:</p>
+<pre><code class="language-powershell">&amp; {
+  $ErrorActionPreference = 'Stop'
+  if (-not $wt -or -not $sha -or -not $db -or -not $runDir) { throw 'run variables are not set: paste the step 2 block' }
+  if (Test-Path $wt)     { throw &quot;$wt already exists: choose a new learner code&quot; }
+  if (Test-Path $runDir) { throw &quot;$runDir already exists: choose a new learner code&quot; }
+  git worktree add $wt --detach $sha
+  if ($LASTEXITCODE -ne 0) { throw 'git worktree add failed' }
+  Set-Location -LiteralPath $wt
+  if ((Get-Location).Path -ne (Resolve-Path -LiteralPath $wt).Path) { throw &quot;not inside $wt&quot; }
+  if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
+  $changes = git status --porcelain
+  if ($LASTEXITCODE -ne 0) { throw 'git status failed' }
+  if ($changes) { throw 'worktree has local changes' }
+  if (Test-Path $db) { throw &quot;$db already exists: choose a new learner code&quot; }
+  New-Item -ItemType Directory $runDir | Out-Null
+  py scripts/run_foreman.py --port 8780 --db $db
+}
+</code></pre>
+<p>Paste the whole block at once. It runs as one unit, so the first failed check stops everything after it; a console runs loose lines one by one, and a <code>throw</code> on one line would not stop the next. Only then open <a href="http://127.0.0.1:8780/">http://127.0.0.1:8780/</a>. The server binds to loopback only, and it keeps this window busy while it runs.</p>
+</li>
+<li>
+<p><strong>At every return,</strong> paste the step 2 block, then verify before starting the server. Stop and do not run the session if a check fails:</p>
+<pre><code class="language-powershell">&amp; {
+  $ErrorActionPreference = 'Stop'
+  if (-not $wt -or -not $sha -or -not $db) { throw 'run variables are not set: paste the step 2 block' }
+  Set-Location -LiteralPath $wt
+  if ((Get-Location).Path -ne (Resolve-Path -LiteralPath $wt).Path) { throw &quot;not inside $wt&quot; }
+  if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
+  $changes = git status --porcelain
+  if ($LASTEXITCODE -ne 0) { throw 'git status failed: do not run' }
+  if ($changes) { throw 'worktree has local changes: do not run' }
+  if (-not (Test-Path $db)) { throw &quot;$db is missing&quot; }
+  py scripts/run_foreman.py --port 8780 --db $db
+}
+</code></pre>
+</li>
+<li>
+<p><strong>Record the setup in a run log</strong> kept in <code>$runDir</code>: the learner code, the approved SHA, the worktree path, the <strong>exact database path</strong> (<code>$wt\$db</code>), the start date and time zone, the content version shown in the notice (<code>m2-draft.11</code>), and the browser. If the notice shows any other version, stop: the setup is not the approved one.</p>
+</li>
+<li>
+<p><strong>Brief the learner, and say nothing more:</strong></p>
+<ul>
+<li>Answer first, before opening any hint.</li>
+<li>Confidence is optional.</li>
+<li>Please <strong>don't study these topics outside the app</strong> during the run. If you do, choose <strong>some</strong> in the app's outside-study question when it is offered, and tell the owner which concept. That concept's later checks will be excluded.</li>
+<li>There are no grades: matches are compared with draft keys.</li>
+</ul>
+</li>
+</ol>
+<h2 id="day-0-study-and-first-practice">Day 0: study and first practice</h2>
+<ol start="7">
+<li>For each concept the learner chooses to start, they read the worked answer, press <strong>I've studied the worked answer</strong>, and answer the next question <strong>before</strong> opening any hint. Record the date each concept's lesson is completed: that concept's delayed checks are timed from it.</li>
+<li>Do not help, explain answers or show the key. If they are stuck, they may use the in-app hints; the hints are recorded as assistance.</li>
+<li><strong>Note in the run log</strong> any interruption: closing the tab, a crash, or a restart.
+<ul>
+<li>If the answer had already been saved, confirm after the restart that it still shows as <strong>Saved first answer to resume</strong>.</li>
+<li>If the tab closed <strong>before</strong> the learner pressed <strong>Save first answer</strong>, nothing was stored. Log that first answer as <strong>lost before save</strong>. Do not ask the learner to retype it as if it were the first answer.</li>
+<li>A first answer must never be rewritten.</li>
+</ul>
+</li>
+</ol>
+<h2 id="return-checks">Return checks</h2>
+<p><strong>Every interval is counted per concept, from that concept's own lesson completion, not from the first day of the run.</strong> Concepts started on different days have different windows. Keep a small table in the run log with one row per concept: lesson date, day 1 date, and the day 7 to day 14 window.</p>
+<p>Delayed checks are offered only when their prerequisites are met:</p>
+<ul>
+<li>A <strong>day-1 check</strong> needs an unassisted candidate-key match on the concept's practice.</li>
+<li>A <strong>week check</strong> needs that, <strong>and</strong> an answered day-1 check. Any score counts, so that poor retention is still measured.</li>
+</ul>
+<p>If the prerequisites are not met, the app offers practice or the still-unused earlier check instead. That is the system working as designed. Never coach the learner or retry anything to create a qualifying answer.</p>
+<ol start="10">
+<li><strong>Day 1 of each concept:</strong> return at least 24 hours after that concept's lesson, without reviewing its answer first.
+<ul>
+<li>If a day-1 check is scheduled, the review box reads <strong>Delayed review due</strong> on the first day after the due time, and <strong>Delayed review overdue</strong> after that. The learner takes the offered check unaided first.</li>
+<li>If not, record &quot;no qualifying day-0 answer, no day-1 check offered&quot;, and let the learner continue with what the app suggests.</li>
+</ul>
+</li>
+<li><strong>Days 7 to 14 of each concept:</strong> this is the primary window (protocol v8 keeps v6's windows). Plan a return inside it for every started concept.
+<ul>
+<li>If the week check's prerequisites are met, it is offered. A check taken before day 7 shows as <strong>early</strong>, and one after day 14 as <strong>late</strong>. Both are kept but excluded from the primary observation.</li>
+<li>If they are not met yet, let the learner take whatever is offered (practice, or the unused day-1 check), then press <strong>Continue</strong> and look again. Answering the day-1 check completes that interval, so the week check may be offered straight away. If it is offered within that concept's days 7 to 14, it is a valid in-window observation: take it.</li>
+<li>A concept's outcome is <strong>missing</strong> only if its week check is still unanswered when <strong>that concept's</strong> window closes. The overview may show <code>missing</code> earlier, before the window has even opened; ignore that until the window closes. Note which prerequisite was missing.</li>
+</ul>
+</li>
+<li><strong>At each return, log:</strong> the date and time, the result of the step 4 checks, which activity was offered and why (the <strong>Why this activity?</strong> text), whether a hint was opened, and <strong>any outside study</strong> of each concept since the last visit.</li>
+<li><strong>If the learner returns after a concept's day 14</strong> and its week-check prerequisites are met, the unused week check is still offered. Let them take it <strong>once</strong>. The app records that first response as <strong>late</strong>. Never change a timestamp or re-run an answered check. Missing outcomes are reported, not imputed.</li>
+</ol>
+<h2 id="after-the-run">After the run</h2>
+<p>The run ends only when the window of <strong>every</strong> started concept has closed.</p>
+<ol start="14">
+<li><strong>Capture the data locally,</strong> while the server is still running. The server keeps its own window busy, so:
+<ol>
+<li>
+<p>Open a <strong>second</strong> PowerShell window.</p>
+</li>
+<li>
+<p>Paste the step 2 block there first; without it the paths below are empty.</p>
+</li>
+<li>
+<p><strong>Export data</strong> in the preview downloads <code>aesop-foreman-data.json</code>: raw records, display preferences, and the computed classifications (<code>derived.overview</code>). Move it from the browser's download folder into <code>$runDir</code> straight away.</p>
+</li>
+<li>
+<p>Optional cross-check: save the live <code>/api/v2/overview</code> endpoint directly into <code>$runDir</code>, never into the worktree, because the file holds raw answers and timestamps:</p>
+<pre><code class="language-powershell">if (-not (Test-Path $runDir)) { throw 'run variables are not set: paste the step 2 block' }
+curl.exe -s http://127.0.0.1:8780/api/v2/overview -o &quot;$runDir\overview-$code.json&quot;
+</code></pre>
+</li>
+</ol>
+</li>
+<li><strong>Write the report locally,</strong> under the <a href="#report-rules">report rules</a>.
+<ul>
+<li>The owner produces a <strong>de-identified aggregate</strong> on this computer: counts and delays per category, with no answer text, free-text notes or timestamps finer than a day.</li>
+<li>Only that aggregate may be shared with an agent (e.g. Codex) for drafting or review.</li>
+<li>Raw exports, the overview file and the run log never leave this computer unless the learner has explicitly consented to the specific processor and its retention.</li>
+</ul>
+</li>
+<li><strong>Delete,</strong> if the learner asks. Deletion is the learner's or owner's decision, never an agent's.
+<ol>
+<li>In the preview, press <strong>Delete data</strong> and confirm. The page shows &quot;Your data was deleted&quot;. Do <strong>not</strong> press <strong>Start again</strong>: that would enroll a new learner.</li>
+<li>Close the preview tab, then stop the server with Ctrl+C.</li>
+<li>Paste the step 2 block, then delete the database file (after the in-app delete it holds no learner records, only the content catalog and the deletion marker) at the <strong>exact path recorded in the run log</strong> (<code>$wt\$db</code>), plus any <code>-wal</code> or <code>-shm</code> files beside it.</li>
+<li>Clear this site's data in the browser (site settings for <code>127.0.0.1:8780</code>).</li>
+<li>Delete everything in <code>$runDir</code> (the export, the overview and the run log) and every copy of them, including the browser's download folder.</li>
+<li>Record only that a deletion took place, with the date.</li>
+</ol>
+</li>
+</ol>
+<h2 id="report-rules">Report rules</h2>
+<ul>
+<li>Report each classification as its own category; never fold them together. That includes independent (unassisted), assisted, early, late, missing and ungraded, plus <strong>provisional</strong>, <strong>contaminated</strong> and <strong>invalid</strong>. With draft keys, otherwise eligible on-time answers are classified <strong>provisional</strong>, not eligible.</li>
+<li><strong>Outside study:</strong> from protocol v5 the app classifies a delayed check given after outside study reported in the app as <strong>contaminated</strong>. If the learner told the owner about outside study but it was <strong>not</strong> entered in the app, exclude that concept's later outcomes by hand, labeled &quot;outside study (reported to owner)&quot;.</li>
+<li>Say &quot;candidate-key match&quot;, never &quot;mastery&quot; or &quot;learned&quot;, until the keys are human-reviewed.</li>
+<li>Keep <code>insufficient_evidence</code> wherever the protocol's thresholds are not met. One learner never meets the 20-learners-per-arm gate.</li>
+<li>Report the actual delay next to the target delay.</li>
+<li>List interruptions, lost-before-save answers, missing prerequisites and any software problems found.</li>
+<li>No names or personal details in the repository or in PRs.</li>
+</ul>
+<h2 id="roles">Roles</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steps 1 to 14: consent, running the sessions, capturing data</td>
+<td>owner (with the learner)</td>
+</tr>
+<tr>
+<td>Step 15: de-identified aggregate</td>
+<td>owner, locally</td>
+</tr>
+<tr>
+<td>Step 15: report drafting from the aggregate only</td>
+<td>owner, or an agent given only the aggregate; reviewed by a non-author</td>
+</tr>
+<tr>
+<td>Step 16: deletion</td>
+<td>learner or owner only</td>
+</tr>
+<tr>
+<td>Fixing software problems found</td>
+<td>normal PR flow: one author and one non-author reviewer</td>
+</tr>
+</tbody>
+</table>
+<h2 id="software-gaps-found-in-review-now-fixed">Software gaps found in review, now fixed</h2>
+<p>These were found during review of this runbook. Each has been fixed in the app, so the earlier workarounds are no longer needed:</p>
+<ol>
+<li><strong>Delete data re-enrolled the learner immediately</strong> (fixed in #42). After deleting, the app shows &quot;Your data was deleted&quot;, and the server refuses every enrollment (409 <code>learner_deleted</code>), even after a page reload or a settings change, until <strong>Start again</strong> is pressed.</li>
+<li><strong>The export omitted the computed classifications</strong> (fixed in #41). The download now includes them in <code>derived.overview</code>.</li>
+<li><strong>The classifier ignored reported outside study</strong> (fixed in #40). From protocol v5 onward, a delayed check given after outside study reported in the app for that concept is classified <code>contaminated</code>.</li>
+</ol>
+
+</main></body>
+</html>

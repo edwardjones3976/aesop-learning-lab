@@ -10,7 +10,7 @@ Open this directory through a local server so the modules load:
 python -m http.server --bind 127.0.0.1 8765
 ```
 
-Start the local API as described in `../docs/local-api-dev.md`, then visit
+Start the local API as described in `../docs/local-api-dev.html`, then visit
 `http://127.0.0.1:8765/`. The fixture works without the API at
 `http://127.0.0.1:8765/?scenario=default`.
 
