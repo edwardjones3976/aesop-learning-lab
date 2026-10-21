@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Micro-unit engine (A2)</title>
+<title>Micro-unit engine (A3)</title>
 <style>
   :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
   @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Micro-unit engine (A2)</h1>
+<h1>Micro-unit engine (A3)</h1>
 <p><code>aesop_lab.micro.engine.MicroUnitEngine(pack, store, now, daily_limit=3)</code>
 uses a validated <code>MicroUnitPack</code>, a <code>SQLiteStore</code>, and a callable clock returning
 an aware datetime. This is an engine/storage API; existing Python content,
@@ -35,19 +35,18 @@ A suggestion does not reserve or expose content. Unfinished units can resume.</l
 Before assignment, this is a deterministic proposal given the current history;
 feedback or assignments arriving before <code>start_unit</code> can change the proposal.</li>
 <li><code>start_unit(unit)</code> persists assignment and exposure and returns only the
-assigned variant in <code>lesson</code>, plus the method and unit IDs. Repeated calls
-preserve the method and original timestamps. New assignments count toward the
+assigned variant in <code>lesson</code>, plus the method and unit IDs. Repeated calls on unfinished units preserve the method and original timestamps. Completed units are refused. New assignments count toward the
 daily cap; existing units can resume after that cap. The assignment transaction
 serializes competing connections, including warm-up and cap decisions.</li>
 <li><code>complete_unit(unit)</code> records completion once. The unit must have started.</li>
-<li><code>answer_check(unit, answer, assisted=False)</code> scores using the existing <code>normalize_answer</code> (whitespace normalized) and then <strong>ignores case</strong> on both sides, so <code>RIVER</code> matches <code>river</code>; punctuation must still match. It compares against the candidate accepted strings. It returns the persisted first response,
+<li><code>answer_check(unit, answer, assisted=False, outside_study="unknown", previously_seen=False)</code> scores using the existing <code>normalize_answer</code> (whitespace normalized) and then <strong>ignores case</strong> on both sides, so <code>RIVER</code> matches <code>river</code>; punctuation must still match. It compares against the candidate accepted strings. It returns the persisted first response,
 score and classification. Repeats cannot replace the first response, including
 an early, assisted or incorrect response. Completion is required; direct early
 or late submissions are retained for reporting.</li>
 <li><code>outcomes_by_method()</code> returns all methods mapped to <code>(matched_key, 1.0)</code>
 observations under <code>outcomes</code>, and unit IDs under <code>excluded</code> for <code>early</code>,
-<code>late</code>, <code>assisted</code>, <code>pending</code> and <code>missing</code>. A completed unit with no response is <code>pending</code> while its day-14 window is open (elapsed time 14 days or less), and <code>missing</code> only after the window closes. Uncompleted units add no evidence.
-Assisted takes precedence over timing in these mutually exclusive buckets.</li>
+<code>late</code>, <code>assisted</code>, <code>contaminated</code>, <code>pending</code> and <code>missing</code>. A completed unit with no response is <code>pending</code> while its day-14 window is open (elapsed time 14 days or less), and <code>missing</code> only after the window closes. Uncompleted units add no evidence.
+Contamination takes precedence over assistance, then timing in these mutually exclusive buckets.</li>
 <li><code>ranking()</code> returns ordered <code>methods</code> with <code>method</code>, <code>posterior_mean</code>,
 <code>probability_best</code>, <code>effective_checks</code>, <code>alpha</code>, <code>beta</code>; plus <code>confidence</code>,
 <code>show_ranking</code>, and exclusions. It delegates to #60's <code>rank_methods</code> unchanged.</li>
@@ -61,7 +60,7 @@ Units can be passed as IDs or pack unit objects; the canonical pack object is us
 <p>Unanswered checks are offered first, oldest completion first, once elapsed time
 since completion reaches seven full days. Overdue checks remain answerable and
 are classified late. Checks never consume the new-unit allowance. Then unfinished
-units resume, then the first unseen pack unit is suggested if the daily allowance
+units resume, then the first unseen unit in seeded learner order is suggested if the daily allowance
 permits it. Assignment dates use calendar days in the timezone supplied by <code>now</code>;
 step C must consistently supply the learner's chosen timezone. The default cap
 is three new units per calendar day per pack.</p>
@@ -71,7 +70,7 @@ fourteen days is late. Only received, first, unassisted, in-window responses fee
 assignment posteriors and ranking, once per exposure at weight one. No imputation
 for missing checks, practice scoring, or repeated-check evidence is added.</p>
 <h2>Storage and #60 mapping</h2>
-<p>Schema <strong>v17</strong> adds <code>micro_exposures</code> and <code>micro_check_attempts</code>. Both use
+<p>Schema <strong>v17</strong> introduced <code>micro_exposures</code> and <code>micro_check_attempts</code>. Both use
 <code>(pack_id, unit_id)</code> as primary key: one exposure and one decisive check per unit
 in a learner's local database. Exposure rows hold method and assignment, exposure
 and completion timestamps. Check rows hold check ID, first answer, correct/incorrect
@@ -83,45 +82,67 @@ The additive v16 migration does not rewrite existing tables or learner history.
 The real compressed v16 fixture and its provenance are in <code>tests/fixtures/micro-v16.md</code>.</p>
 <p>Assignment uses a SHA-256 seed from learner ID, pack ID and unit ID, with a local
 RNG and sorted method IDs. Warm-up picks among methods with the fewest assignments
-until each has two, including pending checks. Thereafter a 20% uniform draw and
+until each has two within its block, including pending checks. Thereafter a 20% uniform draw and
 80% independent Beta Thompson draw use only received eligible outcomes. Priors
 are Beta(1,1), success/failure increments are one. This implements #60's policy
 and independent-unit rule without changing its estimator or confidence thresholds.
 A learner ID is created only behind consent. Ranking Monte Carlo is separately
 seeded from learner/pack and the string <code>ranking</code>.</p>
+<h2>A3 hardening</h2>
+<p>Schema v18 adds exposure TEXT columns <code>policy_branch</code>, <code>assignment_seed</code>,
+<code>eligible_choices</code>, <code>policy_version</code>, <code>pack_version</code>, and
+<code>reexposed_at</code>. Check rows gain <code>outside_study</code> (TEXT, default unknown,
+restricted to none/some/unknown) and <code>previously_seen</code> (INTEGER boolean, default 0).
+All columns are exported. Additive migration preserves every prior row; legacy provenance
+remains NULL because historical decisions cannot be reconstructed. Unlogged replays from before
+this fix cannot be identified retrospectively.</p>
+<p>Before exposure, new engine assignments atomically store the branch (warm-up, uniform-20,
+thompson), decimal SHA-256 seed, JSON eligible method IDs, policy version
+<code>thompson-80-20-warmup2-block-v1</code>, and pack schema version plus SHA-256 of the
+parsed pack representation. The branch is stored instead of an exact assignment probability.
+Replaying adaptive decisions also requires the received history.</p>
+<p>The pack format accepts an optional nonempty <code>block</code> string per unit, for example
+<code>"block": "difficulty-1"</code>. Omitted blocks share one stratum. Warm-up counts assignments
+within the current block, including pending checks, until each method has two. Thereafter
+that block uses the 20% uniform exploration branch and 80% global Thompson branch. Uniform
+exploration samples all methods; exact equal counts are not guaranteed. Thompson uses eligible
+outcomes across all blocks. Blocks should identify topic/difficulty strata before enrollment.</p>
+<p>Unit scheduling uses a learner/pack SHA-256 seed with the separate string <code>unit-order</code>
+to shuffle the pack. Order is stable across restart and varies across learners. Checks retain
+priority and the daily cap applies. Explicit <code>start_unit</code> calls may select by ID;
+callers should follow <code>next_activity</code> to retain random scheduling. Packs remain immutable.</p>
+<p><code>start_unit</code> raises <code>ValueError: completed unit cannot be replayed</code>
+after completion. Refusal does not expose content or contaminate the check. Unfinished restarts
+return the original assigned lesson and retain timestamps. Every engine lesson-return path
+marks exposure. Any lower-level exposure after completion persists the first
+<code>reexposed_at</code>; it permanently excludes that unit's check, even if already answered.</p>
+<p><code>answer_check(unit, answer, assisted=False, outside_study="unknown", previously_seen=False)</code>
+persists the structured declarations with the first answer. Outside study <code>some</code>,
+prior familiarity, or recorded re-exposure yields <code>contaminated</code>, reported in
+<code>excluded</code> and excluded from both allocation posteriors and ranking. Contamination
+takes precedence over assistance and timing. Unknown and none are not reports of outside study,
+matching <code>descriptive_v2.py</code>; they remain eligible when other requirements pass.
+Repeated submissions preserve the first response and declarations.</p>
 <h2>Validation and deliberate breaks</h2>
-<p><code>tests/test_micro_unit_engine.py</code> uses a controlled aware clock and the sample
-pack, expanded into distinct synthetic units where needed. The 60-day seeded
-learner studies three units daily (180 exposures) and receives 159 day-7 checks.
-Recall probabilities are 0.9, 0.5 and 0.2 in sorted method order; outcome RNG seed
-is 20261021, identity is <code>synthetic-42</code>. The true best (<code>cued_retrieval</code>) ranks first.
-Posterior means are 0.9262, 0.5556 and 0.3125, with 120, 25 and 14 eligible
-checks respectively. The confidence label is <code>likely</code>; <code>show_ranking</code> is true.
-This single synthetic history verifies integration, not human effectiveness or
-ensemble calibration. Real content needs many more independently authored units
-than the four-unit sample provides.</p>
-<p>Run <code>PYTHONPATH=src python scripts/micro_unit_engine_break_checks.py</code> to repeat
-one deliberate mutation per key test, in memory. Each must cause an assertion
-failure, not merely a runtime/import error. Mutations remove the cap, offer checks
-a day early, overwrite exposure timestamps, replace first responses, remove
-warm-up, change the exploration boundary to 80%, admit excluded outcomes, remove
-consent checks, retain check rows on deletion, leave migration version at 16,
-and reverse scores in the synthetic learner. All <strong>11/11</strong> breaks produced
-assertion failures in their corresponding tests. The source was unchanged by
-these runs.</p>
-<p>Final validation on this worktree:</p>
-<ul>
-<li><code>PYTHONPATH=src python -m unittest discover -s tests -q</code>: <strong>336 passed</strong>
-(including 12 engine tests, after Claude's integration added the vocabulary case test).</li>
-<li><code>node --test tests/foreman_web_contract.test.mjs tests/personal_comparison_web.test.mjs</code>:
-<strong>51 passed</strong>.</li>
-<li>Deliberate breaks: <strong>11/11 detected</strong>; focused compile checks and
-<code>git diff --check</code> passed.</li>
-</ul>
-<p>The first full run exposed migration tests that reset <code>user_version</code> on an
-already current schema. Making the additive table creation idempotent preserved
-those legacy tests; the final full run above passed. The genuine v16 fixture
-separately verifies the actual upgrade and preservation of every original row.</p>
+<p>The balance test schedules 24 units (two blocks of 12) for 300 learners without received
+feedback. It requires more than 290 distinct orders, mean original pack position spread below
+0.8 across methods, and per-block method count spread below 160 of 3,600 assignments.
+Adaptive allocation need not have equal counts when feedback differs. A separate test verifies
+two warm-up assignments per method in each block.</p>
+<p>Existing expectations changed only for schema v18, shuffled next-unit order, unfinished
+instead of completed restart, and the added contaminated bucket. The consent migration test
+now expects v18. Existing Python content, Preview, protocols, estimator and UI are unchanged.</p>
+<p><code>PYTHONPATH=src python scripts/micro_unit_engine_break_checks.py</code> runs isolated
+in-memory mutations that must cause assertion failures, without import/runtime errors.
+New mutations remove replay refusal, ignore re-exposure, omit provenance, pool block warm-up,
+remove shuffle, and ignore outside study or familiarity. The original A2 mutations remain.</p>
+<p id="a3-results">Final validation: Python unittest discovery passed <strong>343 tests</strong>
+(including 18 engine tests); Node contract suites passed <strong>51 tests</strong>.
+Across 300 learners, mean original pack positions were 11.5652, 11.5395 and 11.3959
+in sorted method order (spread 0.1694, limit 0.8). Easy-block counts were 1201/1184/1215
+and hard-block counts 1207/1198/1195 (spreads 31 and 12, limit 160).
+Both order-diversity and per-block warm-up assertions passed. Deliberate mutation
+checks detected <strong>20/20 breaks</strong> through assertion failures, including v17 migration and optional block parsing. One intermediate full run encountered a Windows connection-abort error in an existing HTTP journey; the full suite was rerun. No push, PR or merge was performed.</p>
 <h2>Step C decisions</h2>
 <p>HTTP routes and payload contracts, UI integration, learner timezone selection,
 pack enrollment/switching, explicit assistance capture, and wording for pending,
@@ -129,7 +150,7 @@ missed, late and close results remain for step C. The engine supplies exclusion
 IDs and model confidence; the UI must explain draft-key uncertainty and must not
 imply the leader's confidence certifies the entire ordering. Pack IDs must be
 stable and packs immutable during a run; versioning or replacing enrolled content
-needs a separate policy. No push, PR, approval or merge is part of A2.</p>
+needs a separate policy. No push, PR, approval or merge is part of A3.</p>
 
 </main></body>
 </html>

@@ -1,4 +1,5 @@
 import gzip
+import json
 import random
 import sqlite3
 import tempfile
@@ -49,7 +50,7 @@ class MicroEngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.engine.start_unit(self.pack.units[3])
         self.at += timedelta(days=1)
-        self.assertEqual(self.engine.next_activity()["unit_id"], self.pack.units[3].id)
+        self.assertEqual(self.engine.next_activity()["unit_id"], next(u.id for u in self.engine._ordered_units() if u.id not in self.engine._exposures()))
         self.learn(self.pack.units[3])
 
     def test_window_and_due_priority(self):
@@ -71,14 +72,13 @@ class MicroEngineTests(unittest.TestCase):
 
     def test_stable_exposure_restart(self):
         unit = self.pack.units[0]
-        first = self.learn(unit)
+        first = self.engine.start_unit(unit)
         original = self.store.micro_exposures(self.pack.pack_id)
         self.store.close()
         self.store = SQLiteStore(self.path)
         self.engine = MicroUnitEngine(self.pack, self.store, lambda: self.at)
         self.at += timedelta(days=1)
         self.assertEqual(self.engine.start_unit(unit), first)
-        self.engine.complete_unit(unit)
         self.assertEqual(self.store.micro_exposures(self.pack.pack_id), original)
         self.assertEqual(first["lesson"], unit.variants[first["method_id"]])
         self.assertNotIn("variants", first)
@@ -151,7 +151,7 @@ class MicroEngineTests(unittest.TestCase):
         result = self.engine.outcomes_by_method()
         self.assertEqual(sorted(x for values in result["outcomes"].values() for x in values), [(False, 1), (True, 1)])
         self.assertEqual({k: len(v) for k, v in result["excluded"].items()},
-                         dict(early=1, late=1, assisted=1, missing=0, pending=1))
+                         dict(early=1, late=1, assisted=1, missing=0, pending=1, contaminated=0))
         # The same unanswered unit becomes missing only after its day-14 window closes.
         self.at = datetime.fromisoformat(exposures[self.pack.units[5].id]["completed_at"]) + timedelta(days=14, seconds=1)
         later = self.engine.outcomes_by_method()["excluded"]
@@ -192,7 +192,7 @@ class MicroEngineTests(unittest.TestCase):
         self.at += timedelta(days=7)
         self.engine.answer_check(self.pack.units[0], "river")
         export = self.store.export_all()
-        self.assertEqual(export["schemaVersion"], 17)
+        self.assertEqual(export["schemaVersion"], 18)
         self.assertEqual(len(export["microExposures"]), 1)
         self.assertEqual(len(export["microCheckAttempts"]), 1)
         self.store.delete_all()
@@ -209,7 +209,7 @@ class MicroEngineTests(unittest.TestCase):
         connection.close()
         migrated = SQLiteStore(path)
         self.addCleanup(migrated.close)
-        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 17)
+        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 18)
         for table, rows in before.items():
             self.assertEqual([tuple(r) for r in migrated.connection.execute(f'SELECT * FROM "{table}"')], rows)
         self.assertTrue(migrated.has_consent())
@@ -233,3 +233,122 @@ class MicroEngineTests(unittest.TestCase):
         self.assertEqual(sum(m["effective_checks"] for m in result["methods"]), 159)
         self.assertEqual(result["methods"][0]["method"], self.engine.methods[0])
         self.assertTrue(result["show_ranking"])
+
+
+    def test_completed_replay(self):
+        unit = self.pack.units[0]
+        self.learn(unit)
+        self.at += timedelta(days=7)
+        with self.assertRaisesRegex(ValueError, "completed"):
+            self.engine.start_unit(unit)
+        self.assertEqual(self.engine.answer_check(unit, "river")["classification"], "eligible")
+        # A lower-level exposure must taint even a check already recorded.
+        replay = self.engine._lesson(unit, self.engine._exposures()[unit.id])
+        self.assertIn("lesson", replay)
+        self.assertEqual(self.engine.outcomes_by_method()["excluded"]["contaminated"], [unit.id])
+        self.assertEqual(sum(m["effective_checks"] for m in self.engine.ranking()["methods"]), 0)
+
+    def test_assignment_provenance(self):
+        unit = self.pack.units[0]
+        self.engine.start_unit(unit)
+        row = self.store.export_all()["microExposures"][0]
+        self.assertEqual(row["policy_branch"], "warm-up")
+        self.assertEqual(row["assignment_seed"], str(self.engine._seed(unit.id)))
+        self.assertEqual(json.loads(row["eligible_choices"]), self.engine.methods)
+        self.assertEqual(row["policy_version"], "thompson-80-20-warmup2-block-v1")
+        self.assertTrue(row["pack_version"].startswith("micro-unit-pack/1:sha256:"))
+        self.store.close()
+        self.store = SQLiteStore(self.path)
+        self.assertEqual(self.store.export_all()["microExposures"][0], row)
+
+    def test_contamination(self):
+        self.expand(6)
+        for i, unit in enumerate(self.pack.units):
+            if i == 3:
+                self.at += timedelta(days=1)
+            self.learn(unit)
+        self.at += timedelta(days=7)
+        for unit, study, seen, expected in zip(self.pack.units,
+                ("none", "unknown", "some", "none", "some", "unknown"),
+                (False, False, False, True, True, False),
+                ("eligible", "eligible", "contaminated", "contaminated", "contaminated", "eligible")):
+            result = self.engine.answer_check(unit, "river", outside_study=study, previously_seen=seen)
+            self.assertEqual(result["classification"], expected)
+            self.assertEqual(result["outside_study"], study)
+            self.assertEqual(bool(result["previously_seen"]), seen)
+        self.assertEqual(len(self.engine.ranking()["excluded"]["contaminated"]), 3)
+        self.assertEqual(sum(m["effective_checks"] for m in self.engine.ranking()["methods"]), 3)
+        for invalid in ("", None, "yes"):
+            with self.assertRaises(ValueError):
+                self.engine.answer_check(self.pack.units[0], "river", outside_study=invalid)
+
+    def test_v17_migration_preserves_rows(self):
+        # Construct an actual v17 micro schema containing exposure and check history.
+        path = Path(self.temp.name) / "v17.db"
+        db = sqlite3.connect(path)
+        self.store.connection.backup(db)
+        for table, fields in (("micro_exposures", ("policy_branch", "assignment_seed", "eligible_choices", "policy_version", "pack_version", "reexposed_at")),
+                              ("micro_check_attempts", ("outside_study", "previously_seen"))):
+            for field in fields:
+                db.execute(f"ALTER TABLE {table} DROP COLUMN {field}")
+        db.execute("INSERT INTO micro_exposures VALUES ('p','u','m','a','b','c')")
+        db.execute("INSERT INTO micro_check_attempts VALUES ('p','u','q','answer','correct','d',0)")
+        db.execute("PRAGMA user_version = 17")
+        db.commit()
+        before = {t: db.execute(f"SELECT * FROM {t}").fetchall() for t in ("micro_exposures", "micro_check_attempts")}
+        db.close()
+        migrated = SQLiteStore(path)
+        self.addCleanup(migrated.close)
+        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 18)
+        for table, rows in before.items():
+            actual = migrated.connection.execute(f"SELECT * FROM {table}").fetchall()
+            self.assertEqual([tuple(r)[:len(rows[0])] for r in actual], rows)
+        self.assertIsNone(migrated.micro_exposures("p")[0]["policy_version"])
+        self.assertEqual(migrated.micro_checks("p")[0]["outside_study"], "unknown")
+
+    def test_order_and_block_balance(self):
+        self.expand(24)
+        self.pack = replace(self.pack, units=tuple(replace(u, block="easy" if i < 12 else "hard")
+                                                  for i, u in enumerate(self.pack.units)))
+        # Use an isolated in-memory store for the 7,200 synthetic assignments.
+        self.store.close()
+        self.store = SQLiteStore(":memory:")
+        self.store.confirm_consent(self.at)
+        self.store.learner_id()
+        totals = {m: [] for m in self.engine.methods}
+        blocks = {b: Counter() for b in ("easy", "hard")}
+        orders = set()
+        for learner in range(300):
+            # Isolate histories cheaply; assignment still runs through real storage.
+            with self.store.connection:
+                self.store.connection.execute("DELETE FROM micro_exposures")
+                self.store.connection.execute("UPDATE learner_identity SET id=?", (f"balance-{learner}",))
+            engine = MicroUnitEngine(self.pack, self.store, lambda: self.at, daily_limit=24)
+            order = engine._ordered_units()
+            orders.add(tuple(u.id for u in order))
+            self.assertEqual(order, MicroUnitEngine(self.pack, self.store, lambda: self.at)._ordered_units())
+            for position, unit in enumerate(order):
+                self.assertEqual(engine.next_activity()["unit_id"], unit.id)
+                method = engine.start_unit(unit)["method_id"]
+                engine.complete_unit(unit)
+                totals[method].append(int(unit.id.split("-")[1]))
+                blocks[unit.block][method] += 1
+        self.assertGreater(len(orders), 290)
+        means = {m: sum(v) / len(v) for m, v in totals.items()}
+        self.assertLess(max(means.values()) - min(means.values()), .8)
+        for counts in blocks.values():
+            self.assertLess(max(counts.values()) - min(counts.values()), 160)
+        print("Balance: original-position means", means, "block counts", blocks)
+
+
+    def test_block_warmup(self):
+        self.expand(12)
+        self.pack = replace(self.pack, units=tuple(replace(u, block="a" if i < 6 else "b")
+                                                  for i, u in enumerate(self.pack.units)))
+        self.engine = MicroUnitEngine(self.pack, self.store, lambda: self.at, daily_limit=12)
+        for block in ("a", "b"):
+            counts = Counter()
+            for unit in (u for u in self.pack.units if u.block == block):
+                counts[self.learn(unit)["method_id"]] += 1
+                self.assertEqual(self.engine._exposures()[unit.id]["policy_branch"], "warm-up")
+            self.assertEqual(sorted(counts.values()), [2, 2, 2])

@@ -43,6 +43,7 @@ class MicroUnit:
     variants: Mapping[str, str]
     check: DelayedCheck
     practice: tuple[PracticeItem, ...]
+    block: str | None = None
 
 @dataclass(frozen=True, slots=True)
 class MicroUnitPack:
@@ -94,7 +95,7 @@ class _Reader:
         return value
 
     def unit(self, value, p, method_ids):
-        u = self.obj(value, p, ("id", "target", "variants", "check"), ("practice",))
+        u = self.obj(value, p, ("id", "target", "variants", "check"), ("practice", "block"))
         uid = self.identifier(u.get("id"), p + ".id", "unit")
         t = self.obj(u.get("target"), p + ".target", ("word", "gloss"))
         target = Target(self.text(t.get("word"), p + ".target.word"), self.text(t.get("gloss"), p + ".target.gloss"))
@@ -132,7 +133,7 @@ class _Reader:
             pp = f"{p}.practice[{j}]"
             item = self.obj(value, pp, ("id", "prompt"))
             practice.append(PracticeItem(self.identifier(item.get("id"), pp + ".id", "item"), self.text(item.get("prompt"), pp + ".prompt")))
-        return MicroUnit(uid, target, MappingProxyType(lessons), DelayedCheck(cid, family, prompt, AnswerKeyCandidate(accepted, "candidate"), 7, True), tuple(practice))
+        return MicroUnit(uid, target, MappingProxyType(lessons), DelayedCheck(cid, family, prompt, AnswerKeyCandidate(accepted, "candidate"), 7, True), tuple(practice), self.text(u["block"], p + ".block") if "block" in u else None)
 
     def parse(self, data):
         raw = self.obj(data, "", ("kind", "schema_version", "pack_id", "methods", "units"))
