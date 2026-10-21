@@ -132,6 +132,6 @@ The run ends only when the window of **every** started concept has closed.
 
 These were found during review of this runbook. Each has been fixed in the app, so the earlier workarounds are no longer needed:
 
-1. **Delete data re-enrolled the learner immediately** (fixed in #42). After deleting, the app now shows "Your data was deleted". Nothing enrolls until **Start again** is pressed, including changes to settings and navigation.
+1. **Delete data re-enrolled the learner immediately** (fixed in #42). After deleting, the app shows "Your data was deleted", and the server refuses every enrollment (409 `learner_deleted`), even after a page reload or a settings change, until **Start again** is pressed.
 2. **The export omitted the computed classifications** (fixed in #41). The download now includes them in `derived.overview`.
 3. **The classifier ignored reported outside study** (fixed in #40). From protocol v5 onward, a delayed check given after outside study reported in the app for that concept is classified `contaminated`.
