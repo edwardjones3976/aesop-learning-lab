@@ -35,7 +35,7 @@ METHOD_DEFINITIONS = [
     {
         "id": "rule_drill",
         "name": "Rule Then Drill",
-        "description": "A short explicit definition statement followed by three quick drill lines.",
+        "description": "A short explicit definition statement followed by two quick drill lines.",
     },
 ]
 
@@ -76,7 +76,7 @@ NOUN_GLOSSES: List[Tuple[str, List[str]]] = [
     ("locket", ["locket"]),
     ("mattress", ["mattress"]),
     ("meadow", ["meadow"]),
-    ("mortar", ["mortar"]),
+    ("cauldron", ["cauldron"]),
     ("necklace", ["necklace"]),
     ("orchard", ["orchard"]),
     ("pebble", ["pebble"]),
@@ -113,7 +113,7 @@ VERB_GLOSSES: List[Tuple[str, List[str]]] = [
     ("to gallop", ["to gallop", "gallop"]),
     ("to paddle", ["to paddle", "paddle"]),
     ("to juggle", ["to juggle", "juggle"]),
-    ("to buckle", ["to buckle", "buckle"]),
+    ("to fasten", ["to fasten", "fasten"]),
     ("to tickle", ["to tickle", "tickle"]),
     ("to sprout", ["to sprout", "sprout"]),
     ("to wither", ["to wither", "wither"]),
@@ -228,12 +228,12 @@ def build_lexicon_data(seed: int = DEFAULT_SEED, unreviewed: bool = False) -> Di
 
         auth = authoring_data[gloss]
 
-        # 1. Retrieval variant (real retrieval: show word, prompt recall, answer on separate final line)
+        # 1. Retrieval variant (teach pair first, prompt retrieval, confirm answer)
         # Note: Must NOT contain check prompt or 'What does'
         retrieval = (
-            f"Study the invented vocabulary word {word}.\n"
-            f"{word}. Before reading on, try to recall its meaning.\n"
-            f"Answer: The word {word} means {gloss_phrase}, so keep {gloss_phrase} in mind."
+            f"The invented word {word} means {gloss_phrase}.\n"
+            f"Now cover the line above. What is the meaning of {word}? Say it aloud before checking.\n"
+            f"Answer: {gloss_phrase}. Remember {word}!"
         )
 
         # 2. Keyword variant (sound-alike keyword + vivid image sentence connecting keyword to meaning)

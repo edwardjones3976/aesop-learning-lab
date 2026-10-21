@@ -169,25 +169,57 @@ class TestInventedLexicon(unittest.TestCase):
                     f"Grammar error 'to to' detected in unit {u['id']} variant '{method_id}': {variant_text}",
                 )
 
-    def test_retrieval_first_sentence_does_not_contain_gloss(self) -> None:
-        """The retrieval variant's first sentence must not reveal the gloss."""
+    def test_retrieval_gloss_before_first_retrieval_instruction(self) -> None:
+        """In every retrieval variant, the gloss appears before the first retrieval instruction."""
         for u in self.units:
             retrieval_text = u["variants"]["retrieval"]
-            first_sentence = retrieval_text.splitlines()[0]
             gloss = u["gloss"]
             base = gloss[3:] if gloss.startswith("to ") else gloss
+            ret_lower = retrieval_text.lower()
+            base_lower = base.lower()
 
-            self.assertNotIn(
-                base.lower(),
-                first_sentence.lower(),
-                f"Retrieval first sentence leaks gloss in unit {u['id']}: '{first_sentence}'",
+            instruction_marker = "now cover"
+            self.assertIn(
+                instruction_marker,
+                ret_lower,
+                f"Retrieval variant does not contain instruction marker in unit {u['id']}: {retrieval_text}",
             )
-            for acc in u["check"]["accepted"]:
-                self.assertNotIn(
-                    acc.lower(),
-                    first_sentence.lower(),
-                    f"Retrieval first sentence leaks accepted answer '{acc}' in unit {u['id']}: '{first_sentence}'",
-                )
+            instruction_idx = ret_lower.find(instruction_marker)
+            gloss_idx = ret_lower.find(base_lower)
+
+            self.assertNotEqual(
+                gloss_idx,
+                -1,
+                f"Gloss '{base}' not found in retrieval variant in unit {u['id']}: {retrieval_text}",
+            )
+            self.assertLess(
+                gloss_idx,
+                instruction_idx,
+                f"Gloss '{base}' does not appear before first retrieval instruction in unit {u['id']}: {retrieval_text}",
+            )
+
+    def test_authoring_sense_present_and_literal(self) -> None:
+        """Every unit has a non-empty 'sense', and verb examples contain no figurative markers."""
+        authoring_path = Path("content/drafts/invented-lexicon-authoring.json")
+        with open(authoring_path, "r", encoding="utf-8") as f:
+            authoring = json.load(f)
+
+        figurative_markers = ["interest", "deadline", "deadlines", "hopes", "heart", "career", "plans"]
+
+        for gloss, auth in authoring.items():
+            sense = auth.get("sense", "")
+            self.assertTrue(
+                bool(sense and str(sense).strip()),
+                f"Unit '{gloss}' is missing a non-empty 'sense' in authoring.",
+            )
+
+            if gloss.startswith("to "):
+                for ex in auth.get("example_sentences", []):
+                    for marker in figurative_markers:
+                        self.assertFalse(
+                            bool(re.search(r"\b" + re.escape(marker) + r"\b", ex, re.IGNORECASE)),
+                            f"Figurative marker '{marker}' found in verb example for '{gloss}': {ex}",
+                        )
 
     def test_no_example_sentence_frame_reused_more_than_twice(self) -> None:
         """No example-sentence frame (with word or gloss removed) is reused across more than 2 units."""

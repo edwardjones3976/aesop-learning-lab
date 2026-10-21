@@ -1,5 +1,6 @@
 {
   "kettle": {
+    "sense": "a metal vessel for boiling water with a lid, spout, and handle",
     "keyword": "hot sieve",
     "mnemonic_sentence": "Steam whistled from the hot sieve as boiling water bubbled inside the tea kettle {w}.",
     "example_sentences": [
@@ -13,6 +14,7 @@
     ]
   },
   "bucket": {
+    "sense": "an open cylindrical container with a handle for carrying liquids",
     "keyword": "lift handle",
     "mnemonic_sentence": "He gripped the sturdy lift handle to haul the heavy wooden bucket {w} up from the deep stone well.",
     "example_sentences": [
@@ -26,6 +28,7 @@
     ]
   },
   "pillow": {
+    "sense": "a soft cushion used to support the head while resting or sleeping",
     "keyword": "rope wood",
     "mnemonic_sentence": "Tired of sleeping on rough rope wood planks, the traveler gladly rested his weary head upon the soft pillow {w}.",
     "example_sentences": [
@@ -39,6 +42,7 @@
     ]
   },
   "blanket": {
+    "sense": "a large piece of thick woven fabric used as a bed covering for warmth",
     "keyword": "satin hat",
     "mnemonic_sentence": "Setting aside her fancy satin hat, the chilled girl pulled the thick wool blanket {w} over her shoulders.",
     "example_sentences": [
@@ -52,6 +56,7 @@
     ]
   },
   "candle": {
+    "sense": "a cylinder of wax with an embedded wick that is burned to provide light",
     "keyword": "tall pour",
     "mnemonic_sentence": "Wax dripped in a tall pour down the golden taper as the wax candle {w} lit up the dark chamber.",
     "example_sentences": [
@@ -65,6 +70,7 @@
     ]
   },
   "mirror": {
+    "sense": "a reflective glass surface that forms an image of objects placed before it",
     "keyword": "view domain",
     "mnemonic_sentence": "The queen admired her majestic view domain through the crystal reflection of the silver mirror {w}.",
     "example_sentences": [
@@ -78,6 +84,7 @@
     ]
   },
   "ladder": {
+    "sense": "a vertical or inclined set of rungs or steps used for climbing up or down",
     "keyword": "cast fence",
     "mnemonic_sentence": "The painter propped the tall cast fence pole aside and unfolded his wooden ladder {w} against the wall.",
     "example_sentences": [
@@ -91,6 +98,7 @@
     ]
   },
   "hammer": {
+    "sense": "a hand tool with a heavy metal head used for pounding nails or beating metal",
     "keyword": "kudu horn",
     "mnemonic_sentence": "Curved like a solid kudu horn, the heavy blacksmith hammer {w} pounded iron on the anvil.",
     "example_sentences": [
@@ -104,6 +112,7 @@
     ]
   },
   "shovel": {
+    "sense": "a tool with a broad blade or scoop attached to a handle for digging or moving loose material",
     "keyword": "gull feather",
     "mnemonic_sentence": "Sweeping past a dropped gull feather in the sand, the gardener drove the steel shovel {w} into the flowerbed.",
     "example_sentences": [
@@ -117,6 +126,7 @@
     ]
   },
   "needle": {
+    "sense": "a very slender pointed steel rod with an eye at one end for sewing thread",
     "keyword": "window digit",
     "mnemonic_sentence": "Holding the tool up near the window digit latch, she threaded fine silk through the sharp steel needle {w}.",
     "example_sentences": [
@@ -130,6 +140,7 @@
     ]
   },
   "anchor": {
+    "sense": "a heavy iron device cast overboard to grip the seabed and hold a ship in place",
     "keyword": "dusty hook",
     "mnemonic_sentence": "Looking like a massive dusty hook, the ship anchor {w} held the wooden schooner firmly in the ocean seabed.",
     "example_sentences": [
@@ -143,6 +154,7 @@
     ]
   },
   "barrel": {
+    "sense": "a bulging cylindrical wooden container bound by hoops used to store liquids",
     "keyword": "village zap",
     "mnemonic_sentence": "Celebrating the annual village zap festival, the tavern keeper tapped a fresh cider barrel {w} for everyone.",
     "example_sentences": [
@@ -156,6 +168,7 @@
     ]
   },
   "basket": {
+    "sense": "a container woven from flexible twigs, wicker, or cane used for carrying goods",
     "keyword": "vampire feast",
     "mnemonic_sentence": "She escaped the vampire feast with a wicker basket {w} heaped full of harvested fruit.",
     "example_sentences": [
@@ -169,6 +182,7 @@
     ]
   },
   "bottle": {
+    "sense": "a rigid container with a narrow neck used for storing liquids",
     "keyword": "family linen",
     "mnemonic_sentence": "Wrapped carefully in soft family linen to avoid breakage, the glass bottle {w} held rare medicinal nectar.",
     "example_sentences": [
@@ -182,6 +196,7 @@
     ]
   },
   "bridge": {
+    "sense": "a structure spanning a river, road, or chasm to allow passage from one side to the other",
     "keyword": "deep boat",
     "mnemonic_sentence": "The massive arch of the stone bridge {w} let every tall deep boat pass safely underneath.",
     "example_sentences": [
@@ -195,6 +210,7 @@
     ]
   },
   "button": {
+    "sense": "a small disc sewn onto clothing used to fasten garments by passing through a slit",
     "keyword": "lullaby mat",
     "mnemonic_sentence": "Sitting on the nursery lullaby mat, the young boy tried to push each plastic button {w} through its shirt hole.",
     "example_sentences": [
@@ -208,6 +224,7 @@
     ]
   },
   "carpet": {
+    "sense": "a floor covering made of thick woven fabric spread across a room",
     "keyword": "wushu hit",
     "mnemonic_sentence": "Practicing a swift wushu hit in the gym, the martial artist landed firmly on the thick carpet {w}.",
     "example_sentences": [
@@ -221,6 +238,7 @@
     ]
   },
   "castle": {
+    "sense": "a large fortified medieval building with defensive walls and towers",
     "keyword": "bulletin hill",
     "mnemonic_sentence": "Standing high on the bulletin hill, the royal fortress castle {w} commanded a wide view of the kingdom.",
     "example_sentences": [
@@ -234,6 +252,7 @@
     ]
   },
   "chimney": {
+    "sense": "a vertical pipe or structure that carries smoke away from a fireplace through a roof",
     "keyword": "go gill",
     "mnemonic_sentence": "A wandering fish had to go gill first into the brick chimney {w} when the factory smoke cleared.",
     "example_sentences": [
@@ -247,6 +266,7 @@
     ]
   },
   "compass": {
+    "sense": "an instrument with a magnetized needle that points toward magnetic north",
     "keyword": "must spy",
     "mnemonic_sentence": "The navigator said we must spy our direction using the magnetic compass {w} to steer north.",
     "example_sentences": [
@@ -260,6 +280,7 @@
     ]
   },
   "cradle": {
+    "sense": "a small rocking bed designed for an infant",
     "keyword": "check him",
     "mnemonic_sentence": "The mother walked in to check him as the baby rocked gently in the carved cradle {w}.",
     "example_sentences": [
@@ -273,6 +294,7 @@
     ]
   },
   "curtain": {
+    "sense": "a piece of hanging cloth used to screen a window from light or view",
     "keyword": "dun fold",
     "mnemonic_sentence": "She drew the heavy dun fold of velvet cloth across the window to close the dark curtain {w}.",
     "example_sentences": [
@@ -286,6 +308,7 @@
     ]
   },
   "dagger": {
+    "sense": "a short bladed weapon with a pointed tip used for stabbing",
     "keyword": "soda mug",
     "mnemonic_sentence": "Resting next to a ceramic soda mug on the tavern table, the sharp dagger {w} glinted in the lantern light.",
     "example_sentences": [
@@ -299,6 +322,7 @@
     ]
   },
   "drawer": {
+    "sense": "a sliding box-shaped storage compartment fitted into a piece of furniture",
     "keyword": "go pull",
     "mnemonic_sentence": "To find the missing keys, go pull open the mahogany desk drawer {w} and search inside.",
     "example_sentences": [
@@ -312,6 +336,7 @@
     ]
   },
   "feather": {
+    "sense": "one of the light horny structures that form the plumage of a bird",
     "keyword": "tiny plume",
     "mnemonic_sentence": "A delicate tiny plume of down dropped as the pure white bird feather {w} drifted to earth.",
     "example_sentences": [
@@ -325,6 +350,7 @@
     ]
   },
   "fence": {
+    "sense": "a freestanding wooden or wire barrier used to enclose an area of ground",
     "keyword": "rail wire",
     "mnemonic_sentence": "The rancher strung rail wire along wooden posts to build a tall boundary fence {w}.",
     "example_sentences": [
@@ -338,6 +364,7 @@
     ]
   },
   "fountain": {
+    "sense": "a decorative architectural structure that jets or pours water into a basin",
     "keyword": "dusk gulf",
     "mnemonic_sentence": "Across the dusky dusk gulf, clear water erupted high into the air from the marble fountain {w}.",
     "example_sentences": [
@@ -351,6 +378,7 @@
     ]
   },
   "furnace": {
+    "sense": "an enclosed chamber in which fuel is burned to generate heat",
     "keyword": "best umbrella",
     "mnemonic_sentence": "Leaving his best umbrella by the warm cellar door, the homeowner stoked the heating furnace {w} with dry coal.",
     "example_sentences": [
@@ -364,6 +392,7 @@
     ]
   },
   "garlic": {
+    "sense": "a pungent bulbous plant divided into cloves used as a cooking seasoning",
     "keyword": "low clove",
     "mnemonic_sentence": "The chef peeled every low clove of the pungent white garlic {w} bulb before mincing it for sauce.",
     "example_sentences": [
@@ -377,6 +406,7 @@
     ]
   },
   "helmet": {
+    "sense": "a rigid protective hat worn to shield the head from injury",
     "keyword": "good toll",
     "mnemonic_sentence": "The knight paid a good toll at the drawbridge while polishing the visor of his steel helmet {w}.",
     "example_sentences": [
@@ -390,6 +420,7 @@
     ]
   },
   "jacket": {
+    "sense": "a sleeved outer garment extending to the waist or hips",
     "keyword": "wedding sock",
     "mnemonic_sentence": "Packing a single silk wedding sock into his travel suitcase, he zipped up his warm winter jacket {w}.",
     "example_sentences": [
@@ -403,6 +434,7 @@
     ]
   },
   "lantern": {
+    "sense": "a portable protective case enclosing a light source such as a candle or oil flame",
     "keyword": "pug near",
     "mnemonic_sentence": "With his faithful pug near his boots, the watchman held his brass lantern {w} high to light the road.",
     "example_sentences": [
@@ -416,6 +448,7 @@
     ]
   },
   "locket": {
+    "sense": "a small hinged ornamental case worn on a chain to hold a miniature portrait",
     "keyword": "round medal",
     "mnemonic_sentence": "Shaped like a round medal, the gold locket {w} swung on its chain and opened to reveal a portrait.",
     "example_sentences": [
@@ -429,6 +462,7 @@
     ]
   },
   "mattress": {
+    "sense": "a large fabric case stuffed with resilient material or springs used for sleeping on",
     "keyword": "hotel sofa",
     "mnemonic_sentence": "Preferring good sleep to a cramped hotel sofa, the tired tourist sank into the comfortable mattress {w}.",
     "example_sentences": [
@@ -442,6 +476,7 @@
     ]
   },
   "meadow": {
+    "sense": "a tract of low grassland near a stream or woods used for pasture or hay",
     "keyword": "buddha dome",
     "mnemonic_sentence": "Gazing past the ornate buddha dome, the traveler saw cows grazing peacefully in the sunny meadow {w}.",
     "example_sentences": [
@@ -454,20 +489,22 @@
       "Butterflies flitted from blossom to blossom across the grassy {w} (meadow)."
     ]
   },
-  "mortar": {
+  "cauldron": {
+    "sense": "a large metal pot used for cooking or boiling liquids over an open fire",
     "keyword": "new wick",
-    "mnemonic_sentence": "Beside the lamp with a new wick, the apothecary crushed dried herbs in a stone mortar {w}.",
+    "mnemonic_sentence": "Beside a bright lamp with a new wick, the cook stirred hot soup inside the heavy cast-iron cauldron {w}.",
     "example_sentences": [
-      "The apothecary used a heavy granite pestle to crush dried herbs inside the stone {w} (mortar).",
-      "Masons mixed sand, water, and lime to prepare fresh binding {w} (mortar) for the brick wall."
+      "The alchemist hung a heavy black iron {w} (cauldron) directly over the roaring fireplace coals.",
+      "A savory stew of venison and root vegetables simmered quietly in the large bronze {w} (cauldron)."
     ],
     "rule_drills": [
-      "Grind the dried peppercorns finely inside the heavy granite {w} (mortar).",
-      "Masons applied fresh cement {w} (mortar) between the stone building blocks.",
-      "Wash the ceramic grinding {w} (mortar) thoroughly after pounding spices."
+      "Scrub the soot from the bottom of the iron {w} (cauldron) after cooking.",
+      "She poured three gallons of spring water into the wide {w} (cauldron).",
+      "Hang the heavy copper {w} (cauldron) from the iron tripod above the fire."
     ]
   },
   "necklace": {
+    "sense": "an ornamental chain or string of beads worn around the neck",
     "keyword": "zip clasp",
     "mnemonic_sentence": "She fastened the tiny zip clasp behind her neck, admiring the sparkling diamond necklace {w}.",
     "example_sentences": [
@@ -481,6 +518,7 @@
     ]
   },
   "orchard": {
+    "sense": "a piece of land planted with fruit trees",
     "keyword": "peck pad",
     "mnemonic_sentence": "Holding a farmer peck pad to record the yield, the inspector toured the rows of fruit trees in the orchard {w}.",
     "example_sentences": [
@@ -494,6 +532,7 @@
     ]
   },
   "pebble": {
+    "sense": "a small smooth rounded stone worn by water or sand",
     "keyword": "zero head",
     "mnemonic_sentence": "With zero head wind to deflect his throw, the boy skipped a smooth round pebble {w} across the water.",
     "example_sentences": [
@@ -507,6 +546,7 @@
     ]
   },
   "quiver": {
+    "sense": "a cylindrical case for holding and carrying arrows on the back",
     "keyword": "herb pouch",
     "mnemonic_sentence": "Beside his leather herb pouch, the huntsman drew a sharp hunting arrow from his quiver {w}.",
     "example_sentences": [
@@ -520,6 +560,7 @@
     ]
   },
   "ribbon": {
+    "sense": "a long narrow strip of decorative fabric used for tying or trimming",
     "keyword": "penny mug",
     "mnemonic_sentence": "Draped across the handle of a shiny penny mug, the satin ribbon {w} added festive flair to the birthday package.",
     "example_sentences": [
@@ -533,6 +574,7 @@
     ]
   },
   "saddle": {
+    "sense": "a padded leather seat fastened on the back of a horse for a rider",
     "keyword": "mount less",
     "mnemonic_sentence": "To ride mount less horses safely, the cowboy cinched his sturdy leather saddle {w} around the stallion.",
     "example_sentences": [
@@ -546,6 +588,7 @@
     ]
   },
   "scissors": {
+    "sense": "a cutting instrument with two crossed pivoting blades",
     "keyword": "fast saw",
     "mnemonic_sentence": "Moving like a miniature fast saw, the sharp tailor scissors {w} cut cleanly through the denim fabric.",
     "example_sentences": [
@@ -559,6 +602,7 @@
     ]
   },
   "sponge": {
+    "sense": "a porous absorbent piece of natural fibrous skeleton or foam used for cleaning",
     "keyword": "tear gel",
     "mnemonic_sentence": "Cleaning tear gel spills from the counter, he soaked water into the porous yellow sponge {w}.",
     "example_sentences": [
@@ -572,6 +616,7 @@
     ]
   },
   "tunnel": {
+    "sense": "an underground passage cut through a hill, mountain, or beneath water",
     "keyword": "fast fume",
     "mnemonic_sentence": "Spewing fast fume exhaust, the diesel freight train roared into the dark underground tunnel {w}.",
     "example_sentences": [
@@ -585,6 +630,7 @@
     ]
   },
   "valley": {
+    "sense": "a low area of land between hills or mountains, typically with a river running through it",
     "keyword": "hill bush",
     "mnemonic_sentence": "Past the leafy hill bush, a peaceful green river valley {w} stretched between two towering peaks.",
     "example_sentences": [
@@ -598,6 +644,7 @@
     ]
   },
   "wagon": {
+    "sense": "a four-wheeled wooden vehicle pulled by horses or oxen for hauling heavy loads",
     "keyword": "ponderous rim",
     "mnemonic_sentence": "Turning with a ponderous rim, the wooden wheels creaked as the farm wagon {w} hauled fresh hay.",
     "example_sentences": [
@@ -611,6 +658,7 @@
     ]
   },
   "whistle": {
+    "sense": "a small wind instrument that produces a shrill piercing sound when blown",
     "keyword": "navy flute",
     "mnemonic_sentence": "Louder than a navy flute, the referee's piercing silver whistle {w} brought play to an instant halt.",
     "example_sentences": [
@@ -624,6 +672,7 @@
     ]
   },
   "window": {
+    "sense": "an opening in a wall fitted with glass panes to admit light and air",
     "keyword": "moon fit",
     "mnemonic_sentence": "In a neat moon fit, silver rays streamed through the glass pane of the bedroom window {w}.",
     "example_sentences": [
@@ -637,6 +686,7 @@
     ]
   },
   "anvil": {
+    "sense": "a heavy block of iron or steel upon which hot metals are hammered and shaped",
     "keyword": "jolting iron",
     "mnemonic_sentence": "With jolting iron impacts, the smith's heavy hammer struck hot steel upon the sturdy anvil {w}.",
     "example_sentences": [
@@ -650,6 +700,7 @@
     ]
   },
   "to borrow": {
+    "sense": "to take and use something belonging to someone else with the intention of returning it",
     "keyword": "ask kin",
     "mnemonic_sentence": "She went to ask kin for help, seeking to borrow {w} their garden wheelbarrow for the afternoon.",
     "example_sentences": [
@@ -663,6 +714,7 @@
     ]
   },
   "to whisper": {
+    "sense": "to speak very softly using breath rather than vocal cords",
     "keyword": "rolling pin",
     "mnemonic_sentence": "Baking at the counter beside her rolling pin, the chef leaned over to whisper {w} the secret family recipe.",
     "example_sentences": [
@@ -676,6 +728,7 @@
     ]
   },
   "to harvest": {
+    "sense": "to gather a ripe crop from the fields, orchards, or vines",
     "keyword": "kettle mitten",
     "mnemonic_sentence": "Putting down his heavy kettle mitten, the eager orchard hand set out to harvest {w} the ripe autumn fruit.",
     "example_sentences": [
@@ -689,6 +742,7 @@
     ]
   },
   "to sharpen": {
+    "sense": "to give a thin keen cutting edge or fine point to a blade or tool",
     "keyword": "motor pipe",
     "mnemonic_sentence": "Leaning across the rusty motor pipe, the mechanic used an oilstone to sharpen {w} his pocketknife blade.",
     "example_sentences": [
@@ -702,6 +756,7 @@
     ]
   },
   "to polish": {
+    "sense": "to make a smooth surface shine brightly by rubbing it with a cloth or paste",
     "keyword": "jet dame",
     "mnemonic_sentence": "The glamorous jet dame used a soft microfiber cloth to polish {w} her sparkling silver necklace.",
     "example_sentences": [
@@ -715,6 +770,7 @@
     ]
   },
   "to scatter": {
+    "sense": "to throw or disperse items loosely in various random directions over an area",
     "keyword": "pour mud",
     "mnemonic_sentence": "Strong autumn winds began to pour mud and scatter {w} dry brown leaves all across the stone pavement.",
     "example_sentences": [
@@ -728,6 +784,7 @@
     ]
   },
   "to crumble": {
+    "sense": "to break or fall apart into small fragments or crumbs",
     "keyword": "metal kit",
     "mnemonic_sentence": "Dropping his heavy metal kit on the sandstone step caused the dry edge to crumble {w} into tiny fragments.",
     "example_sentences": [
@@ -736,11 +793,12 @@
     ],
     "rule_drills": [
       "Stale dry bread will {w} (crumble) into tiny pieces if you squeeze it.",
-      "The mortar began to {w} (crumble) between the old foundation stones.",
+      "The dry sandstone began to {w} (crumble) between the old foundation blocks.",
       "Use your fingers to gently {w} (crumble) the feta cheese over the salad."
     ]
   },
   "to stumble": {
+    "sense": "to trip or lose one’s balance momentarily while walking or running",
     "keyword": "reheat",
     "mnemonic_sentence": "Rushing back to reheat his cold dinner, he tripped on the doorway mat and began to stumble {w}.",
     "example_sentences": [
@@ -754,6 +812,7 @@
     ]
   },
   "to wander": {
+    "sense": "to walk or move about aimlessly without a fixed destination",
     "keyword": "toot stroll",
     "mnemonic_sentence": "Whistling a lively toot stroll, the traveler set out to wander {w} aimlessly through the pine woods.",
     "example_sentences": [
@@ -767,6 +826,7 @@
     ]
   },
   "to tremble": {
+    "sense": "to shake involuntarily from cold, weakness, or physical exertion",
     "keyword": "polo bet",
     "mnemonic_sentence": "After placing a high-stakes polo bet, the nervous gambler began to tremble {w} with anxious suspense.",
     "example_sentences": [
@@ -780,19 +840,21 @@
     ]
   },
   "to kindle": {
+    "sense": "to ignite or set tinder and dry wood into a burning flame",
     "keyword": "tetra word",
     "mnemonic_sentence": "Whispering a mystic tetra word over the dry tinder, the wizard managed to kindle {w} a bright campfire.",
     "example_sentences": [
       "The scout struck a spark against the flint stone to quickly {w} (kindle) dry pine needles into flame.",
-      "Her enthusiastic speech helped to deeply {w} (kindle) a lasting interest in local wildlife preservation."
+      "He blew gently on the glowing spark to carefully {w} (kindle) dry birch shavings into a bright campfire."
     ],
     "rule_drills": [
       "Use dry birch bark shavings to {w} (kindle) the campfire flame.",
       "He tried to {w} (kindle) a spark using a primitive flint and steel.",
-      "Inspiring stories can {w} (kindle) great ambition in young learners."
+      "Add small dry twigs to {w} (kindle) the wood stove into a steady fire."
     ]
   },
   "to untie": {
+    "sense": "to undo or loosen a knot or binding",
     "keyword": "web move",
     "mnemonic_sentence": "With a quick web move, the deckhand pulled the rope free to untie {w} the boat from the harbor dock.",
     "example_sentences": [
@@ -806,6 +868,7 @@
     ]
   },
   "to squeeze": {
+    "sense": "to apply firm mechanical pressure to something from opposite sides",
     "keyword": "last mango",
     "mnemonic_sentence": "He gripped the sweet last mango with both hands to squeeze {w} every drop of rich juice into the bowl.",
     "example_sentences": [
@@ -819,6 +882,7 @@
     ]
   },
   "to bounce": {
+    "sense": "to rebound off a hard surface after striking it",
     "keyword": "quick toe",
     "mnemonic_sentence": "With a spring off his quick toe, the gymnast landed and began to bounce {w} high on the trampoline.",
     "example_sentences": [
@@ -832,6 +896,7 @@
     ]
   },
   "to splash": {
+    "sense": "to cause liquid to scatter or strike in flying drops against a surface",
     "keyword": "nifty kick",
     "mnemonic_sentence": "With a nifty kick into the shallow pool, the swimmer started to splash {w} cold water everywhere.",
     "example_sentences": [
@@ -845,6 +910,7 @@
     ]
   },
   "to gallop": {
+    "sense": "to move forward at the fastest four-beat gait of a horse",
     "keyword": "future shoe",
     "mnemonic_sentence": "Fast as if propelled by a future shoe, the swift warhorse started to gallop {w} across the open plains.",
     "example_sentences": [
@@ -858,6 +924,7 @@
     ]
   },
   "to paddle": {
+    "sense": "to propel or steer a small boat through water using a handheld blade",
     "keyword": "joy arm",
     "mnemonic_sentence": "Swinging his joy arm into each stroke, the canoer used his blade to paddle {w} down the river rapids.",
     "example_sentences": [
@@ -871,32 +938,35 @@
     ]
   },
   "to juggle": {
+    "sense": "to toss and catch several physical objects in continuous motion in the air",
     "keyword": "village diner",
     "mnemonic_sentence": "Standing outside the crowded village diner, the street performer began to juggle {w} three silver balls.",
     "example_sentences": [
       "The street performer entertained the cheering crowd by learning to easily {w} (juggle) five ripe oranges.",
-      "As a busy working parent, she had to constantly {w} (juggle) demanding career deadlines and childcare duties."
+      "The circus acrobat delighted the audience by managing to gracefully {w} (juggle) four spinning wooden clubs."
     ],
     "rule_drills": [
       "The talented street clown can {w} (juggle) three bowling pins effortlessly.",
       "It requires great coordination to {w} (juggle) several spinning plates in the air.",
-      "She had to carefully {w} (juggle) her demanding job and evening classes."
+      "Practice every day to learn how to {w} (juggle) three rubber balls smoothly."
     ]
   },
-  "to buckle": {
+  "to fasten": {
+    "sense": "to attach or secure something firmly in place with a strap, pin, or latch",
     "keyword": "vent zone",
-    "mnemonic_sentence": "Overheating near the air vent zone caused the structural plastic casing to buckle {w} under stress.",
+    "mnemonic_sentence": "Working near the air vent zone, the mechanic used a sturdy strap to fasten {w} the heavy panel.",
     "example_sentences": [
-      "The enormous structural weight caused the overloaded steel support beam to slowly {w} (buckle) in the center.",
-      "Please make sure to securely {w} (buckle) your seatbelt before the airplane begins its takeoff roll."
+      "Please make sure to tightly {w} (fasten) your seatbelt before the airplane takes off.",
+      "She used a brass safety pin to firmly {w} (fasten) the loose cloak around her shoulders."
     ],
     "rule_drills": [
-      "Make sure to securely {w} (buckle) your safety harness before climbing.",
-      "The heavy snow load caused the wooden roof rafters to {w} (buckle).",
-      "Fasten and {w} (buckle) the leather strap around your travel suitcase."
+      "Make sure to securely {w} (fasten) your safety harness before climbing.",
+      "He used heavy twine to tightly {w} (fasten) the cargo onto the truck bed.",
+      "Always remember to {w} (fasten) the gate latch after entering the barnyard."
     ]
   },
   "to tickle": {
+    "sense": "to touch a body part lightly so as to cause twitching or laughter",
     "keyword": "jigsaw desk",
     "mnemonic_sentence": "Dropping sawdust across the jigsaw desk, the prankster leaned down to tickle {w} his sleepy friend awake.",
     "example_sentences": [
@@ -910,6 +980,7 @@
     ]
   },
   "to sprout": {
+    "sense": "to put forth fresh green shoots, leaves, or buds from a seed",
     "keyword": "bison saddle",
     "mnemonic_sentence": "Dropped beside the leather bison saddle in damp soil, the fertile pumpkin seed began to sprout {w} green leaves.",
     "example_sentences": [
@@ -923,6 +994,7 @@
     ]
   },
   "to wither": {
+    "sense": "to become dry, limp, and shriveled from lack of water or heat",
     "keyword": "rot leaf",
     "mnemonic_sentence": "Deprived of water, every rot leaf began to wither {w} and shrivel up under the scorching summer sun.",
     "example_sentences": [
@@ -936,6 +1008,7 @@
     ]
   },
   "to shimmer": {
+    "sense": "to shine with a soft, wavering, or tremulous reflected light",
     "keyword": "jolly zone",
     "mnemonic_sentence": "Reflecting bright carnival lamps across the jolly zone, the tranquil lake surface seemed to shimmer {w} in the dark.",
     "example_sentences": [
@@ -949,6 +1022,7 @@
     ]
   },
   "to swallow": {
+    "sense": "to pass food or drink from the mouth down the throat into the stomach",
     "keyword": "mama nut",
     "mnemonic_sentence": "Feeding her chicks, the mama nut gathering bird paused to swallow {w} a juicy caterpillar whole.",
     "example_sentences": [
@@ -962,6 +1036,7 @@
     ]
   },
   "to strangle": {
+    "sense": "to squeeze the throat tightly so as to cut off breath or blood flow",
     "keyword": "tuba worm",
     "mnemonic_sentence": "Coiling like a giant tuba worm, the creeping vine threatened to strangle {w} the garden sapling.",
     "example_sentences": [
@@ -975,6 +1050,7 @@
     ]
   },
   "to wrestle": {
+    "sense": "to grapple with an opponent in a close physical struggle on the ground",
     "keyword": "jumbo arm",
     "mnemonic_sentence": "Locking with a jumbo arm grip, the two heavyweights entered the ring to wrestle {w} for the championship.",
     "example_sentences": [
@@ -988,6 +1064,7 @@
     ]
   },
   "to slumber": {
+    "sense": "to rest in a state of natural physical sleep",
     "keyword": "good repose",
     "mnemonic_sentence": "Entering good repose, the exhausted explorer lay down to peacefully slumber {w} under the tall pines.",
     "example_sentences": [
@@ -1001,6 +1078,7 @@
     ]
   },
   "to ponder": {
+    "sense": "to reflect deeply and quietly upon a matter in the mind",
     "keyword": "lad on map",
     "mnemonic_sentence": "The studious lad on map details paused to ponder {w} the best overland route across the desert.",
     "example_sentences": [
@@ -1010,23 +1088,25 @@
     "rule_drills": [
       "Take some quiet time alone to {w} (ponder) the profound philosophical question.",
       "The grandmaster paused for twenty minutes to {w} (ponder) his next chess move.",
-      "She sat on the rocky cliff to {w} (ponder) what career path to pursue."
+      "The chess grandmaster took ten minutes to {w} (ponder) his next tactical move."
     ]
   },
   "to shatter": {
+    "sense": "to break violently into numerous sharp, rigid pieces under an impact",
     "keyword": "zodiac cup",
     "mnemonic_sentence": "Slipping off the marble counter, the fragile zodiac cup hit the stone floor to shatter {w} into fragments.",
     "example_sentences": [
       "Dropping the delicate porcelain teacup onto the hard tile floor caused it to instantly {w} (shatter) to bits.",
-      "The unexpected harsh betrayal served to permanently {w} (shatter) her long-held illusions about their friendship."
+      "A heavy falling icicle struck the greenhouse skylight, causing the glass pane to loudly {w} (shatter)."
     ],
     "rule_drills": [
       "The crystal goblet will {w} (shatter) if it strikes the concrete patio.",
       "A baseball flew through the window, causing the glass pane to loudly {w} (shatter).",
-      "The surprising confession seemed to completely {w} (shatter) the defendant's alibi."
+      "Dropping the fragile ceramic vase onto the pavement will {w} (shatter) it completely."
     ]
   },
   "to glisten": {
+    "sense": "to sparkle or gleam with reflected light from a wet or oily surface",
     "keyword": "mist vapor",
     "mnemonic_sentence": "Covered in cool mist vapor, the damp cobblestone streets began to glisten {w} under the streetlights.",
     "example_sentences": [
@@ -1040,19 +1120,21 @@
     ]
   },
   "to plunge": {
+    "sense": "to dive, leap, or drop rapidly and deeply into water or space",
     "keyword": "pit dive",
     "mnemonic_sentence": "Leaping in a daring pit dive, the brave swimmer was ready to plunge {w} deep into the icy mountain pool.",
     "example_sentences": [
       "The brave cliff jumper took a deep breath before preparing to boldly {w} (plunge) into the deep ocean pool.",
-      "When the boiler failed in midwinter, indoor temperatures began to dangerously {w} (plunge) toward freezing."
+      "The kingfisher tucked its wings and tilted downward to steeply {w} (plunge) beneath the river surface."
     ],
     "rule_drills": [
       "The diver took a deep breath before deciding to {w} (plunge) into the chilly pool.",
-      "Temperatures are expected to {w} (plunge) below freezing after the cold front.",
+      "The submarine crew prepared to rapidly {w} (plunge) beneath the stormy ocean waves.",
       "He grabbed the rope swing and prepared to {w} (plunge) into the swimming hole."
     ]
   },
   "to scramble": {
+    "sense": "to climb or move quickly and awkwardly over rough ground using hands and feet",
     "keyword": "darting hare",
     "mnemonic_sentence": "Nimble as a darting hare, the agile hiker used hands and feet to scramble {w} up the rocky cliff.",
     "example_sentences": [
@@ -1066,6 +1148,7 @@
     ]
   },
   "to trample": {
+    "sense": "to tread heavily upon something so as to crush or flatten it underfoot",
     "keyword": "gold spur",
     "mnemonic_sentence": "Urged on by a flashing gold spur, the herd rushed forward to trample {w} the tall prairie grass.",
     "example_sentences": [
@@ -1079,6 +1162,7 @@
     ]
   },
   "to trickle": {
+    "sense": "to flow in a very thin, slow stream or in small successive drops",
     "keyword": "jimmy",
     "mnemonic_sentence": "Little Jimmy watched a tiny stream of melting snow water trickle {w} down the cold rock face.",
     "example_sentences": [
@@ -1092,6 +1176,7 @@
     ]
   },
   "to clamber": {
+    "sense": "to climb up or over obstacles awkwardly using both hands and feet",
     "keyword": "don up",
     "mnemonic_sentence": "Told to don up sturdy climbing gear, the mountaineer began to clamber {w} over the jagged boulders.",
     "example_sentences": [
@@ -1105,6 +1190,7 @@
     ]
   },
   "to linger": {
+    "sense": "to remain in a physical place longer than necessary rather than departing",
     "keyword": "penny bank",
     "mnemonic_sentence": "Standing outside the old penny bank, the curious shoppers decided to linger {w} under the warm streetlamps.",
     "example_sentences": [
@@ -1118,6 +1204,7 @@
     ]
   },
   "to dwindle": {
+    "sense": "to gradually diminish in physical size, quantity, or number",
     "keyword": "view signal",
     "mnemonic_sentence": "Watching the distant view signal blink weakly, the team saw their emergency rations dwindle {w} to nothing.",
     "example_sentences": [
@@ -1131,6 +1218,7 @@
     ]
   },
   "to beckon": {
+    "sense": "to summon someone closer with a gesture of the hand, arm, or head",
     "keyword": "wave go",
     "mnemonic_sentence": "Giving a wave go signal with his arm, the captain began to beckon {w} his crew forward into the cave.",
     "example_sentences": [
@@ -1144,6 +1232,7 @@
     ]
   },
   "to bestow": {
+    "sense": "to present something of honor, gift, or title formally to someone",
     "keyword": "give pay",
     "mnemonic_sentence": "Rather than just give pay, the benevolent queen chose to bestow {w} medals of highest valor upon them.",
     "example_sentences": [
@@ -1157,6 +1246,7 @@
     ]
   },
   "to engulf": {
+    "sense": "to sweep over and surround something completely so as to submerge or consume it",
     "keyword": "jungle frog",
     "mnemonic_sentence": "Leaping like a colossal jungle frog, the sudden flood waters rose up to engulf {w} the wooden footbridge.",
     "example_sentences": [
@@ -1170,6 +1260,7 @@
     ]
   },
   "to fathom": {
+    "sense": "to penetrate and understand the meaning, nature, or depth of something",
     "keyword": "deep judge",
     "mnemonic_sentence": "Even the wise deep judge could not fathom {w} the bizarre motive behind the jewel theft.",
     "example_sentences": [
@@ -1183,6 +1274,7 @@
     ]
   },
   "to garner": {
+    "sense": "to gather, collect, or acquire something through effort over time",
     "keyword": "ribbon fan",
     "mnemonic_sentence": "Holding a colorful ribbon fan, the talented dancer worked hard to garner {w} enthusiastic applause from the crowd.",
     "example_sentences": [
@@ -1196,6 +1288,7 @@
     ]
   },
   "to ignite": {
+    "sense": "to set something on fire or begin burning with flame",
     "keyword": "wick glow",
     "mnemonic_sentence": "Watching the cotton wick glow, he blew on the ember to ignite {w} the campfire shavings into flame.",
     "example_sentences": [
@@ -1209,19 +1302,21 @@
     ]
   },
   "to muster": {
+    "sense": "to assemble or gather troops or individuals together in one physical place",
     "keyword": "zoom focus",
     "mnemonic_sentence": "Bringing her team into zoom focus, the captain blew her whistle to muster {w} all hands on the flight deck.",
     "example_sentences": [
       "The field general sounded the bugle call to immediately {w} (muster) all available infantry regiments.",
-      "Before stepping onto the stage, the anxious speaker paused to quietly {w} (muster) all his remaining courage."
+      "The sailing captain blew his silver whistle to promptly {w} (muster) every crew member on the upper deck."
     ],
     "rule_drills": [
       "The battalion commander ordered officers to {w} (muster) all troops in the yard.",
-      "She had to {w} (muster) all her remaining inner strength to climb the final ridge.",
-      "The political party worked tirelessly to {w} (muster) enough votes to pass the bill."
+      "The village constable blew a horn to {w} (muster) volunteers to search the woods.",
+      "The squad leader gave the signal to {w} (muster) the search party at dawn."
     ]
   },
   "to pilfer": {
+    "sense": "to steal small items or petty goods stealthily",
     "keyword": "kick cat",
     "mnemonic_sentence": "Using a sly kick cat distraction, the pickpocket managed to pilfer {w} the tourist's leather wallet.",
     "example_sentences": [
@@ -1235,6 +1330,7 @@
     ]
   },
   "to ravage": {
+    "sense": "to inflict severe physical destruction and devastation upon a place",
     "keyword": "roman road",
     "mnemonic_sentence": "Marching straight down the ancient roman road, the ruthless army arrived to ravage {w} the defenseless farming valley.",
     "example_sentences": [
@@ -1248,6 +1344,7 @@
     ]
   },
   "to saunter": {
+    "sense": "to walk in a slow, relaxed, unhurried manner",
     "keyword": "zulu kiss",
     "mnemonic_sentence": "Pausing for a joyful zulu kiss, the happy tourists continued to saunter {w} down the sunlit boulevard.",
     "example_sentences": [
@@ -1261,6 +1358,7 @@
     ]
   },
   "to throttle": {
+    "sense": "to choke, compress, or regulate the intake or flow of an engine or passage",
     "keyword": "fume choke",
     "mnemonic_sentence": "In thick fume choke, dense creeping weeds grew rapidly to throttle {w} the tender vegetable plants.",
     "example_sentences": [
@@ -1270,23 +1368,25 @@
     "rule_drills": [
       "Thick garden weeds threatened to completely {w} (throttle) the young tomato seedlings.",
       "The pilot adjusted the control levers to smoothly {w} (throttle) down the jet engines.",
-      "Unchecked economic inflation could severely {w} (throttle) growth across the sector."
+      "Turn the brass fuel valve clockwise to {w} (throttle) the gas flow to the burner."
     ]
   },
   "to unravel": {
+    "sense": "to untangle, separate, or undo woven threads or fibers of a fabric",
     "keyword": "woven gear",
     "mnemonic_sentence": "Catching a sharp snag on the woven gear, the wool sweater began to unravel {w} along the outer seam.",
     "example_sentences": [
       "If you tug on that loose thread on your wool sweater, the knitted cuff will rapidly begin to {w} (unravel).",
-      "Under rigorous questioning by prosecutors, the suspect's carefully constructed alibi began rapidly to {w} (unravel)."
+      "As the old rope frayed against the sharp rock edge, its braided strands started to slowly {w} (unravel)."
     ],
     "rule_drills": [
       "Pull that loose yarn thread and the entire knitted wool scarf will {w} (unravel).",
-      "Detectives watched the suspect's fabricated alibi begin to completely {w} (unravel).",
-      "The complex diplomatic peace treaty began to slowly {w} (unravel) under political pressure."
+      "Pull the loose end of the braided cord to {w} (unravel) the tangled knots.",
+      "The seamstress watched the damaged hem of the cotton curtain begin to {w} (unravel)."
     ]
   },
   "to vanish": {
+    "sense": "to pass completely out of sight and become invisible",
     "keyword": "post gong",
     "mnemonic_sentence": "Struck with a loud post gong, the theatrical illusion made the white rabbit vanish {w} from the stage.",
     "example_sentences": [
