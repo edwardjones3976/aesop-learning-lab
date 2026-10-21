@@ -133,7 +133,7 @@ The assessment fields identified above are identical. For completeness, the foll
 - `hints.worked_solution`: "mark(note) receives 'map' as local word and returns '[map]!' with the default suffix. The caller's note remains 'map', so result is '[map]!:map'." → "mark(note) gives the local word the value 'map'. It returns '[map]!' using the default suffix. The caller's note is still 'map', so result is '[map]!:map'."
 - `learning_objective`: "Trace an omitted default argument and a locally rebound parameter without changing the caller's binding." → "Trace a call that leaves out an argument (so its default is used) and gives a parameter a new value, without changing the caller's name."
 - `explanation`: "mark(note) receives 'map' as local word and returns '[map]!' with the default suffix. The caller's note remains 'map', so result is '[map]!:map'." → "mark(note) gives the local word the value 'map'. It returns '[map]!' using the default suffix. The caller's note is still 'map', so result is '[map]!:map'."
-- `common_mistakes`: ["Rebinding local word does not rebind the callerâ€™s note, and the omitted suffix argument uses its default \"!\"."] → ["Changing the local word does not change the caller's note. The call leaves out suffix, so it uses the default \"!\"."]
+- `common_mistakes`: ["Rebinding local word does not rebind the caller’s note, and the omitted suffix argument uses its default \"!\"."] → ["Changing the local word does not change the caller's note. The call leaves out suffix, so it uses the default \"!\"."]
 
 ### `recursion-week-01-v9`
 
@@ -151,7 +151,7 @@ The assessment fields identified above are identical. For completeness, the foll
 
 ### `recursive-case-week-01-v9`
 
-- `hints.targeted`: "Each waiting call flips the smaller callâ€™s state; list states for 0, 1, 2, and onward." → "Each waiting call flips the state from the smaller call. List the states for 0, 1, 2, and so on."
+- `hints.targeted`: "Each waiting call flips the smaller call’s state; list states for 0, 1, 2, and onward." → "Each waiting call flips the state from the smaller call. List the states for 0, 1, 2, and so on."
 - `hints.worked_solution`: "lamp_state(0) is off. The states for 1 through 5 presses are on, off, on, off, on; result is on." → "lamp_state(0) is off. The states for 1 to 5 presses are on, off, on, off, on. So result is on."
 - `learning_objective`: "Trace a recursive step that combines a smaller result by toggling a state in an unfamiliar context." → "Trace a recursive step that flips the smaller call's state between on and off, in a new example."
 - `explanation`: "lamp_state(0) is off. The states for 1 through 5 presses are on, off, on, off, on; result is on." → "lamp_state(0) is off. The states for 1 to 5 presses are on, off, on, off, on. So result is on."
