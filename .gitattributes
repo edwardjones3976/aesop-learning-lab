@@ -1,0 +1,2 @@
+# Generated, byte-compared artifacts must keep LF on every OS (tests/test_invented_lexicon.py).
+content/drafts/*.json text eol=lf
