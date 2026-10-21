@@ -31,6 +31,7 @@ def extract_code_snippets_from_pack(pack_data: Dict[str, Any]) -> Tuple[List[Dic
             "family_id": item.get("family_id"),
             "body": body,
             "source_type": "item",
+            "check_delay_days": item.get("check_delay_days"),
         }
         if item.get("held_out"):
             held_out.append(entry)
@@ -276,7 +277,16 @@ def find_heldout_similarity_flags(pack_data: Dict[str, Any]) -> List[Dict[str, A
     flags = []
     for item in held_out_items:
         sig = compute_code_signature(item["body"])
-        matched = source_sig_map.get(sig)
+        matched = list(source_sig_map.get(sig, []))
+        # A held-out check with a shorter delay is answered, and its solution can be
+        # revealed, before this one, so it counts as prior exposure too.
+        delay = item.get("check_delay_days") or 0
+        matched += [
+            {**other, "source_type": "earlier_held_out_item"}
+            for other in held_out_items
+            if other is not item and (other.get("check_delay_days") or 0) < delay
+            and compute_code_signature(other["body"]) == sig
+        ]
         if matched:
             flags.append({
                 "held_out_id": item["id"],

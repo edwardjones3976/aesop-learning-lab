@@ -12,17 +12,25 @@ from tests.heldout_similarity import (
 )
 
 
-# Documented allowlist for held-out items whose shape matches studied sources.
-# Each entry MUST have an explicit, justified reason.
-# If an item on this allowlist ceases to be flagged, CI must fail (stale allowlist guard).
+# Documented allowlist of (held-out item, matched source) pairs whose shape matches.
+# Keying by pair means an allowlisted item still fails on any NEW match.
+# Each entry MUST have a written reason; a pair that stops matching fails CI (stale).
 CURRENT_PACK_ALLOWLIST = {
-    "recursion-halving-transfer-01-v9": (
-        "Judged near-transfer on day 1 (family recursion-halving-transfer-a, leaf_count). "
-        "Structurally matches single-decrement multiplication recursion (base-case-trace-01-v9 / f(n)), "
-        "evaluating tree branching rather than factorial."
+    ("recursion-halving-transfer-01-v9", "base-case-trace-01-v9"): (
+        "Day-1 near-transfer, not a primary outcome. leaf_count doubles a decremented call "
+        "like the studied f(n); Codex's step-7 review rejected it as an unfamiliar-transfer claim."
+    ),
+    ("recursion-halving-transfer-01-v9", "recursive-case-application-02-v9"): (
+        "Same day-1 near-transfer item; the savings practice also multiplies a decremented call."
+    ),
+    ("scope-week-01-v9", "scope-keyword-transfer-01-v9"): (
+        "OWNER DECISION PENDING. The day-7 primary check and the day-1 check (answered first) are "
+        "both two-parameter functions appending a string default. The day-7 item's tested idea, "
+        "rebinding a parameter locally while the caller's variable is unchanged, is absent from "
+        "the day-1 item, and Codex's step-7 review accepted it; replacing it needs a new content "
+        "and protocol version, which is held until round-2 steps 1-3 land."
     ),
 }
-
 
 class HeldoutSimilarityTests(unittest.TestCase):
     """Structural similarity guard tests."""
@@ -64,25 +72,27 @@ class HeldoutSimilarityTests(unittest.TestCase):
         Each allowlist entry must have a written reason, and stale entries must fail.
         """
         flags = find_heldout_similarity_flags(self.current_pack)
-        flagged_by_id = {f["held_out_id"]: f for f in flags}
+        pairs = {(f["held_out_id"], s["id"]) for f in flags for s in f["matched_sources"]}
 
-        # 1. Stale allowlist check: every item in allowlist must actually be flagged
-        for allowed_id, reason in CURRENT_PACK_ALLOWLIST.items():
-            self.assertTrue(bool(reason and reason.strip()), f"Allowlist entry {allowed_id} has no written reason.")
-            self.assertIn(
-                allowed_id,
-                flagged_by_id,
-                f"Stale allowlist entry: {allowed_id} is on the allowlist but is no longer flagged!",
-            )
+        for pair, reason in CURRENT_PACK_ALLOWLIST.items():
+            self.assertTrue(reason.strip(), f"Allowlist entry {pair} has no written reason.")
+            self.assertIn(pair, pairs, f"Stale allowlist entry: {pair} no longer matches.")
 
-        # 2. CI violation check: any flag not on allowlist fails CI
-        unallowed_flags = [f for f in flags if f["held_out_id"] not in CURRENT_PACK_ALLOWLIST]
-        self.assertEqual(
-            unallowed_flags,
-            [],
-            f"Unallowed similarity flags found in current pack: {unallowed_flags}",
-        )
+        self.assertEqual(sorted(pairs - CURRENT_PACK_ALLOWLIST.keys()), [],
+                         "Unallowed similarity flags in the current pack.")
 
+    def test_earlier_held_out_check_counts_as_exposure(self):
+        """A day-7 check copied from a day-1 check (answered first) is flagged."""
+        pack_copy = copy.deepcopy(self.current_pack)
+        day1 = next(it for it in pack_copy["items"]
+                    if it.get("held_out") and it.get("check_delay_days") == 1)
+        pack_copy["items"].append({"id": "synthetic-day7-copy", "family_id": "synthetic-new-family",
+                                   "body": day1["body"], "held_out": True, "check_delay_days": 7})
+        flags = {f["held_out_id"]: f for f in find_heldout_similarity_flags(pack_copy)}
+        self.assertIn(day1["id"], {s["id"] for s in flags["synthetic-day7-copy"]["matched_sources"]})
+        # The reverse direction is not exposure: the day-1 check comes first.
+        self.assertNotIn("synthetic-day7-copy",
+                         {s["id"] for s in flags.get(day1["id"], {"matched_sources": []})["matched_sources"]})
     def test_v11_meet_is_not_flagged(self):
         """recursion-week-01-v11 (meet) has converging two-parameter recursion
 
