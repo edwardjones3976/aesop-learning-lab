@@ -89,8 +89,8 @@ The run ends only when the window of **every** started concept has closed.
 14. **Capture the data locally,** while the server is still running. The server keeps its own window busy, so:
     1. Open a **second** PowerShell window.
     2. Paste the step 2 block there first; without it the paths below are empty.
-    3. **Export data** in the preview downloads `aesop-foreman-data.json`: raw records plus display preferences. Move it from the browser's download folder into `$runDir` straight away.
-    4. The computed classifications (provisional, contaminated, invalid, early, late, missing) are **not** in that export. Save them **directly** into `$runDir`, never into the worktree, because the file holds raw answers and timestamps:
+    3. **Export data** in the preview downloads `aesop-foreman-data.json`: raw records, display preferences, and the computed classifications (`derived.overview`). Move it from the browser's download folder into `$runDir` straight away.
+    4. The export already includes the computed classifications (`derived.overview`). As an optional cross-check, you may also save the live `/api/v2/overview` endpoint directly into `$runDir`, never into the worktree, because the file holds raw answers and timestamps:
 
        ```powershell
        if (-not (Test-Path $runDir)) { throw 'run variables are not set: paste the step 2 block' }
@@ -131,5 +131,5 @@ The run ends only when the window of **every** started concept has closed.
 ## Known software gaps (tracked for fixes)
 
 1. **Delete data re-enrolls immediately:** the button reloads the page after deleting, which creates a new learner. The workaround is step 16.
-2. **The export omits computed classifications.** The workaround is step 14's overview capture.
+2. **The export omits computed classifications.** Fixed: the download payload now includes computed classifications in `derived.overview`. Step 14 keeps the separate overview capture as an optional cross-check.
 3. **Outside study is not used by the classifier:** responses after reported outside study are not marked ineligible automatically. The workaround is the manual outside-study rule.

@@ -207,6 +207,19 @@ class Preview:
                 "concepts": concepts, "pathRecommendation": self._path_recommendation(concepts),
                 "experiment": self.experiment_findings()}
 
+    def export(self) -> dict:
+        raw = self.store.export_all()
+        computed_at = self.now().astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        overview = self.overview()
+        return {
+            **raw,
+            "derived": {
+                "computedAt": computed_at,
+                "packVersion": self.pack.pack_version,
+                "overview": overview,
+            },
+        }
+
     def delete_data(self) -> dict:
         self.store.delete_all()
         self._activate_pack(CURRENT_PACK_PATH)
@@ -550,7 +563,7 @@ def make_handler(preview: Preview, *, port: int = PORT):
                                                                query.get("mode", ["recommended"])[0],
                                                                int(raw_minutes)))
                     if path == "/api/v2/export":
-                        return self._json(200, preview.store.export_all())
+                        return self._json(200, preview.export())
                     if path == "/api/v2/personal-comparison":
                         return self._json(200, preview.personal_comparison().report())
                     files = {"/": ("index.html", "text/html"),
