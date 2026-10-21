@@ -23,7 +23,7 @@ one button (I agree — start learning), and no inputs. Its shipped text is:
 >
 > Results are compared with draft answer keys. They stay provisional and are not a grade or a judgment of what you know.
 >
-> One person's answers give not enough evidence about which method works (insufficient_evidence).
+> One person's answers are not enough evidence to show which teaching method works better.
 >
 > You can stop at any time, and you can ask for your data to be deleted.
 

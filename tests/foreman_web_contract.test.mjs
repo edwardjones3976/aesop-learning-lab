@@ -947,7 +947,7 @@ test('consent replaces workspace and includes every required statement without p
   for (const statement of ['answers, hint use, confidence, outside-study notes and timing',
     'on this computer only', 'not sent to any outside service, including AI models',
     'draft answer keys', 'provisional', 'not a grade or a judgment of what you know',
-    "One person's answers give not enough evidence", 'insufficient_evidence',
+    "One person's answers are not enough evidence", 'teaching method works better',
     'stop at any time', 'ask for your data to be deleted']) assert.ok(html.includes(statement), statement);
   assert.doesNotMatch(html, /mastery|<input|checked/i);
   assert.equal((html.match(/<button/g) || []).length, 1);

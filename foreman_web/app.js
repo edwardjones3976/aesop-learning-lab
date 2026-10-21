@@ -566,7 +566,7 @@ export function consentMarkup() {
   return `<div class="empty consent"><h2>Before you start</h2>
     <p>Your answers, hint use, confidence, outside-study notes and timing are stored on this computer only. They are not sent to any outside service, including AI models.</p>
     <p>Results are compared with draft answer keys. They stay provisional and are not a grade or a judgment of what you know.</p>
-    <p>One person's answers give not enough evidence about which method works (insufficient_evidence).</p>
+    <p>One person's answers are not enough evidence to show which teaching method works better.</p>
     <p>You can stop at any time, and you can ask for your data to be deleted.</p>
     <button id="confirm-consent" class="button" type="button">I agree — start learning</button></div>`;
 }
