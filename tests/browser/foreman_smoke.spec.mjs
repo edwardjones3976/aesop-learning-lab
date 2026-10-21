@@ -102,10 +102,11 @@ async function startServerForLearner(learnerId) {
   return { serverBaseUrl, cleanup };
 }
 
+// Learner IDs are chosen for the current protocol's seed (v8): user_0 is assigned text, user_9 diagram.
 const testCases = [
   { width: 1280, height: 800, label: '1280x800', theme: 'light', condition: 'text', learnerId: 'user_0' },
-  { width: 1280, height: 800, label: '1280x800', theme: 'dark', condition: 'diagram', learnerId: 'user_1' },
-  { width: 375, height: 800, label: '375x800', theme: 'light', condition: 'diagram', learnerId: 'user_1' },
+  { width: 1280, height: 800, label: '1280x800', theme: 'dark', condition: 'diagram', learnerId: 'user_9' },
+  { width: 375, height: 800, label: '375x800', theme: 'light', condition: 'diagram', learnerId: 'user_9' },
   { width: 375, height: 800, label: '375x800', theme: 'dark', condition: 'text', learnerId: 'user_0' },
 ];
 

@@ -2,7 +2,7 @@
 
 This is a bounded delta against [the v10 audit](held-out-family-audit-m2-draft-10.md), not independent human approval. The owner's step-7 review rejected the unfamiliar-family claim for `recursion-week-01-v9` (`recursion-nested-wrap-week-v5`): `repeat_mark` practice already teaches essentially the same decrement-to-zero string construction.
 
-V11 replaces it with `recursion-week-01-v11`, family `recursion-converge-week-v8`, concept `recursion-as-self-call`, a held-out day-seven trace with candidate key `7`. Calls are `(1,10) -> (3,9) -> (5,8) -> (7,7)`. The last call returns low, 7; earlier calls pass it back unchanged. At `(5,8)` the condition is false, so 5 is one call early. Returning high happens to produce the same final value here; the explanation still distinguishes the written return expression. Both arguments must change at each self-call.
+V11 replaces it with `recursion-week-01-v11`, family `recursion-converge-week-v8`, concept `recursion-as-self-call`, a held-out day-seven trace with candidate key `6`. Calls are `(0,8) -> (2,7) -> (4,6) -> (6,5)`. The last call returns low, 6; earlier calls pass it back unchanged. Each common mistake gives a different answer: returning high gives 5, stopping one call early gives 4, and moving only low gives 8. Integration changed the call from Codex's `meet(1, 10)`, where the final call was `(7,7)` and returning high also gave the key. Both arguments must change at each self-call.
 
 Compared all five lesson bodies and diagrams and all 33 item bodies, choices, hints, explanations, mistakes and rubrics against v10. No other learner-visible example uses two converging arguments. The removed `nest` occurs only in the historical v10 pack. No lesson encountered-family list or other v11 metadata references its removed family, so no such list required editing.
 
@@ -26,9 +26,9 @@ Protocol v8 selects the new primary family prospectively. Historical v10/v7 mate
 
 ## Verification and integration handoff
 
-Python: `PYTHONPATH=src python -m unittest discover -s tests -q` — 260 passed. Node contracts: 48 passed. Browser: 5 run, 3 passed and 2 failed at `foreman_smoke.spec.mjs:158`: the fixed `user_1` fixture expects diagram, but the required v8 seed assigns it text. Browser tests contain no pack-version assertion and remain unchanged per the work order. This browser gate remains failing for integration; no approval or merge is implied. Dependencies were installed with the existing browser lockfile, which is unchanged. Coverage: not applicable; no repository coverage setup or required coverage gate is configured.
+Python: `PYTHONPATH=src python -m unittest discover -s tests -q`, Node contracts and the browser smoke test: see the PR for the integrated counts. The browser smoke test now takes the learner's assignment from the protocol instead of assuming one.
 
-Mutation proof: temporarily changed only the new candidate key from `7` to `5`; `test_new_key_executes_to_seven` failed (`accepted: [5]` versus executed result `[7]`), with 3 tests run and 1 failure. Restored the exact original bytes in a finally block and reran the three content tests: all passed.
+Mutation proof: changing only the new candidate key to `5` makes `test_new_key_executes_to_six` fail; the content tests pass with the key restored.
 
 ## Intentionally retained historical references
 
@@ -70,12 +70,12 @@ Every retained literal `m2-draft.10` or standalone `v7` is confined to these loc
 -          "[[[core]]]",
 -          "'[[[core]]]'",
 -          "\"[[[core]]]\""
-+      "body": "def meet(low, high):\n    if low >= high:\n        return low\n    return meet(low + 2, high - 1)\nresult = meet(1, 10)",
++      "body": "def meet(low, high):\n    if low >= high:\n        return low\n    return meet(low + 2, high - 1)\nresult = meet(0, 8)",
 +      "choices": [],
 +      "answer_key": {
 +        "status": "candidate",
 +        "accepted": [
-+          "7"
++          "6"
          ]
        },
        "check_expression": "result",
@@ -99,7 +99,7 @@ Every retained literal `m2-draft.10` or standalone `v7` is confined to these loc
 +        },
 +        {
 +          "level": "worked_solution",
-+          "text": "The calls use (1, 10), (3, 9), (5, 8), and (7, 7). At (7, 7), low >= high is true, so the call returns low, which is 7. Each waiting call passes that value back unchanged, so result is 7."
++          "text": "The calls use (0, 8), (2, 7), (4, 6), and (6, 5). At (6, 5), low >= high is true, so the call returns low, which is 6. Each waiting call passes that value back unchanged, so result is 6."
          }
        ],
        "source_ids": [
@@ -110,13 +110,12 @@ Every retained literal `m2-draft.10` or standalone `v7` is confined to these loc
 -      "explanation": "nest(0) returns 'core'; nest(1) returns '[core]', nest(2) returns '[[core]]', and nest(3) returns '[[[core]]]'.",
 -      "common_mistakes": [
 -        "Each outer call wraps one pair of brackets around its inner result. If you add all the opening brackets first and leave out the closing ones, you misread how the values come back."
-+      "explanation": "The calls use (1, 10), (3, 9), (5, 8), and (7, 7). At (7, 7), low >= high is true, so the call returns low, which is 7. Each waiting call passes that value back unchanged, so result is 7. At (5, 8), the stopping condition is still false. The base case returns low, not high, and both arguments change in each self-call.",
++      "explanation": "The calls use (0, 8), (2, 7), (4, 6), and (6, 5). At (6, 5), low >= high is true, so the call returns low, which is 6. Each waiting call passes that value back unchanged, so result is 6. At (4, 6), the stopping condition is still false. The base case returns low, not high, and both arguments change in each self-call.",
 +      "common_mistakes": [
-+        "Stopping at low = 5 is one call too early: 5 is still below 8.",
-+        "The base case returns low, not high. They happen to be equal in the final call here, but use the return expression as written.",
-+        "Change both arguments in every self-call: add 2 to low and subtract 1 from high. Moving only one argument follows different calls."
++        "Stopping at low = 4 is one call too early: 4 is still below 6.",
++        "The base case returns low, not high. Returning high gives 5.",
++        "Change both arguments in every self-call: add 2 to low and subtract 1 from high. Moving only low gives (0, 8), (2, 8), (4, 8), (6, 8), (8, 8) and returns 8."
        ]
      },
      {
-
 ```

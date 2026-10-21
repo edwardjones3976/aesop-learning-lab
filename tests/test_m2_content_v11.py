@@ -50,10 +50,19 @@ class M2ContentV11Tests(unittest.TestCase):
                              new_text[b:new_text.index('\n    }', b)])
         self.assertEqual(sum(i['held_out'] for i in new['items']), 9)
 
-    def test_new_key_executes_to_seven(self):
+    def test_new_key_executes_to_six(self):
         namespace = {}
         exec(self.new['body'], namespace)
-        self.assertEqual(namespace['result'], 7)
+        self.assertEqual(namespace['result'], 6)
+        # Each common mistake must lead to a different answer than the key.
+        def misread(low, high, step_high, answer_high, stop_early):
+            while not (low >= high or (stop_early and low + 2 >= high - step_high)):
+                low, high = low + 2, high - step_high
+            return high if answer_high else low
+        mistakes = {'returns high': misread(0, 8, 1, True, False),
+                    'one call early': misread(0, 8, 1, False, True),
+                    'moves only low': misread(0, 8, 0, False, False)}
+        self.assertEqual(mistakes, {'returns high': 5, 'one call early': 4, 'moves only low': 8})
         self.assertEqual(self.new['answer_key'], {'status': 'candidate', 'accepted': [str(namespace['result'])]})
         self.assertEqual(self.new['check_expression'], 'result')
         self.assertEqual([h['level'] for h in self.new['hints']], ['nudge', 'targeted', 'worked_solution'])
