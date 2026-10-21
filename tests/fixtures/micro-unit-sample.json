@@ -1,0 +1,130 @@
+{
+  "kind": "micro_unit",
+  "schema_version": "micro-unit-pack/1",
+  "pack_id": "invented-vocabulary-sample",
+  "methods": [
+    {
+      "id": "cued_retrieval",
+      "name": "Cued retrieval",
+      "description": "Recall the meaning from a cue."
+    },
+    {
+      "id": "keyword_mnemonic",
+      "name": "Keyword mnemonic",
+      "description": "Connect a sound cue to an image."
+    },
+    {
+      "id": "example_sentence",
+      "name": "Example sentence",
+      "description": "Learn the word in a sentence."
+    }
+  ],
+  "units": [
+    {
+      "id": "voma",
+      "target": {
+        "word": "voma",
+        "gloss": "river"
+      },
+      "variants": {
+        "cued_retrieval": "voma means river. Cover the meaning and recall it from voma.",
+        "keyword_mnemonic": "voma means river. Picture foam beside the river.",
+        "example_sentence": "voma means river. We saw a river; in this language we saw a voma."
+      },
+      "check": {
+        "id": "voma-day7",
+        "family_id": "voma-recall",
+        "prompt": "Give the English meaning of voma.",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "river"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      },
+      "practice": [
+        {
+          "id": "voma-practice",
+          "prompt": "Say voma aloud and recall its meaning."
+        }
+      ]
+    },
+    {
+      "id": "nelu",
+      "target": {
+        "word": "nelu",
+        "gloss": "moon"
+      },
+      "variants": {
+        "cued_retrieval": "nelu means moon. Cover the meaning and recall it from nelu.",
+        "keyword_mnemonic": "nelu means moon. Picture new beside the moon.",
+        "example_sentence": "nelu means moon. We saw a moon; in this language we saw a nelu."
+      },
+      "check": {
+        "id": "nelu-day7",
+        "family_id": "nelu-recall",
+        "prompt": "Give the English meaning of nelu.",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "moon"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      }
+    },
+    {
+      "id": "paku",
+      "target": {
+        "word": "paku",
+        "gloss": "basket"
+      },
+      "variants": {
+        "cued_retrieval": "paku means basket. Cover the meaning and recall it from paku.",
+        "keyword_mnemonic": "paku means basket. Picture pack beside the basket.",
+        "example_sentence": "paku means basket. We saw a basket; in this language we saw a paku."
+      },
+      "check": {
+        "id": "paku-day7",
+        "family_id": "paku-recall",
+        "prompt": "Give the English meaning of paku.",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "basket"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      }
+    },
+    {
+      "id": "sedi",
+      "target": {
+        "word": "sedi",
+        "gloss": "stone"
+      },
+      "variants": {
+        "cued_retrieval": "sedi means stone. Cover the meaning and recall it from sedi.",
+        "keyword_mnemonic": "sedi means stone. Picture sediment beside the stone.",
+        "example_sentence": "sedi means stone. We saw a stone; in this language we saw a sedi."
+      },
+      "check": {
+        "id": "sedi-day7",
+        "family_id": "sedi-recall",
+        "prompt": "Give the English meaning of sedi.",
+        "answer_key": {
+          "status": "candidate",
+          "accepted": [
+            "stone"
+          ]
+        },
+        "check_delay_days": 7,
+        "held_out": true
+      }
+    }
+  ]
+}
