@@ -561,6 +561,74 @@ export function comparisonHintBlockReason(answer) {
     : null;
 }
 
+export function workspaceMarkup(view) {
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const index = view.overview.concepts.findIndex(c => c.id === view.conceptId) + 1;
+  if (index < 1) throw contractError('overview.concepts', 'selected concept was not found.');
+  const current = view.overview.concepts[index-1], signals = current.signals;
+  const suggested = view.overview.pathRecommendation;
+  const finding = view.overview.experiment;
+  const protocolId = finding?.protocol?.id ?? finding?.protocolId;
+  const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
+  const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'correlated concept observations' : 'eligible delayed answers';
+  const armDetail = arm => {
+    if (finding?.analysisUnit !== 'independent_learner') return '';
+    const row = finding.arms[arm];
+    return `; ${row.independentLearners} independent learner${row.independentLearners === 1 ? '' : 's'}` +
+      (row.provisional ? `; ${row.provisional} provisional draft-key check${row.provisional === 1 ? '' : 's'} (${row.candidateKeyMatches} candidate match${row.candidateKeyMatches === 1 ? '' : 'es'})` : '') +
+      (row.late ? `; ${row.late} late check${row.late === 1 ? '' : 's'} reported outside the primary window` : '') +
+      (row.contaminated ? `; ${row.contaminated} familiar or assisted check${row.contaminated === 1 ? '' : 's'}` : '') +
+      (row.early ? `; ${row.early} early check${row.early === 1 ? '' : 's'}` : '') +
+      (row.ungraded ? `; ${row.ungraded} ungraded response${row.ungraded === 1 ? '' : 's'}` : '') +
+      (row.invalid ? `; ${row.invalid} invalid response${row.invalid === 1 ? '' : 's'}` : '') +
+      (row.exposureIncomparable ? `; ${row.exposureIncomparable} exposure${row.exposureIncomparable === 1 ? '' : 's'} without verified comparability` : '');
+  };
+  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
+  const limitations = [
+    finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
+    finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
+    finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
+    finding?.protocol?.minimumIndependentLearnersPerArm != null ? `A stronger comparison needs at least ${finding.protocol.minimumIndependentLearnersPerArm} independent learners per arm, verified exposure, and reviewed content. One person's concept results remain correlated.` : null,
+    finding?.syntheticResultsAreLearningEvidence === false ? 'Synthetic test results are not learner evidence.' : null,
+  ].filter(Boolean);
+  const assignedMethod = view.lesson.method?.conditionId === 'diagram' ? 'B · text with diagram' : view.lesson.method?.conditionId === 'text' ? 'A · text' : null;
+  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>Limits on interpretation</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></section>` : '';
+  const draftMarkup = view.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : view.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
+  const reviewMarkup = view.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, view.session) : '';
+  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(view.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p>`;
+  const pathNote = `<div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(view.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== view.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>`;
+  const evidencePanel = `<details class="workspace-evidence"><summary>Your evidence</summary>${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}</details>`;
+  const support = `${pathNote}${draftMarkup}${reviewMarkup}${evidencePanel}<div class="divider"></div>`;
+  const overrideNote = '<label class="muted" for="override-note">Why choose more practice? (optional)</label><input id="override-note" class="answer" maxlength="500" placeholder="Your reason, if you want to record it">';
+  if (!view.lesson.completed) {
+    const method = view.lesson.method;
+    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p>${method.studyTargetMinutes ? `<p>Comparison study target: about ${esc(method.studyTargetMinutes)} minutes with this lesson before practice in either method. You may continue sooner or later; study time is not verified.</p>` : ''}<small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
+    const diagramMarkup = view.lesson.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled concept diagram</figcaption><pre>${esc(view.lesson.diagram)}</pre></figure>` : '';
+    const lessonTitleMarkup = view.lesson.title === current.title ? '' : `<h3>${esc(view.lesson.title)}</h3>`;
+    return intro + `<span class="pill">Worked answer first · draft lesson</span>${lessonTitleMarkup}${methodMarkup}<p class="method-note">Study the complete worked answer, follow each step, and check the common mistakes. Your next question uses a different item family; studying this answer does not count as an independent correct answer.</p><article class="lesson-body">${lessonMarkup(view.lesson.body)}</article>${diagramMarkup}${view.lesson.experimentNotice ? `<p class="muted">${esc(view.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${view.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've studied the worked answer →</button></div>` + support;
+  }
+  if (view.result) {
+    const r = validateAttemptResult(view.result);
+    const status = r.scoreStatus === 'ungraded' ? 'Saved for self review' : r.scoreStatus === 'correct' ? 'Candidate key match' : 'Try another approach';
+    return intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>${solutionMarkup(r)}` +
+      (r.rubric && !view.review ? `<div class="activity-card"><span class="label">SELF REVIEW · ORIGINAL ANSWER</span><pre class="code">${esc(view.answer)}</pre><p class="muted">For each criterion, quote the part of your first answer that supports a shown or partial rating.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Evidence for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save self review →</button></div></div>` : '') +
+      (view.review ? `<div class="activity-card"><span class="label">COMPARE AND REVISE</span><p>${esc(view.review.nextStep.replace('_',' '))}</p><pre class="code">${esc(view.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((view.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
+      `${overrideNote}<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>${support}`;
+  }
+  const s = view.session, a = s.activity;
+  if (!a) {
+    return intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>${support}`;
+  }
+  const saved = Boolean(s.draft);
+  const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
+  const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
+  const priorFamily = signals.recordedAttempts.filter(attempt => attempt.familyId === a.familyId);
+  const activityLabel = a.heldOut ? 'Unfamiliar delayed assessment' :
+    priorFamily.some(attempt => attempt.assisted) ? 'Assisted review' :
+    priorFamily.length || signals.encounteredFamilyIds.includes(a.familyId) ? 'Repeated practice' : 'New question';
+  return intro + `<span class="pill">${activityLabel}</span><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>${!saved && view.mode === 'recommended' ? `${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>` : ''}<div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${priorFamily.length ? '<p>This item family has been attempted before. A new answer here remains repeat practice.</p>' : ''}${s.recommendation?.aim ? `<p><strong>Aim:</strong> ${esc(s.recommendation.aim)}</p>` : ''}${s.recommendation?.evidenceGap ? `<p><strong>Evidence still needed:</strong> ${esc(s.recommendation.evidenceGap)}</p>` : ''}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${support}`;
+}
+
 if (typeof globalThis.document !== 'undefined') {
 const content = document.querySelector('#content');
 const conceptsEl = document.querySelector('#concepts');
@@ -750,60 +818,17 @@ function render() {
   }
 }
 function renderWorkspace() {
-  const index = state.overview.concepts.findIndex(c => c.id === state.conceptId) + 1;
-  if (index < 1) throw contractError('overview.concepts', 'selected concept was not found.');
-  const current = state.overview.concepts[index-1], signals = current.signals;
   const suggested = state.overview.pathRecommendation;
-  const finding = state.overview.experiment;
-  const protocolId = finding?.protocol?.id ?? finding?.protocolId;
-  const protocolVersion = finding?.protocol?.version ?? finding?.protocolVersion;
-  const unitLabel = finding?.analysisUnit === 'independent_learner' ? 'correlated concept observations' : 'eligible delayed answers';
-  const armDetail = arm => {
-    if (finding?.analysisUnit !== 'independent_learner') return '';
-    const row = finding.arms[arm];
-    return `; ${row.independentLearners} independent learner${row.independentLearners === 1 ? '' : 's'}` +
-      (row.provisional ? `; ${row.provisional} provisional draft-key check${row.provisional === 1 ? '' : 's'} (${row.candidateKeyMatches} candidate match${row.candidateKeyMatches === 1 ? '' : 'es'})` : '') +
-      (row.late ? `; ${row.late} late check${row.late === 1 ? '' : 's'} reported outside the primary window` : '') +
-      (row.contaminated ? `; ${row.contaminated} familiar or assisted check${row.contaminated === 1 ? '' : 's'}` : '') +
-      (row.early ? `; ${row.early} early check${row.early === 1 ? '' : 's'}` : '') +
-      (row.ungraded ? `; ${row.ungraded} ungraded response${row.ungraded === 1 ? '' : 's'}` : '') +
-      (row.invalid ? `; ${row.invalid} invalid response${row.invalid === 1 ? '' : 's'}` : '') +
-      (row.exposureIncomparable ? `; ${row.exposureIncomparable} exposure${row.exposureIncomparable === 1 ? '' : 's'} without verified comparability` : '');
-  };
-  const armsMarkup = finding?.arms ? `<div class="experiment-arms"><p><strong>Method A · text:</strong> ${finding.arms.text.eligible} ${unitLabel}, ${finding.arms.text.correct} correct; ${finding.arms.text.missing} missing${armDetail('text')}.</p><p><strong>Method B · text with diagram:</strong> ${finding.arms.diagram.eligible} ${unitLabel}, ${finding.arms.diagram.correct} correct; ${finding.arms.diagram.missing} missing${armDetail('diagram')}.</p></div>` : '';
-  const limitations = [
-    finding?.contentReviewStatus === 'draft' ? 'Instructional content and answer keys are draft; independent review is not complete.' : null,
-    finding?.protocol?.exposureDurationControlled === false ? 'Lesson exposure is self-paced, so the two methods cannot support a causal superiority claim.' : null,
-    finding?.protocol?.minimumPerArm != null ? `The protocol requires ${finding.protocol.minimumPerArm} eligible delayed outcomes per method.` : null,
-    finding?.protocol?.minimumIndependentLearnersPerArm != null ? `A stronger comparison needs at least ${finding.protocol.minimumIndependentLearnersPerArm} independent learners per arm, verified exposure, and reviewed content. One person's concept results remain correlated.` : null,
-    finding?.syntheticResultsAreLearningEvidence === false ? 'Synthetic test results are not learner evidence.' : null,
-  ].filter(Boolean);
-  const assignedMethod = state.lesson.method?.conditionId === 'diagram' ? 'B · text with diagram' : state.lesson.method?.conditionId === 'text' ? 'A · text' : null;
-  const experimentMarkup = finding ? `<section class="experiment-summary" aria-label="Instructional comparison findings"><strong>Instructional comparison: ${esc(finding.status.replace('_', ' '))}</strong><p>${esc(finding.reason)}</p>${assignedMethod ? `<p>Your assigned presentation here: ${esc(assignedMethod)}.</p>` : ''}${armsMarkup}${limitations.length ? `<p><strong>Limits on interpretation</strong></p><ul>${limitations.map(text => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}<small>${protocolId ? `Protocol ${esc(protocolId)} · ${esc(protocolVersion)}. ` : ''}A method preference is not evidence of better learning.</small></section>` : '';
-  const draftMarkup = state.result ? '' : signals.openDraft ? `<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Activity ${esc(signals.openDraft.activityId)} · ${esc(signals.openDraft.hintLevel.replace('_', ' '))} assistance · saved <time datetime="${esc(signals.openDraft.savedAt)}">${esc(new Date(signals.openDraft.savedAt).toLocaleString())}</time>. The first answer remains locked while you request hints.</p></section>` : state.session.draft ? '<section class="draft-status" role="status" aria-label="Saved answer status"><strong>Saved first answer to resume</strong><p>Your original answer remains locked while you request hints.</p></section>' : '';
-  const reviewMarkup = state.lesson.completed ? reviewTimingMarkup(signals.reviewSchedule, state.session) : '';
-  const intro = `<div class="section-kicker">CONCEPT ${String(index).padStart(2,'0')} / ${String(state.overview.concepts.length).padStart(2,'0')}</div><h2>${esc(current.title)}</h2><p class="lede">The goal is lasting understanding. The setting is yours to adjust; retrieval and delayed checks remain part of the learning path.</p>`;
-  const pathNote = `<div class="path-note"><strong>Suggested next: ${esc(suggested.action.replace('_', ' '))} · ${esc(state.overview.concepts.find(c => c.id === suggested.conceptId)?.title)}</strong><p>${esc(suggested.reason)}</p>${suggested.conceptId !== state.conceptId ? '<button class="button secondary" id="follow-path">Go to suggested concept</button>' : '<span class="muted">You can choose any concept from Your Path.</span>'}</div>`;
-  const evidencePanel = `<details class="workspace-evidence"><summary>Your evidence</summary>${evidenceSummaryMarkup(signals.evidence)}<p class="muted">${signals.needsReview} ungraded open response${signals.needsReview === 1 ? '' : 's'}. Self review supports reflection but does not award correctness.</p>${evidenceMarkup(signals.evidence, signals.recordedAttempts)}${experimentMarkup}</details>`;
-  const support = `${pathNote}${draftMarkup}${reviewMarkup}${evidencePanel}<div class="divider"></div>`;
-  const overrideNote = '<label class="muted" for="override-note">Why choose more practice? (optional)</label><input id="override-note" class="answer" maxlength="500" placeholder="Your reason, if you want to record it">';
+  const markup = workspaceMarkup(state);
   content.onclick = event => { if (event.target?.id === 'follow-path') select(suggested.conceptId); };
   if (!state.lesson.completed) {
-    const method = state.lesson.method;
-    const methodMarkup = method ? `<div class="method-note"><strong>Instructional method ${method.conditionId === 'diagram' ? 'B' : 'A'}</strong><p>${method.conditionId === 'diagram' ? 'The same written explanation includes a labeled diagram.' : 'Written explanation and retrieval practice.'}</p>${method.studyTargetMinutes ? `<p>Comparison study target: about ${esc(method.studyTargetMinutes)} minutes with this lesson before practice in either method. You may continue sooner or later; study time is not verified.</p>` : ''}<small>Assignment ${esc(method.protocolId)} · ${esc(method.protocolVersion)}</small></div>` : '';
-    const diagramMarkup = state.lesson.diagram ? `<figure class="lesson-diagram"><figcaption>Labeled concept diagram</figcaption><pre>${esc(state.lesson.diagram)}</pre></figure>` : '';
-    const lessonTitleMarkup = state.lesson.title === current.title ? '' : `<h3>${esc(state.lesson.title)}</h3>`;
-    content.innerHTML = intro + `<span class="pill">Worked answer first · draft lesson</span>${lessonTitleMarkup}${methodMarkup}<p class="method-note">Study the complete worked answer, follow each step, and check the common mistakes. Your next question uses a different item family; studying this answer does not count as an independent correct answer.</p><article class="lesson-body">${lessonMarkup(state.lesson.body)}</article>${diagramMarkup}${state.lesson.experimentNotice ? `<p class="muted">${esc(state.lesson.experimentNotice)}</p>` : ''}<p class="sources">Sources: ${state.lesson.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join('')}</p><div class="button-row"><button class="button" id="complete">I've studied the worked answer →</button></div>` + support;
+    content.innerHTML = markup;
     document.querySelector('#complete').onclick = async () => { try { await api('/api/v2/lesson-completions',{conceptId:state.conceptId}); await refresh(); } catch(e){showError(e)} };
     return;
   }
   if (state.result) {
     const r = validateAttemptResult(state.result);
-    const status = r.scoreStatus === 'ungraded' ? 'Saved for self review' : r.scoreStatus === 'correct' ? 'Candidate key match' : 'Try another approach';
-    content.innerHTML = intro + `<div class="feedback" role="status" aria-live="polite"><h3>${status}</h3><p>${esc(r.nextReason)}</p>${r.explanation && !r.solution ? `<p><strong>Why:</strong> ${esc(r.explanation)}</p>` : ''}<p class="muted">${r.assisted ? 'Hint assisted · ' : ''}Development preview · No mastery claim</p></div>${solutionMarkup(r)}` +
-      (r.rubric && !state.review ? `<div class="activity-card"><span class="label">SELF REVIEW · ORIGINAL ANSWER</span><pre class="code">${esc(state.answer)}</pre><p class="muted">For each criterion, quote the part of your first answer that supports a shown or partial rating.</p>${r.rubric.criteria.map(c=>`<div class="review-row" data-criterion="${esc(c.id)}"><p><strong>${esc(c.description)}</strong></p><select class="answer rating"><option value="unsure">Unsure</option><option value="shown">Shown</option><option value="partial">Partial</option><option value="not_shown">Not shown</option></select><input class="answer evidence" placeholder="Exact quote from your answer, if shown or partial" aria-label="Evidence for ${esc(c.description)}"></div>`).join('')}<div class="button-row"><button class="button" id="review">Save self review →</button></div></div>` : '') +
-      (state.review ? `<div class="activity-card"><span class="label">COMPARE AND REVISE</span><p>${esc(state.review.nextStep.replace('_',' '))}</p><pre class="code">${esc(state.review.comparison.annotatedExample)}</pre><p class="muted">Common mistakes: ${esc((state.review.comparison.commonMistakes ?? []).join(' · '))}</p><label class="muted" for="revision">A revised answer, if you want to try again</label><textarea id="revision" class="answer long"></textarea><div class="button-row"><button class="button secondary" id="save-revision">Save revision</button></div></div>` : '') +
-      `${overrideNote}<div class="button-row"><button class="button" id="next">Continue →</button><button class="button secondary" id="more">Choose more practice (override)</button></div>${support}`;
+    content.innerHTML = markup;
     if (r.rubric && !state.review) document.querySelector('#review').onclick = async () => {
       try {
         const judgments = [...document.querySelectorAll('.review-row')].map(row => ({criterionId:row.dataset.criterion,rating:row.querySelector('.rating').value,evidence:row.querySelector('.evidence').value}));
@@ -820,18 +845,12 @@ function renderWorkspace() {
   }
   const s = state.session, a = s.activity;
   if (!a) {
-    content.innerHTML = intro + `<div class="empty"><h3>You're caught up for now.</h3><p>${esc(s.reason || 'The next check will be offered later.')}</p>${s.nextCheckAt ? `<p>Next check: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>${support}`;
+    content.innerHTML = markup;
     document.querySelector('#more').onclick = () => chooseMorePractice().catch(showError);
     return;
   }
   const saved = Boolean(s.draft);
-  const previous = signals.recentOutcome === 'incorrect' ? 'Your previous scored answer missed its candidate key. The policy offers continued practice.' : signals.recentOutcome === 'ungraded' ? 'Your previous open answer remains ungraded; self review supplies the comparison.' : signals.recentOutcome === 'correct' ? 'Your previous answer matched a candidate key. A delayed check still requires time and unassisted evidence.' : 'Start with retrieval after reading the lesson.';
-  const reason = saved ? 'Resume the first answer you already saved.' : s.recommendation?.reason || 'Continue with an available activity.';
-  const priorFamily = signals.recordedAttempts.filter(attempt => attempt.familyId === a.familyId);
-  const activityLabel = a.heldOut ? 'Unfamiliar delayed assessment' :
-    priorFamily.some(attempt => attempt.assisted) ? 'Assisted review' :
-    priorFamily.length || signals.encounteredFamilyIds.includes(a.familyId) ? 'Repeated practice' : 'New question';
-  content.innerHTML = intro + `<span class="pill">${activityLabel}</span><div class="activity-card"><span class="label">${esc(a.type.replace('_',' '))} · ${esc(a.evidenceKind)}${a.difficulty ? ` · ${esc(a.difficulty)}` : ''}</span>${a.learningObjective ? `<p class="activity-objective"><strong>Learning objective:</strong> ${esc(a.learningObjective)}</p>` : ''}<h3>${esc(a.prompt)}</h3>${a.body ? `<pre class="code">${esc(a.body)}</pre>` : ''}<div id="answer-area"></div>${!saved ? '<div class="answer-context"><label for="confidence">How confident are you in this first answer?</label><select id="confidence" class="answer"><option value="">Prefer not to say</option><option value="0">0% · guessing</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100% · certain</option></select><p class="muted">Record this before opening any hints. You may leave it blank.</p></div>' : ''}<div class="button-row"><button id="save" class="button" ${saved?'disabled':''}>${saved?'First answer saved':'Save first answer →'}</button></div><div id="after-save"></div></div>${!saved && state.mode === 'recommended' ? `${overrideNote}<div class="button-row"><button class="button secondary" id="more">Choose more practice (override)</button></div>` : ''}<div class="why"><strong>Why this activity?</strong>${esc(reason)} ${esc(previous)}${priorFamily.length ? '<p>This item family has been attempted before. A new answer here remains repeat practice.</p>' : ''}${s.recommendation?.aim ? `<p><strong>Aim:</strong> ${esc(s.recommendation.aim)}</p>` : ''}${s.recommendation?.evidenceGap ? `<p><strong>Evidence still needed:</strong> ${esc(s.recommendation.evidenceGap)}</p>` : ''}${s.nextCheckAt && !a.heldOut ? `<p>Independent check time, if eligibility remains: ${esc(new Date(s.nextCheckAt).toLocaleString())}</p>` : ''}</div>${support}`;
+  content.innerHTML = markup;
   drawAnswer(a, saved);
   if (!saved) {
     document.querySelector('#confidence').value = state.confidence == null ? '' : String(state.confidence);

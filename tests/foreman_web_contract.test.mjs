@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  workspaceMarkup,
   buildAttemptPayload,
   evidenceMarkup,
   evidenceSnapshot,
@@ -331,7 +332,7 @@ finally:
         assert.equal(selector, '#complete');
         return completeButton;
       } },
-      evidenceSummaryMarkup, evidenceMarkup, lessonMarkup, reviewTimingMarkup,
+      workspaceMarkup, evidenceSummaryMarkup, evidenceMarkup, lessonMarkup, reviewTimingMarkup,
     };
     runInNewContext(`${escapeSource}\n${renderSource}\nrenderWorkspace();`, context);
     const title = `<h2>${concept.title}</h2>`;
@@ -441,3 +442,61 @@ test('attempt context is explicit and cannot turn assistance into independent ev
   assert.throws(() => buildAttemptPayload('draft-1', 0, 1.2, 'none'), /attempt\.confidence/);
   assert.throws(() => buildAttemptPayload('draft-1', 0, 0.5, 'never'), /attempt\.outsideStudy/);
 });
+
+const workspaceView = () => ({
+  overview: baseOverview([baseConcept('c1', 'Unique concept title', {
+    encounteredFamilyIds: [], reviewSchedule: { status: 'none' },
+  }), baseConcept('c2', 'Next concept')], { conceptId: 'c2', action: 'practice', reason: 'Continue.' }),
+  conceptId: 'c1', mode: 'recommended', answer: 'yes', result: null, review: null,
+  lesson: { title: 'Unique concept title', completed: true, body: 'Worked example.', sources: [] },
+  session: { activity: { id: 'a1', familyId: 'f1', type: 'choice',
+    evidenceKind: 'recognition', prompt: 'Pick one', choices: ['yes'], hints: [] },
+    draft: null, recommendation: { reason: 'Practice.' } },
+});
+
+for (const screen of ['lesson', 'practice question', 'saved draft', 'result', 'caught-up', 'due', 'overdue']) {
+  test(`workspace markup placement: ${screen}`, () => {
+    const view = workspaceView();
+    let activity = '<div class="activity-card">';
+    if (screen === 'lesson') {
+      view.lesson.completed = false;
+      activity = '<article class="lesson-body">';
+    } else if (screen === 'saved draft') {
+      view.session.draft = { id: 'd1', firstAnswer: 'yes', hintLevels: [] };
+    } else if (screen === 'result') {
+      view.result = { attemptId: 'a1', scoreStatus: 'correct', gradingMethod: 'key',
+        assisted: false, nextReason: 'Matched.', developmentOnly: true };
+      activity = '<div class="feedback"';
+    } else if (screen === 'caught-up') {
+      view.session.activity = null;
+      activity = '<div class="empty">';
+    } else if (screen === 'due' || screen === 'overdue') {
+      view.session.activity.heldOut = true;
+      view.overview.concepts[0].signals.reviewSchedule = {
+        status: screen, dueAt: '2026-01-02T12:00:00Z', reason: 'Check recall.',
+      };
+    }
+    const before = structuredClone(view);
+    const html = workspaceMarkup(view);
+    assert.deepEqual(view, before, 'markup must not mutate its input');
+    const main = html.indexOf(activity);
+    const path = html.indexOf('<div class="path-note">');
+    const evidence = html.indexOf('<details class="workspace-evidence">');
+    assert.ok(main >= 0 && main < path && main < evidence, 'activity must precede path and evidence');
+    const panels = html.match(/<details\b[^>]*\bclass="workspace-evidence"[^>]*>/g) ?? [];
+    assert.equal(panels.length, 1, 'exactly one evidence panel');
+    assert.doesNotMatch(panels[0], /\sopen(?:\s|=|>)/, 'evidence panel must be closed');
+    if (screen === 'due' || screen === 'overdue') {
+      const timing = html.indexOf('<section class="review-timing"');
+      assert.ok(timing >= 0 && timing < evidence, 'review timing must precede evidence');
+      assert.match(html, new RegExp(`Delayed review ${screen}`));
+      assert.match(html, /Unfamiliar delayed assessment/);
+    } else {
+      assert.doesNotMatch(html, /class="review-timing"/);
+    }
+    if (screen === 'lesson') {
+      assert.equal(html.split(view.lesson.title).length - 1, 1);
+      assert.ok(!html.includes(`<h3>${view.lesson.title}</h3>`));
+    }
+  });
+}
