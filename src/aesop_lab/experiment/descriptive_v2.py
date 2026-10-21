@@ -15,7 +15,8 @@ from typing import Mapping, Sequence
 
 from aesop_lab.api.delay_display import display_delay_days
 from aesop_lab.domain.models import (
-    Activity, Attempt, EvidenceKind, ExperimentAssignment, HintLevel, ScoreStatus,
+    Activity, Attempt, EvidenceKind, ExperimentAssignment, HintLevel, OutsideStudy,
+    ScoreStatus,
 )
 
 
@@ -30,6 +31,13 @@ class DescriptiveProtocolV2:
     primary_window_days: int
     target_exposure_minutes: int
     minimum_independent_learners_per_arm: int
+
+    def __post_init__(self) -> None:
+        if (not isinstance(self.version, str) or
+                not self.version.startswith("v") or
+                not self.version[1:] or
+                any(char not in "0123456789" for char in self.version[1:])):
+            raise ValueError("protocol version must be v followed by an integer")
 
     @property
     def primary_families(self) -> dict[str, str]:
@@ -181,9 +189,11 @@ def _assign_condition(
 def _classify_first(
     first: Attempt, activity: Activity, exposure: ExposureV2,
     prior_families: set[str], now: datetime, content_review_status: str,
-    protocol: DescriptiveProtocolV2,
+    protocol: DescriptiveProtocolV2, *, prior_outside_study: bool = False,
 ) -> tuple[str, float | None]:
     """Classify first-family response without moving the primary time window."""
+
+    protocol_number = int(protocol.version[1:])
 
     if exposure.completed_at is None or first.occurred_at > now:
         return "invalid", None
@@ -200,6 +210,12 @@ def _classify_first(
     if (activity.family_id in exposure.encountered_family_ids or
             activity.family_id in prior_families or
             first.hint_level is not HintLevel.NONE):
+        return "contaminated", None
+    # V5 first explicitly excludes outside study; preserve earlier protocols.
+    # Only SOME reports study. UNKNOWN and missing (None) are not reports of
+    # study, and optional free-text detail does not override the structured value.
+    if (protocol_number >= 5 and
+            (prior_outside_study or first.outside_study is OutsideStudy.SOME)):
         return "contaminated", None
     if first.score_status not in (ScoreStatus.CORRECT, ScoreStatus.INCORRECT):
         return "ungraded", None
@@ -326,9 +342,19 @@ def _analyze(
         prior_families = {activity.family_id for attempt in attempts
                           if attempt.occurred_at < first.occurred_at
                           and (activity := activities.get(attempt.activity_id)) is not None}
+        # Include every family for this concept, up to and including the first
+        # held-out response. Later declarations cannot change this observation.
+        prior_outside_study = any(
+            attempt.outside_study is OutsideStudy.SOME
+            and attempt.occurred_at <= first.occurred_at
+            and (activity := activities.get(attempt.activity_id)) is not None
+            and activity.concept_id == assignment.concept_id
+            for attempt in attempts
+        )
         classification, elapsed_seconds = _classify_first(
             first, activities[first.activity_id], exposure, prior_families,
-            now, content_review_status, protocol)
+            now, content_review_status, protocol,
+            prior_outside_study=prior_outside_study)
         arm[classification] += 1
         observation = {"conceptId": assignment.concept_id,
                        "firstAttemptId": first.id,
