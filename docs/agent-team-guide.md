@@ -39,10 +39,10 @@ Each PR moves through these steps in order. Each step catches mistakes the earli
 
 ### Capacity
 - **At most two agent jobs at once** on this laptop. Bridge calls, worker runs, Cursor MCP calls and Playwright runs all count. A third job has been killed for low memory.
-- A plan wave names its two jobs and the files each owns. Later steps wait until a slot frees.
+- A plan wave names its two jobs and the files each owns, and later steps wait until a slot frees. For example, round 2's first wave was step 1, the version registry (Codex: `src/aesop_lab/foreman.py` and its tests), and step 2, the similarity guard (Antigravity: `tests/heldout_similarity.py` and `tests/test_heldout_similarity.py`).
 
 ### Worktrees
-- **At the start of every task**, count the leftover worktrees (`git worktree list`). Keep them at **four or fewer** before adding one. A session can die before its merge, so cleanup at merge time alone is not enough.
+- **At the start of every task**, count the leftover worktrees (`git worktree list`). Add one only if the total stays **at four or fewer** afterwards. A session can die before its merge, so cleanup at merge time alone is not enough.
 - **In the merge session**, remove the PR's worktrees: the author's and the reviewer's. Keep the branch.
 
 ### Author preflight
@@ -59,7 +59,7 @@ The integrator (Claude) reviews the diff, re-runs every suite (Python, node cont
 - **The non-author reviewer** (Cursor) checks the exact head commit against the PR's stated contract. It merges with `gh pr merge N --merge --match-head-commit <sha>`, or returns findings.
 - **The GitHub Codex reviewer:** judge new findings by `created_at` after the latest commit, because old comments move onto new commits.
 - **Convergence rule:** after about four review rounds, only P1 or factually wrong findings block. Other findings are fixed or declined with a written reason.
-- **Bot stall rule:** if the Codex bot shows "running" for more than 30 minutes, comment `@codex review` once. If it is still stalled, the merge may go ahead on a non-author review, green CI and an exact-SHA merge. Any finding it posts later is still fixed or declined.
+- **Bot stall rule:** if the Codex bot shows "running" for more than 30 minutes, comment `@codex review` once. If it is still stalled, the merge may go ahead without the bot, but every other requirement still applies: a non-author review of the exact commit, tests checked, green CI, any owner decision the PR depends on recorded, and an exact-SHA merge. Any finding it posts later is still fixed or declined.
 
 ## Talking to other agents
 
