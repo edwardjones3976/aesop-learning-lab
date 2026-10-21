@@ -6,7 +6,7 @@
   "status": "draft",
   "author": "Claude (prospective plain-language rewrite of learner-facing prose over the v9 author draft)",
   "review": {
-    "note": "Prospective v10 candidate rewords learner-facing prose in plain English for beginners. Code, answers, choices, item and family IDs, held-out status, hint levels, delays, rubric criteria, and sources are unchanged from v9. Historical packs remain separate. Keys remain candidates; no independent or human approval receipt is claimed.",
+    "note": "Prospective v11 candidate replaces one day-seven held-out item: recursion-week-01-v9 (family recursion-nested-wrap-week-v5) becomes recursion-week-01-v11 (family recursion-converge-week-v8), because the old item nearly duplicated seen practice. Everything else is unchanged from v10 apart from version fields. Historical packs remain separate. Keys remain candidates; no independent or human approval receipt is claimed.",
     "receipts": []
   },
   "sources": [
