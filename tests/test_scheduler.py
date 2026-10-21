@@ -38,6 +38,18 @@ def state(now: datetime, attempts: tuple[Attempt, ...] = (),
 
 
 class SchedulerTests(unittest.TestCase):
+    def test_plain_language_policy_keeps_selection_and_old_reasons(self) -> None:
+        prior = (attempt("assisted", PRACTICE_A, hint=HintLevel.NUDGE),)
+        learner = state(LESSON_TIME + timedelta(hours=2), prior)
+        old = recommend(learner, 20, "pilot-v4")
+        plain = recommend(learner, 20, "pilot-v5")
+        self.assertEqual(plain.recommendation.activity_id,
+                         old.recommendation.activity_id)
+        self.assertEqual(plain.next_check_at, old.next_check_at)
+        self.assertIn("hint-assisted", old.reason)
+        self.assertIn("used a hint", plain.reason.lower())
+        self.assertIn("without help", plain.reason.lower())
+
     def test_two_errors_across_items_target_shared_evidence_kind(self) -> None:
         recall = Activity("recall", "recursion", "v1", "recall-family",
                           ActivityType.CHOICE, EvidenceKind.RECALL)

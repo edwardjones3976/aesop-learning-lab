@@ -120,7 +120,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     revisionDraft: "",
     revisionId: null,
     error: null,
-    status: "Loading the next activity.",
+    status: "Loading the next question.",
     sent: false,
   };
 
@@ -244,7 +244,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       state.phase = "empty";
       state.activity = null;
       state.error = null;
-      state.status = "No activity was returned.";
+      state.status = "No question is available right now.";
       notify("load");
       return;
     }
@@ -260,7 +260,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     state.activity = structuredClone(response.activity);
     state.phase = "practicing";
     state.error = null;
-    state.status = "Activity ready.";
+    state.status = "Question ready.";
     accumulatedMs = 0;
     runningSince = now();
     notify("load");
@@ -283,7 +283,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     resetPracticeFields();
     state.phase = "loading";
     state.error = null;
-    state.status = "Loading the next activity.";
+    state.status = "Loading the next question.";
     notify("load-start");
     try {
       const response = await api.nextSession({ availableMinutes: state.availableMinutes, mode });
@@ -332,12 +332,12 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       ? choiceLabel(state.activity, state.selectedChoice).trim()
       : state.draft.trim();
     if (!answer) {
-      fail("first_answer_required", "Record a first answer before hints or submission.");
+      fail("first_answer_required", "Save your first answer before opening hints or checking it.");
       return;
     }
     state.firstAnswer = answer;
     state.error = null;
-    state.status = "First answer recorded.";
+    state.status = "First answer saved.";
     notify("record");
   }
 
@@ -387,19 +387,19 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     }
     if (state.phase !== "practicing") return;
     if (!state.firstAnswer) {
-      fail("first_answer_required", "Record a first answer before opening a hint.");
+      fail("first_answer_required", "Save your first answer before opening a hint.");
       return;
     }
     const level = nextHintLevel(state.activity, state.viewedHints.map((hint) => hint.level));
     if (!level) {
-      state.status = "No further hints are available for this activity.";
+      state.status = "There are no more hints for this question.";
       notify("hint");
       return;
     }
     const hint = state.activity.hints.find((item) => item.level === level);
     state.viewedHints = [...state.viewedHints, { level, text: hint.text }];
     state.error = null;
-    state.status = `Hint opened: ${level}.`;
+    state.status = "Hint opened.";
     notify("hint");
   }
 
@@ -444,14 +444,14 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     }
     if (state.phase !== "practicing" || state.sent) return;
     if (!state.firstAnswer) {
-      fail("first_answer_required", "Record a first answer before submitting the attempt.");
+      fail("first_answer_required", "Save your first answer before checking it.");
       return;
     }
     freeze();
     const payload = buildPayload();
     state.phase = "submitting";
     state.error = null;
-    state.status = "Submitting attempt.";
+    state.status = "Checking your answer.";
     notify("submit-start");
     let response;
     try {
@@ -518,8 +518,8 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     state.phase = openEnded ? "review" : "result";
     state.error = null;
     state.status = openEnded
-      ? "First answer recorded. Compare it with each rubric criterion."
-      : `Attempt recorded. Score status: ${response.scoreStatus}.`;
+      ? "First answer saved. Use the review guide to check each point."
+      : "Answer saved. See the result below.";
     notify("submit");
   }
 
@@ -566,7 +566,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     }
     state.phase = "review_submitting";
     state.error = null;
-    state.status = "Saving self review.";
+    state.status = "Saving your review.";
     notify("review-submit-start");
     try {
       const response = await api.submitSelfReview({
@@ -584,7 +584,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       state.review = { reviewId: response.reviewId, nextStep: response.nextStep };
       state.comparison = structuredClone(response.comparison);
       state.phase = "comparison";
-      state.status = "Review saved. Compare your answer with the example, then revise or finish.";
+      state.status = "Review saved. Compare your answer with the example. Then write a new answer or finish.";
       notify("review-saved");
     } catch (error) {
       state.phase = "review";
@@ -606,7 +606,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
     if (typeof api.submitRevision !== "function") { fail("unavailable", "This adapter cannot save revisions."); return; }
     state.phase = "revision_submitting";
     state.error = null;
-    state.status = "Saving revision.";
+    state.status = "Saving your new answer.";
     notify("revision-submit-start");
     try {
       const response = await api.submitRevision({ reviewId: state.review.reviewId, answer: state.revisionDraft });
@@ -615,7 +615,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
       }
       state.revisionId = response.revisionId;
       state.phase = "review_done";
-      state.status = "Revision saved separately from the first answer.";
+      state.status = "New answer saved. Your first answer is still stored separately.";
       notify("revision-saved");
     } catch (error) {
       state.phase = "comparison";
@@ -628,7 +628,7 @@ export function createPracticeSession(api, { now = () => Date.now(), availableMi
   function finishWithoutRevision() {
     if (state.phase !== "comparison" || state.revisionDraft.trim()) return;
     state.phase = "review_done";
-    state.status = "Self review saved. A later independent check is still needed.";
+    state.status = "Review saved. You still need a later question answered without help.";
     notify("review-finished");
   }
 

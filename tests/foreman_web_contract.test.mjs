@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -313,6 +314,39 @@ finally:
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const payload = JSON.parse(result.stdout);
   validateOverview(payload.overview);
+  // Exercise the actual renderer with string output and handler stubs; no DOM is needed.
+  const source = readFileSync(new URL('../foreman_web/app.js', import.meta.url), 'utf8');
+  const renderSource = source.slice(source.indexOf('function renderWorkspace() {'),
+    source.indexOf('function drawAnswer('));
+  const escapeSource = source.match(/^const esc = .*;$/m)[0];
+  for (const [index, concept] of payload.overview.concepts.entries()) {
+    const lesson = { ...payload.concepts[concept.id].lesson, completed: false };
+    assert.equal(lesson.title, concept.title);
+    const content = {};
+    const completeButton = {};
+    const context = {
+      state: { overview: payload.overview, conceptId: concept.id, lesson, session: {} },
+      content,
+      document: { querySelector: selector => {
+        assert.equal(selector, '#complete');
+        return completeButton;
+      } },
+      evidenceSummaryMarkup, evidenceMarkup, lessonMarkup, reviewTimingMarkup,
+    };
+    runInNewContext(`${escapeSource}\n${renderSource}\nrenderWorkspace();`, context);
+    const title = `<h2>${concept.title}</h2>`;
+    assert.equal(content.innerHTML.split(title).length - 1, 1);
+    assert.equal((content.innerHTML.match(/<h2>/g) ?? []).length, 1);
+    assert.match(content.innerHTML, new RegExp(`CONCEPT 0${index + 1} / 05`));
+    assert.match(content.innerHTML, /<span class="pill">Worked answer first · draft lesson<\/span>/);
+    assert.equal(typeof completeButton.onclick, 'function');
+    lesson.title = '<Distinct lesson title>';
+    runInNewContext('renderWorkspace();', context);
+    assert.ok(content.innerHTML.includes(title));
+    assert.equal((content.innerHTML.match(/<h2>/g) ?? []).length, 1);
+    assert.match(content.innerHTML, /<h3>&lt;Distinct lesson title&gt;<\/h3>/);
+    assert.doesNotMatch(content.innerHTML, /<Distinct lesson title>/);
+  }
   for (const saved of Object.values(payload.savedSessions)) validateSession(saved);
   for (const cid of Object.keys(payload.concepts)) {
     validateLesson(payload.concepts[cid].lesson);
