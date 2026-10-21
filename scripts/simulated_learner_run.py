@@ -46,6 +46,10 @@ LEARNER_BRIEF = (
 )
 
 
+class LearnerUnavailable(RuntimeError):
+    """The bridge failed; the round is recorded as an error, never as an answer."""
+
+
 def ask_learner(prompt: str, run_dir: Path, round_no: int, model: str | None) -> str:
     prompt_file = run_dir / "prompts" / f"round-{round_no:02d}.txt"
     prompt_file.parent.mkdir(exist_ok=True)
@@ -57,6 +61,9 @@ def ask_learner(prompt: str, run_dir: Path, round_no: int, model: str | None) ->
         command += ["-Model", model]
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8",
                             errors="replace", timeout=900)
+    if result.returncode != 0:
+        # A failed bridge call must never be scored as the learner's answer.
+        raise LearnerUnavailable(f"bridge exited {result.returncode}: {result.stderr.strip()[-300:]}")
     text = result.stdout.strip()
     # The bridge sometimes returns the provider's JSON envelope.
     if text.startswith("{"):
@@ -122,13 +129,18 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, default=50)
     parser.add_argument("--model", default=None, help="optional agy model name")
     args = parser.parse_args()
+    capacity = sum(budget for _, budget in VISITS)
+    if not 1 <= args.rounds <= capacity:
+        parser.error(f"--rounds must be between 1 and {capacity}, the visit plan's total budget")
     run_dir = args.run_dir.resolve()
     if ROOT in run_dir.parents or run_dir == ROOT:
         parser.error("--run-dir must be outside the repository")
+    leftovers = [name for name in ("simulated-learner.sqlite3", "transcript.jsonl", "prompts",
+                                   "export.json", "findings.json") if (run_dir / name).exists()]
+    if leftovers:
+        parser.error(f"{run_dir} holds an earlier run ({', '.join(leftovers)}): use a fresh run directory")
     (run_dir / "learner-empty").mkdir(parents=True, exist_ok=True)
     db = run_dir / "simulated-learner.sqlite3"
-    if db.exists():
-        parser.error(f"{db} exists: use a fresh run directory")
 
     clock = [START]
     preview = Preview(db, now=lambda: clock[0])
@@ -151,7 +163,15 @@ def main() -> int:
                 if recommendation["action"] == "lesson":
                     lesson = preview.lesson(cid)
                     started = time.monotonic()
-                    reply = ask_learner(lesson_prompt(lesson, notebook), run_dir, round_no + 1, args.model)
+                    try:
+                        reply = ask_learner(lesson_prompt(lesson, notebook), run_dir, round_no + 1, args.model)
+                    except LearnerUnavailable as error:
+                        # Lesson stays incomplete; the app re-offers it next round.
+                        entry.update(kind="lesson", error=str(error))
+                        round_no += 1
+                        transcript.write(json.dumps(entry) + "\n")
+                        transcript.flush()
+                        continue
                     note = first_line(reply)
                     notebook.append(f"[{lesson['title']}] {note}")
                     preview.complete_lesson(cid)
@@ -166,7 +186,10 @@ def main() -> int:
                         transcript.flush()
                         break  # nothing to do this visit; wait for the next day
                     started = time.monotonic()
-                    reply = ask_learner(question_prompt(activity, notebook), run_dir, round_no + 1, args.model)
+                    try:
+                        reply = ask_learner(question_prompt(activity, notebook), run_dir, round_no + 1, args.model)
+                    except LearnerUnavailable as error:
+                        reply, entry["error"] = "", str(error)
                     answer = first_line(reply)
                     entry.update(kind="question", activityId=activity["id"], heldOut=activity["heldOut"],
                                  checkDelayDays=activity.get("checkDelayDays"), answer=answer,
@@ -183,6 +206,8 @@ def main() -> int:
                         draft = str(uuid4())
                         preview.first_answer({"conceptId": cid, "activityId": activity["id"],
                                               "draftId": draft, "answer": answer})
+                        # "none" is true by construction: the learner is an AI answering from
+                        # an empty folder with no tools, so it cannot study elsewhere.
                         result = preview.submit({"draftId": draft, "outsideStudy": "none",
                                                  "activeSeconds": entry["seconds"]})
                         entry["scoreStatus"] = result.get("scoreStatus")
