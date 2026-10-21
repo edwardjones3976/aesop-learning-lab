@@ -25,26 +25,37 @@ Three software gaps found while reviewing this runbook have been fixed in the ap
 3. **Create a fresh, pinned setup, and refuse anything already in use.** The preview silently reopens an existing database, and an existing run folder would mix two learners' files. So the setup stops if either one exists, or if the pinned worktree does not match:
 
    ```powershell
-   if (Test-Path $wt)     { throw "$wt already exists: choose a new learner code" }
-   if (Test-Path $runDir) { throw "$runDir already exists: choose a new learner code" }
-   git worktree add $wt --detach $sha
-   cd $wt
-   if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
-   if (git status --porcelain) { throw 'worktree has local changes' }
-   if (Test-Path $db) { throw "$db already exists: choose a new learner code" }
-   New-Item -ItemType Directory $runDir | Out-Null
-   py scripts/run_foreman.py --port 8780 --db $db
+   & {
+     $ErrorActionPreference = 'Stop'
+     if (-not $wt -or -not $sha -or -not $db -or -not $runDir) { throw 'run variables are not set: paste the step 2 block' }
+     if (Test-Path $wt)     { throw "$wt already exists: choose a new learner code" }
+     if (Test-Path $runDir) { throw "$runDir already exists: choose a new learner code" }
+     git worktree add $wt --detach $sha
+     if ($LASTEXITCODE -ne 0) { throw 'git worktree add failed' }
+     Set-Location -LiteralPath $wt
+     if ((Get-Location).Path -ne (Resolve-Path -LiteralPath $wt).Path) { throw "not inside $wt" }
+     if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
+     if (git status --porcelain) { throw 'worktree has local changes' }
+     if (Test-Path $db) { throw "$db already exists: choose a new learner code" }
+     New-Item -ItemType Directory $runDir | Out-Null
+     py scripts/run_foreman.py --port 8780 --db $db
+   }
    ```
 
-   Only then open <http://127.0.0.1:8780/>. The server binds to loopback only, and it keeps this window busy while it runs.
+   Paste the whole block at once. It runs as one unit, so the first failed check stops everything after it; a console runs loose lines one by one, and a `throw` on one line would not stop the next. Only then open <http://127.0.0.1:8780/>. The server binds to loopback only, and it keeps this window busy while it runs.
 4. **At every return,** paste the step 2 block, then verify before starting the server. Stop and do not run the session if a check fails:
 
    ```powershell
-   cd $wt
-   if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
-   if (git status --porcelain) { throw 'worktree has local changes: do not run' }
-   if (-not (Test-Path $db)) { throw "$db is missing" }
-   py scripts/run_foreman.py --port 8780 --db $db
+   & {
+     $ErrorActionPreference = 'Stop'
+     if (-not $wt -or -not $sha -or -not $db) { throw 'run variables are not set: paste the step 2 block' }
+     Set-Location -LiteralPath $wt
+     if ((Get-Location).Path -ne (Resolve-Path -LiteralPath $wt).Path) { throw "not inside $wt" }
+     if ((git rev-parse HEAD) -ne $sha) { throw 'worktree is not at the approved SHA' }
+     if (git status --porcelain) { throw 'worktree has local changes: do not run' }
+     if (-not (Test-Path $db)) { throw "$db is missing" }
+     py scripts/run_foreman.py --port 8780 --db $db
+   }
    ```
 5. **Record the setup in a run log** kept in `$runDir`: the learner code, the approved SHA, the worktree path, the **exact database path** (`$wt\$db`), the start date and time zone, the content version shown in the notice (`m2-draft.11`), and the browser. If the notice shows any other version, stop: the setup is not the approved one.
 6. **Brief the learner, and say nothing more:**
