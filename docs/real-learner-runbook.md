@@ -73,7 +73,7 @@ Delayed checks are offered only when their prerequisites are met:
 If the prerequisites are not met, the app offers practice or the still-unused earlier check instead. That is the system working as designed. Never coach the learner or retry anything to create a qualifying answer.
 
 10. **Day 1 of each concept:** return at least 24 hours after that concept's lesson, without reviewing its answer first.
-    - If a day-1 check is scheduled, the review box reads **Delayed review due**. The learner takes the offered check unaided first.
+    - If a day-1 check is scheduled, the review box reads **Delayed review due** on the first day after the due time, and **Delayed review overdue** after that. The learner takes the offered check unaided first.
     - If not, record "no qualifying day-0 answer, no day-1 check offered", and let the learner continue with what the app suggests.
 11. **Days 7 to 14 of each concept:** this is the primary window for protocol v6. Plan a return inside it for every started concept.
     - If the week check's prerequisites are met, it is offered. A check taken before day 7 shows as **early**, and one after day 14 as **late**. Both are kept but excluded from the primary observation.
@@ -100,7 +100,7 @@ The run ends only when the window of **every** started concept has closed.
     - The owner produces a **de-identified aggregate** on this computer: counts and delays per category, with no answer text, free-text notes or timestamps finer than a day.
     - Only that aggregate may be shared with an agent (e.g. Codex) for drafting or review.
     - Raw exports, the overview file and the run log never leave this computer unless the learner has explicitly consented to the specific processor and its retention.
-16. **Delete,** if the learner asks. Deletion is the learner's or owner's decision, never an agent's. Do **not** use the preview's **Delete data** button: after deleting, it reloads the page, which immediately enrolls a new learner. Instead:
+16. **Delete,** if the learner asks. Deletion is the learner's or owner's decision, never an agent's. Do **not** use the preview's **Delete data** button: after deleting, it calls refresh(), which enrolls a new learner. Instead:
     1. Close the preview tab.
     2. Stop the server with Ctrl+C.
     3. Paste the step 2 block, then delete the **exact database path recorded in the run log** (`$wt\$db`), plus any `-wal` or `-shm` files beside it.
@@ -130,6 +130,6 @@ The run ends only when the window of **every** started concept has closed.
 
 ## Known software gaps (tracked for fixes)
 
-1. **Delete data re-enrolls immediately:** the button reloads the page after deleting, which creates a new learner. The workaround is step 16.
+1. **Delete data re-enrolls immediately:** the button calls refresh() after deleting, which enrolls a new learner. The workaround is step 16.
 2. **The export omits computed classifications.** The workaround is step 14's overview capture.
 3. **Outside study is not used by the classifier:** responses after reported outside study are not marked ineligible automatically. The workaround is the manual outside-study rule.
