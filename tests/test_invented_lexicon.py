@@ -210,6 +210,164 @@ class TestInventedLexicon(unittest.TestCase):
                 f"Example sentence frame was reused {count} times (> 2): {frame}",
             )
 
+    def test_keyword_sound_alikes(self) -> None:
+        """Keywords must be sound-alikes: first two letters or SequenceMatcher ratio >= 0.53.
+
+        Threshold 0.53 ensures all real sound-alikes pass while meaning descriptions like
+        'smoky roof' (gogi, ratio 0.15), 'twin blades' (fasaso, ratio 0.25), and
+        'puff of smoke' (poszogak, ratio 0.526) fail.
+        """
+        import difflib
+        authoring_path = Path("content/drafts/invented-lexicon-authoring.json")
+        with open(authoring_path, "r", encoding="utf-8") as f:
+            authoring = json.load(f)
+
+        threshold = 0.53
+        for u in self.units:
+            word = u["word"].lower()
+            kw = authoring[u["gloss"]]["keyword"].lower()
+            kw_clean = re.sub(r"[^a-z]", "", kw)
+            first2 = word[:2] == kw_clean[:2]
+            ratio = difflib.SequenceMatcher(None, word, kw_clean).ratio()
+            self.assertTrue(
+                first2 or ratio >= threshold,
+                f"Keyword '{kw}' for invented word '{word}' is not a valid sound-alike (f2={first2}, ratio={ratio:.3f} < {threshold})",
+            )
+
+    def test_retrieval_does_not_contain_check_prompt_or_what_does(self) -> None:
+        """No variant contains its unit's check prompt, or the phrase 'What does' (ignoring case)."""
+        for u in self.units:
+            check_prompt = u["check"]["prompt"].lower()
+            for method_id, variant_text in u["variants"].items():
+                v_lower = variant_text.lower()
+                self.assertNotIn(
+                    check_prompt,
+                    v_lower,
+                    f"Unit {u['id']} variant '{method_id}' leaks check prompt '{check_prompt}'",
+                )
+                self.assertNotIn(
+                    "what does",
+                    v_lower,
+                    f"Unit {u['id']} variant '{method_id}' contains 'what does'",
+                )
+
+    def test_accepted_answers_equivalence(self) -> None:
+        """Accepted answers must be equivalent forms only.
+
+        For verbs: subset of {gloss, bare form}.
+        For nouns: {gloss}, plus an allowed synonym only if it appears in at least 2 variants.
+        No related-but-different objects (mallet, boiler, pendant, bedding) allowed.
+        """
+        banned = {"boiler", "mallet", "pendant", "bedding"}
+        for u in self.units:
+            gloss = u["gloss"]
+            accepted = u["check"]["accepted"]
+            for ans in accepted:
+                self.assertNotIn(
+                    ans.lower(),
+                    banned,
+                    f"Unit {u['id']} contains banned non-equivalent answer '{ans}'",
+                )
+
+            if gloss.startswith("to "):
+                base = gloss[3:]
+                allowed = {gloss, base}
+                self.assertTrue(
+                    set(accepted).issubset(allowed),
+                    f"Verb unit {u['id']} accepted answers {accepted} not subset of {allowed}",
+                )
+            else:
+                self.assertIn(
+                    gloss,
+                    accepted,
+                    f"Noun unit {u['id']} does not include gloss '{gloss}' in accepted",
+                )
+                if len(accepted) > 1:
+                    self.assertEqual(
+                        len(accepted),
+                        2,
+                        f"Noun unit {u['id']} has more than one synonym: {accepted}",
+                    )
+                    syn = accepted[1]
+                    var_count = sum(
+                        1 for v in u["variants"].values()
+                        if syn.lower() in v.lower()
+                    )
+                    self.assertGreaterEqual(
+                        var_count,
+                        2,
+                        f"Noun unit {u['id']} synonym '{syn}' appears in {var_count} variants (< 2)",
+                    )
+
+    def test_rule_drill_structure_and_exposure_parity(self) -> None:
+        """Rule drill has 1 rule line + 2 practice lines; exposure counts match across all 4 methods."""
+        for u in self.units:
+            word = u["word"]
+            gloss = u["gloss"]
+            base = gloss[3:] if gloss.startswith("to ") else gloss
+
+            rd = u["variants"]["rule_drill"]
+            lines = [l for l in rd.splitlines() if l.strip()]
+            self.assertEqual(len(lines), 3, f"Unit {u['id']} rule_drill does not have 3 lines: {lines}")
+            self.assertTrue(lines[0].startswith("Rule:"), f"Line 1 not Rule: {lines[0]}")
+            self.assertTrue(lines[1].startswith("Fill in:"), f"Line 2 not Fill in: {lines[1]}")
+            self.assertTrue(lines[2].startswith("Which word means"), f"Line 3 not Which word: {lines[2]}")
+            self.assertIn("(Answer: " + word + ")", lines[1])
+            self.assertIn("(Answer: " + word + ")", lines[2])
+
+            counts = {}
+            for method_id, v_text in u["variants"].items():
+                w_cnt = len(re.findall(r"\b" + re.escape(word) + r"\b", v_text, re.I))
+                b_cnt = len(re.findall(r"\b" + re.escape(base) + r"\b", v_text, re.I))
+                counts[method_id] = (w_cnt, b_cnt)
+
+            distinct_counts = set(counts.values())
+            self.assertEqual(
+                len(distinct_counts),
+                1,
+                f"Unit {u['id']} does not have identical exposure across methods: {counts}",
+            )
+
+    def test_part_of_speech_consistency(self) -> None:
+        """Verbs never follow determiners; nouns never follow 'to'."""
+        determiners = ["a", "an", "the", "this", "that", "his", "her", "my", "your"]
+        for u in self.units:
+            word = u["word"]
+            is_verb = u["gloss"].startswith("to ")
+            for method_id, text in u["variants"].items():
+                if is_verb:
+                    for det in determiners:
+                        pattern = r"\b" + det + r"\s+" + re.escape(word) + r"\b"
+                        matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                        for m in matches:
+                            after = text[m.end():m.end() + 10].strip()
+                            self.assertTrue(
+                                det.lower() == "that" and after.startswith("mean"),
+                                f"Verb '{word}' directly follows determiner '{det}' in unit {u['id']} variant '{method_id}': {text}",
+                            )
+                else:
+                    pattern = r"\bto\s+" + re.escape(word) + r"\b"
+                    self.assertFalse(
+                        bool(re.search(pattern, text, re.IGNORECASE)),
+                        f"Noun '{word}' directly follows 'to' in unit {u['id']} variant '{method_id}': {text}",
+                    )
+
+    def test_seeds_enforcement(self) -> None:
+        """The generator refuses non-default seeds without --unreviewed, and marks unreviewed runs."""
+        # Default seed works
+        data_default = build_lexicon_data(seed=DEFAULT_SEED)
+        self.assertEqual(data_default["seed"], DEFAULT_SEED)
+        self.assertNotIn("unreviewed", data_default)
+
+        # Other seed without unreviewed fails
+        with self.assertRaises(ValueError):
+            build_lexicon_data(seed=99999)
+
+        # Other seed with unreviewed succeeds and has 'unreviewed': True
+        data_unreviewed = build_lexicon_data(seed=99999, unreviewed=True)
+        self.assertEqual(data_unreviewed["seed"], 99999)
+        self.assertIs(data_unreviewed["unreviewed"], True)
+
 
 if __name__ == "__main__":
     unittest.main()

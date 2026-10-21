@@ -41,55 +41,55 @@ METHOD_DEFINITIONS = [
 
 # 50 concrete, everyday nouns and their acceptable answer variants
 NOUN_GLOSSES: List[Tuple[str, List[str]]] = [
-    ("kettle", ["kettle", "tea kettle"]),
-    ("bucket", ["bucket", "pail"]),
-    ("pillow", ["pillow", "cushion"]),
-    ("blanket", ["blanket", "quilt"]),
-    ("candle", ["candle", "taper"]),
-    ("mirror", ["mirror", "looking glass"]),
-    ("ladder", ["ladder", "stepladder"]),
-    ("hammer", ["hammer", "mallet"]),
-    ("shovel", ["shovel", "spade"]),
-    ("needle", ["needle", "sewing needle"]),
+    ("kettle", ["kettle"]),
+    ("bucket", ["bucket"]),
+    ("pillow", ["pillow"]),
+    ("blanket", ["blanket"]),
+    ("candle", ["candle"]),
+    ("mirror", ["mirror"]),
+    ("ladder", ["ladder"]),
+    ("hammer", ["hammer"]),
+    ("shovel", ["shovel"]),
+    ("needle", ["needle"]),
     ("anchor", ["anchor"]),
-    ("barrel", ["barrel", "cask"]),
-    ("basket", ["basket", "hamper"]),
-    ("bottle", ["bottle", "flask"]),
-    ("bridge", ["bridge", "overpass"]),
+    ("barrel", ["barrel"]),
+    ("basket", ["basket"]),
+    ("bottle", ["bottle"]),
+    ("bridge", ["bridge"]),
     ("button", ["button"]),
-    ("carpet", ["carpet", "rug"]),
-    ("castle", ["castle", "fortress"]),
-    ("chimney", ["chimney", "smokestack"]),
+    ("carpet", ["carpet"]),
+    ("castle", ["castle"]),
+    ("chimney", ["chimney"]),
     ("compass", ["compass"]),
-    ("cradle", ["cradle", "crib"]),
-    ("curtain", ["curtain", "drape"]),
-    ("dagger", ["dagger", "dirk"]),
+    ("cradle", ["cradle"]),
+    ("curtain", ["curtain"]),
+    ("dagger", ["dagger"]),
     ("drawer", ["drawer"]),
-    ("feather", ["feather", "plume"]),
-    ("fence", ["fence", "paling"]),
+    ("feather", ["feather"]),
+    ("fence", ["fence"]),
     ("fountain", ["fountain"]),
-    ("furnace", ["furnace", "boiler"]),
+    ("furnace", ["furnace"]),
     ("garlic", ["garlic"]),
     ("helmet", ["helmet"]),
-    ("jacket", ["jacket", "coat"]),
-    ("lantern", ["lantern", "lamp"]),
-    ("locket", ["locket", "pendant"]),
-    ("mattress", ["mattress", "bedding"]),
-    ("meadow", ["meadow", "pasture"]),
+    ("jacket", ["jacket"]),
+    ("lantern", ["lantern"]),
+    ("locket", ["locket"]),
+    ("mattress", ["mattress"]),
+    ("meadow", ["meadow"]),
     ("mortar", ["mortar"]),
-    ("necklace", ["necklace", "choker"]),
-    ("orchard", ["orchard", "grove"]),
-    ("pebble", ["pebble", "stone"]),
-    ("quiver", ["quiver", "arrow case"]),
-    ("ribbon", ["ribbon", "band"]),
+    ("necklace", ["necklace"]),
+    ("orchard", ["orchard"]),
+    ("pebble", ["pebble"]),
+    ("quiver", ["quiver"]),
+    ("ribbon", ["ribbon"]),
     ("saddle", ["saddle"]),
-    ("scissors", ["scissors", "shears"]),
+    ("scissors", ["scissors"]),
     ("sponge", ["sponge"]),
-    ("tunnel", ["tunnel", "underpass"]),
-    ("valley", ["valley", "vale"]),
-    ("wagon", ["wagon", "cart"]),
+    ("tunnel", ["tunnel"]),
+    ("valley", ["valley"]),
+    ("wagon", ["wagon"]),
     ("whistle", ["whistle"]),
-    ("window", ["window", "casement"]),
+    ("window", ["window"]),
     ("anvil", ["anvil"]),
 ]
 
@@ -198,8 +198,15 @@ def generate_phonotactic_words(
     return words
 
 
-def build_lexicon_data(seed: int = DEFAULT_SEED) -> Dict[str, Any]:
+def build_lexicon_data(seed: int = DEFAULT_SEED, unreviewed: bool = False) -> Dict[str, Any]:
     """Deterministically build the complete invented lexicon data structure."""
+    if seed != DEFAULT_SEED and not unreviewed:
+        raise ValueError(
+            f"Seed {seed} has not been authored/reviewed. "
+            f"The authored curriculum belongs to default seed {DEFAULT_SEED}. "
+            f"Pass --unreviewed to generate an unreviewed lexicon."
+        )
+
     rng = random.Random(seed)
     excluded_words = load_excluded_words()
     authoring_data = load_authoring_data()
@@ -222,35 +229,36 @@ def build_lexicon_data(seed: int = DEFAULT_SEED) -> Dict[str, Any]:
         auth = authoring_data[gloss]
 
         # 1. Retrieval variant (real retrieval: show word, prompt recall, answer on separate final line)
+        # Note: Must NOT contain check prompt or 'What does'
         retrieval = (
-            f"Consider the invented word {word}.\n"
-            f"What does {word} mean? Take a moment to recall or guess before checking below.\n"
-            f"Answer: {word} means {gloss_phrase}, so remember that {gloss} is the meaning."
+            f"Study the invented vocabulary word {word}.\n"
+            f"{word}. Before reading on, try to recall its meaning.\n"
+            f"Answer: The word {word} means {gloss_phrase}, so keep {gloss_phrase} in mind."
         )
 
         # 2. Keyword variant (sound-alike keyword + vivid image sentence connecting keyword to meaning)
         kw = auth["keyword"]
-        # The word follows the meaning in brackets, as in the other methods, so the sentence reads naturally.
         mnem_sentence = auth["mnemonic_sentence"].format(w=f"({word})")
         keyword = (
             f"Think of {word} as {kw}. {mnem_sentence} "
-            f"For instance, remember that {word} means {gloss_phrase} whenever you hear {kw}."
+            f"Remember that {word} means {gloss_phrase} whenever you hear {kw}."
         )
 
         # 3. Example sentence variant (two unit-specific sentences implying meaning clearly)
         ex1 = auth["example_sentences"][0].format(w=word)
         ex2 = auth["example_sentences"][1].format(w=word)
-        example_sentence = f"{ex1} {ex2}"
+        example_sentence = (
+            f"{ex1} {ex2} "
+            f"Always remember, {word} represents this meaning."
+        )
 
-        # 4. Rule drill variant (explicit definition statement + 3 sensible unit-specific drills)
-        drill1 = auth["rule_drills"][0].format(w=word)
-        drill2 = auth["rule_drills"][1].format(w=word)
-        drill3 = auth["rule_drills"][2].format(w=word)
+        # 4. Rule drill variant (1 rule line + 2 practice lines with answer)
+        raw_drill = auth["rule_drills"][0].replace(f"({base})", "").replace(f"({word})", "").replace("{w}", "___")
+        drill_fill = " ".join(raw_drill.split())
         rule_drill = (
-            f"Rule: {word} means {gloss_phrase}.\n"
-            f"Drill 1: {drill1}\n"
-            f"Drill 2: {drill2}\n"
-            f"Drill 3: {drill3}"
+            f"Rule: The word {word} means {gloss_phrase}.\n"
+            f"Fill in: {drill_fill} (Answer: {word})\n"
+            f"Which word means {gloss_phrase}? (Answer: {word})"
         )
 
         # Delayed check
@@ -277,16 +285,24 @@ def build_lexicon_data(seed: int = DEFAULT_SEED) -> Dict[str, Any]:
         }
         units.append(unit)
 
-    return {
+    res: Dict[str, Any] = {
         "seed": seed,
         "methods": METHOD_DEFINITIONS,
         "units": units,
     }
+    if unreviewed:
+        res["unreviewed"] = True
+    return res
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate invented lexicon draft.")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="RNG seed for generation")
+    parser.add_argument(
+        "--unreviewed",
+        action="store_true",
+        help="Allow running with non-default unreviewed seeds",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -295,7 +311,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    data = build_lexicon_data(seed=args.seed)
+    data = build_lexicon_data(seed=args.seed, unreviewed=args.unreviewed)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:

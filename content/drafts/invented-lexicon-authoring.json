@@ -26,21 +26,21 @@
     ]
   },
   "pillow": {
-    "keyword": "rest head",
-    "mnemonic_sentence": "The tired traveler wanted to rest head weary muscles upon a soft feather pillow {w}.",
+    "keyword": "rope wood",
+    "mnemonic_sentence": "Tired of sleeping on rough rope wood planks, the traveler gladly rested his weary head upon the soft pillow {w}.",
     "example_sentences": [
       "She fluffed the soft down {w} (pillow) before resting her tired neck for the night.",
       "He slept soundly with his head nestled deep into the embroidered {w} (pillow)."
     ],
     "rule_drills": [
-      "Place the soft {w} (pillow) onto the guest bed.",
+      "Carefully place the soft {w} (pillow) onto the guest bed.",
       "She bought a firm foam {w} (pillow) for better neck support.",
       "He tucked the small travel {w} (pillow) behind his lower back."
     ]
   },
   "blanket": {
-    "keyword": "soft wrap",
-    "mnemonic_sentence": "He pulled the cozy soft wrap over his shivering shoulders, grateful for the warm wool blanket {w}.",
+    "keyword": "satin hat",
+    "mnemonic_sentence": "Setting aside her fancy satin hat, the chilled girl pulled the thick wool blanket {w} over her shoulders.",
     "example_sentences": [
       "During the freezing night, she pulled an extra wool {w} (blanket) over the bed.",
       "They spread a checkered picnic {w} (blanket) over the cool grass under the oak tree."
@@ -85,14 +85,14 @@
       "The firefighter extended the aluminum rescue {w} (ladder) toward the second-story window."
     ],
     "rule_drills": [
-      "Hold the bottom of the folding {w} (ladder) steady.",
+      "Always hold the bottom of the tall folding {w} (ladder) steady.",
       "He carried the lightweight aluminum {w} (ladder) into the orchard.",
       "Never stand on the very top rung of any {w} (ladder)."
     ]
   },
   "hammer": {
-    "keyword": "cool tool",
-    "mnemonic_sentence": "The blacksmith called his heavy iron hammer {w} a cool tool for shaping molten metal.",
+    "keyword": "kudu horn",
+    "mnemonic_sentence": "Curved like a solid kudu horn, the heavy blacksmith hammer {w} pounded iron on the anvil.",
     "example_sentences": [
       "The carpenter swung the heavy steel {w} (hammer) to drive the iron nail into the oak beam.",
       "With one sharp strike of the claw {w} (hammer), the bent spike drove flush into the timber."
@@ -104,8 +104,8 @@
     ]
   },
   "shovel": {
-    "keyword": "go furrow",
-    "mnemonic_sentence": "To go furrow the garden plot, the farmer dug deep with his iron spade and garden shovel {w}.",
+    "keyword": "gull feather",
+    "mnemonic_sentence": "Sweeping past a dropped gull feather in the sand, the gardener drove the steel shovel {w} into the flowerbed.",
     "example_sentences": [
       "The landscaper used a pointed steel {w} (shovel) to dig deep trenches for the new rose bushes.",
       "He cleared the driveway of heavy snow using a wide plastic snow {w} (shovel)."
@@ -117,8 +117,8 @@
     ]
   },
   "needle": {
-    "keyword": "wee digit",
-    "mnemonic_sentence": "She pricked her wee digit while threading fine silk through the tiny eye of the steel needle {w}.",
+    "keyword": "window digit",
+    "mnemonic_sentence": "Holding the tool up near the window digit latch, she threaded fine silk through the sharp steel needle {w}.",
     "example_sentences": [
       "The tailor threaded fine blue thread through the tiny eye of the sharp sewing {w} (needle).",
       "She mended the torn jacket sleeve using a slender steel {w} (needle) and sturdy yarn."
@@ -130,8 +130,8 @@
     ]
   },
   "anchor": {
-    "keyword": "deep sea hold",
-    "mnemonic_sentence": "The sailors dropped the iron anchor {w} to secure a firm deep sea hold against the ocean current.",
+    "keyword": "dusty hook",
+    "mnemonic_sentence": "Looking like a massive dusty hook, the ship anchor {w} held the wooden schooner firmly in the ocean seabed.",
     "example_sentences": [
       "The sailors dropped the heavy iron {w} (anchor) overboard to keep the sailboat steady in the bay.",
       "Strong ocean currents tested the grip of the mooring {w} (anchor) embedded deep in the seabed."
@@ -143,8 +143,8 @@
     ]
   },
   "barrel": {
-    "keyword": "big vat",
-    "mnemonic_sentence": "The brewer rolled the big vat into the cellar, tapping cider from the cedar barrel {w}.",
+    "keyword": "village zap",
+    "mnemonic_sentence": "Celebrating the annual village zap festival, the tavern keeper tapped a fresh cider barrel {w} for everyone.",
     "example_sentences": [
       "The cellar master rolled a heavy wooden {w} (barrel) of aged red wine across the stone floor.",
       "Rain poured down the roof spout straight into a large wooden water {w} (barrel)."
@@ -169,8 +169,8 @@
     ]
   },
   "bottle": {
-    "keyword": "fine wine label",
-    "mnemonic_sentence": "He read the fine wine label pasted carefully across the tall green glass bottle {w}.",
+    "keyword": "family linen",
+    "mnemonic_sentence": "Wrapped carefully in soft family linen to avoid breakage, the glass bottle {w} held rare medicinal nectar.",
     "example_sentences": [
       "He pulled the tight cork from the vintage glass {w} (bottle) and poured red wine into two glasses.",
       "The hiker filled his aluminum water {w} (bottle) from the cold mountain stream."
@@ -186,7 +186,7 @@
     "mnemonic_sentence": "The massive arch of the stone bridge {w} let every tall deep boat pass safely underneath.",
     "example_sentences": [
       "The stone arch {w} (bridge) spanned the wide rushing river, connecting the two historic villages.",
-      "Traffic came to a complete halt while the drawbridge portion of the city {w} (bridge) opened."
+      "Traffic came to a complete halt while the raised span portion of the city {w} (bridge) opened."
     ],
     "rule_drills": [
       "Walk carefully across the narrow wooden foot {w} (bridge).",
@@ -195,8 +195,8 @@
     ]
   },
   "button": {
-    "keyword": "lock loop",
-    "mnemonic_sentence": "He slid the bone fastener into the lock loop, fastening his coat button {w} against the icy wind.",
+    "keyword": "lullaby mat",
+    "mnemonic_sentence": "Sitting on the nursery lullaby mat, the young boy tried to push each plastic button {w} through its shirt hole.",
     "example_sentences": [
       "He fastened the top horn {w} (button) on his winter overcoat to keep out the biting frost.",
       "A loose mother-of-pearl {w} (button) popped off her silk shirt and rolled under the sofa."
@@ -208,8 +208,8 @@
     ]
   },
   "carpet": {
-    "keyword": "wool heap",
-    "mnemonic_sentence": "She unrolled the plush wool heap to lay a soft Persian carpet {w} over the bare wooden floor.",
+    "keyword": "wushu hit",
+    "mnemonic_sentence": "Practicing a swift wushu hit in the gym, the martial artist landed firmly on the thick carpet {w}.",
     "example_sentences": [
       "The thick oriental {w} (carpet) muffled footsteps and kept the living room floor pleasantly warm.",
       "He vacuumed the plush wool {w} (carpet) thoroughly before the evening guests arrived."
@@ -221,8 +221,8 @@
     ]
   },
   "castle": {
-    "keyword": "brave hall",
-    "mnemonic_sentence": "Brave hall guards manned the high stone towers of the royal castle {w} guarding the frontier.",
+    "keyword": "bulletin hill",
+    "mnemonic_sentence": "Standing high on the bulletin hill, the royal fortress castle {w} commanded a wide view of the kingdom.",
     "example_sentences": [
       "High upon the rocky cliff stood the ancient stone {w} (castle), overlooking the stormy sea.",
       "The royal family retreated behind the fortified walls and deep moat of the medieval {w} (castle)."
@@ -234,8 +234,8 @@
     ]
   },
   "chimney": {
-    "keyword": "smoky roof",
-    "mnemonic_sentence": "Thick grey smoke poured past the smoky roof as the brick chimney {w} vented the roaring hearth.",
+    "keyword": "go gill",
+    "mnemonic_sentence": "A wandering fish had to go gill first into the brick chimney {w} when the factory smoke cleared.",
     "example_sentences": [
       "Grey smoke curled into the winter sky from the red brick {w} (chimney) atop the cottage roof.",
       "The sweep climbed the steep shingles to clear thick soot from the stone {w} (chimney) flue."
@@ -286,8 +286,8 @@
     ]
   },
   "dagger": {
-    "keyword": "sharp mood",
-    "mnemonic_sentence": "In a sharp mood, the rogue concealed a double-edged steel dagger {w} in his leather boot.",
+    "keyword": "soda mug",
+    "mnemonic_sentence": "Resting next to a ceramic soda mug on the tavern table, the sharp dagger {w} glinted in the lantern light.",
     "example_sentences": [
       "The assassin concealed a razor-sharp steel {w} (dagger) inside the inner pocket of his coat.",
       "He drew the ceremonial gold-hilted {w} (dagger) from its jeweled sheath during the rite."
@@ -351,8 +351,8 @@
     ]
   },
   "furnace": {
-    "keyword": "blaze bunker",
-    "mnemonic_sentence": "The workers stoked the blaze bunker as red flames roared inside the smelting furnace {w}.",
+    "keyword": "best umbrella",
+    "mnemonic_sentence": "Leaving his best umbrella by the warm cellar door, the homeowner stoked the heating furnace {w} with dry coal.",
     "example_sentences": [
       "Workers shoveled coal into the fiery industrial {w} (furnace) to melt the raw scrap iron.",
       "In the depths of winter, the basement central heating {w} (furnace) ran day and night."
@@ -390,8 +390,8 @@
     ]
   },
   "jacket": {
-    "keyword": "warm hood",
-    "mnemonic_sentence": "He pulled up his warm hood and zipped his heavy insulated jacket {w} against the falling snow.",
+    "keyword": "wedding sock",
+    "mnemonic_sentence": "Packing a single silk wedding sock into his travel suitcase, he zipped up his warm winter jacket {w}.",
     "example_sentences": [
       "He zipped up his heavy winter {w} (jacket) against the freezing gusts blowing from the north.",
       "She hung her waterproof rain {w} (jacket) on the wooden coat rack near the front entry."
@@ -423,14 +423,14 @@
       "The antique silver heart-shaped {w} (locket) was a precious family keepsake passed down for generations."
     ],
     "rule_drills": [
-      "Fasten the clasp of the golden pendant {w} (locket) around her neck.",
+      "Fasten the clasp of the golden hinged {w} (locket) around her neck.",
       "He kept a cherished miniature photograph inside his silver {w} (locket).",
       "The antique heirloom {w} (locket) was crafted with ornate filigree engraving."
     ]
   },
   "mattress": {
-    "keyword": "cozy sofa",
-    "mnemonic_sentence": "Longing for a cozy sofa, he sank into the comfortable spring mattress {w} after a tiring journey.",
+    "keyword": "hotel sofa",
+    "mnemonic_sentence": "Preferring good sleep to a cramped hotel sofa, the tired tourist sank into the comfortable mattress {w}.",
     "example_sentences": [
       "He collapsed onto the soft foam {w} (mattress) after hiking twenty miles through rough mountains.",
       "They bought a firm inner-spring {w} (mattress) to help relieve chronic morning lower back pain."
@@ -442,8 +442,8 @@
     ]
   },
   "meadow": {
-    "keyword": "green pasture",
-    "mnemonic_sentence": "Cattle grazed peacefully across the green pasture as wild poppies blossomed in the sunny meadow {w}.",
+    "keyword": "buddha dome",
+    "mnemonic_sentence": "Gazing past the ornate buddha dome, the traveler saw cows grazing peacefully in the sunny meadow {w}.",
     "example_sentences": [
       "Cattle grazed contentedly upon the lush clover growing across the wide mountain {w} (meadow).",
       "Bright yellow buttercups and purple lupines blanketed the sunny alpine {w} (meadow) in late spring."
@@ -481,8 +481,8 @@
     ]
   },
   "orchard": {
-    "keyword": "pick pear",
-    "mnemonic_sentence": "Eager to pick pear fruit, the pickers headed straight into the sunny apple orchard {w}.",
+    "keyword": "peck pad",
+    "mnemonic_sentence": "Holding a farmer peck pad to record the yield, the inspector toured the rows of fruit trees in the orchard {w}.",
     "example_sentences": [
       "Rows of mature apple and cherry trees stood laden with ripe fruit throughout the {w} (orchard).",
       "The family spent a sunny autumn afternoon picking crisp Honeycrisp apples in the local {w} (orchard)."
@@ -520,8 +520,8 @@
     ]
   },
   "ribbon": {
-    "keyword": "silk strand",
-    "mnemonic_sentence": "She looped the glossy silk strand into a decorative bow, tying the satin ribbon {w} on the gift.",
+    "keyword": "penny mug",
+    "mnemonic_sentence": "Draped across the handle of a shiny penny mug, the satin ribbon {w} added festive flair to the birthday package.",
     "example_sentences": [
       "She tied a bright scarlet satin {w} (ribbon) into an elegant bow around the wrapped birthday present.",
       "The championship prize horse wore a wide blue silk {w} (ribbon) pinned proudly to its bridle."
@@ -537,7 +537,7 @@
     "mnemonic_sentence": "To ride mount less horses safely, the cowboy cinched his sturdy leather saddle {w} around the stallion.",
     "example_sentences": [
       "The stable hand tightened the leather girth and cinched the western {w} (saddle) firmly onto the mare.",
-      "He polished the fine brown leather of the riding {w} (saddle) with saddle soap until it gleamed."
+      "He polished the fine brown leather of the riding {w} (saddle) with conditioning soap until it gleamed."
     ],
     "rule_drills": [
       "Cinch the leather horse {w} (saddle) securely around the horse's barrel.",
@@ -546,8 +546,8 @@
     ]
   },
   "scissors": {
-    "keyword": "twin blades",
-    "mnemonic_sentence": "The seamstress manipulated the twin blades of her sharp sewing scissors {w} to snip the heavy cloth.",
+    "keyword": "fast saw",
+    "mnemonic_sentence": "Moving like a miniature fast saw, the sharp tailor scissors {w} cut cleanly through the denim fabric.",
     "example_sentences": [
       "The tailor used a sharp pair of heavy iron {w} (scissors) to cut cleanly through the thick wool bolt.",
       "She grabbed the kitchen shears or small crafting {w} (scissors) to snip the stubborn plastic tag."
@@ -663,8 +663,8 @@
     ]
   },
   "to whisper": {
-    "keyword": "low reed",
-    "mnemonic_sentence": "Soft as wind rustling through a low reed, she leaned in to whisper {w} the secret password.",
+    "keyword": "rolling pin",
+    "mnemonic_sentence": "Baking at the counter beside her rolling pin, the chef leaned over to whisper {w} the secret family recipe.",
     "example_sentences": [
       "She leaned close to her friend's ear to softly {w} (whisper) the surprising secret so no one overheard.",
       "In the quiet university library, students had to {w} (whisper) quietly to avoid disturbing other readers."
@@ -676,8 +676,8 @@
     ]
   },
   "to harvest": {
-    "keyword": "cut maize",
-    "mnemonic_sentence": "The farmhands gathered at sunrise to cut maize stalks and harvest {w} the ripe autumn grain.",
+    "keyword": "kettle mitten",
+    "mnemonic_sentence": "Putting down his heavy kettle mitten, the eager orchard hand set out to harvest {w} the ripe autumn fruit.",
     "example_sentences": [
       "The farming family worked from dawn until dusk to {w} (harvest) the golden wheat before autumn rains fell.",
       "In late October, workers gathered in the vineyard to {w} (harvest) clusters of sweet, ripe purple grapes."
@@ -689,8 +689,8 @@
     ]
   },
   "to sharpen": {
-    "keyword": "make sharp",
-    "mnemonic_sentence": "The woodsman used a flat whetstone to make sharp steel and sharpen {w} his dull splitting axe.",
+    "keyword": "motor pipe",
+    "mnemonic_sentence": "Leaning across the rusty motor pipe, the mechanic used an oilstone to sharpen {w} his pocketknife blade.",
     "example_sentences": [
       "The carpenter used a whetstone and fine oil to {w} (sharpen) the dull iron blade of his block plane.",
       "Before carving the roast turkey, the chef took time to carefully {w} (sharpen) his long carving knife."
@@ -728,8 +728,8 @@
     ]
   },
   "to crumble": {
-    "keyword": "make crumb",
-    "mnemonic_sentence": "Under dry heat, the baker saw stale bread make crumb dust and crumble {w} between his fingertips.",
+    "keyword": "metal kit",
+    "mnemonic_sentence": "Dropping his heavy metal kit on the sandstone step caused the dry edge to crumble {w} into tiny fragments.",
     "example_sentences": [
       "The ancient limestone castle walls began to slowly {w} (crumble) into dust after centuries of neglect.",
       "Under the pressure of his fingers, the dry oatmeal cookie started to {w} (crumble) into sweet little pieces."
@@ -780,8 +780,8 @@
     ]
   },
   "to kindle": {
-    "keyword": "tinder wood",
-    "mnemonic_sentence": "He struck a glowing spark into dry tinder wood to kindle {w} a roaring fire against the night frost.",
+    "keyword": "tetra word",
+    "mnemonic_sentence": "Whispering a mystic tetra word over the dry tinder, the wizard managed to kindle {w} a bright campfire.",
     "example_sentences": [
       "The scout struck a spark against the flint stone to quickly {w} (kindle) dry pine needles into flame.",
       "Her enthusiastic speech helped to deeply {w} (kindle) a lasting interest in local wildlife preservation."
@@ -836,17 +836,17 @@
     "mnemonic_sentence": "With a nifty kick into the shallow pool, the swimmer started to splash {w} cold water everywhere.",
     "example_sentences": [
       "The energetic children loved to jump into muddy rain puddles and {w} (splash) murky water onto each other.",
-      "When the speeding delivery truck hit the deep gutter puddle, it sent a huge dirty {w} (splash) across the sidewalk."
+      "When the speeding delivery truck hit the deep puddle, it began to noisily {w} (splash) murky water across the sidewalk."
     ],
     "rule_drills": [
       "Do not {w} (splash) soapy water out of the bathtub onto the floor.",
       "The diving dolphin surfaced to playfully {w} (splash) spectators in the front row.",
-      "Rowers had to avoid making a heavy {w} (splash) with each oar stroke."
+      "Rowers had to avoid trying to heavily {w} (splash) with each oar stroke."
     ]
   },
   "to gallop": {
-    "keyword": "fast hoof",
-    "mnemonic_sentence": "Urged on by the rhythm of fast hoof beats, the warhorse broke into a gallop {w} across the open plain.",
+    "keyword": "future shoe",
+    "mnemonic_sentence": "Fast as if propelled by a future shoe, the swift warhorse started to gallop {w} across the open plains.",
     "example_sentences": [
       "The cavalry riders gave their mounts free rein to let them {w} (gallop) swiftly across the open meadow.",
       "Hearing the distant crack of thunder, the frightened wild horses began to {w} (gallop) away from the ridge."
@@ -871,8 +871,8 @@
     ]
   },
   "to juggle": {
-    "keyword": "will deal",
-    "mnemonic_sentence": "The circus performer will deal with crowd applause while he manages to juggle {w} five flaming torches.",
+    "keyword": "village diner",
+    "mnemonic_sentence": "Standing outside the crowded village diner, the street performer began to juggle {w} three silver balls.",
     "example_sentences": [
       "The street performer entertained the cheering crowd by learning to easily {w} (juggle) five ripe oranges.",
       "As a busy working parent, she had to constantly {w} (juggle) demanding career deadlines and childcare duties."
@@ -884,8 +884,8 @@
     ]
   },
   "to buckle": {
-    "keyword": "bend zone",
-    "mnemonic_sentence": "Under extreme pressure in the bend zone, the overloaded steel girder began to buckle {w} and collapse.",
+    "keyword": "vent zone",
+    "mnemonic_sentence": "Overheating near the air vent zone caused the structural plastic casing to buckle {w} under stress.",
     "example_sentences": [
       "The enormous structural weight caused the overloaded steel support beam to slowly {w} (buckle) in the center.",
       "Please make sure to securely {w} (buckle) your seatbelt before the airplane begins its takeoff roll."
@@ -897,8 +897,8 @@
     ]
   },
   "to tickle": {
-    "keyword": "soft feather",
-    "mnemonic_sentence": "She used the tip of a soft feather to tickle {w} the baby's bare toes until giggles broke out.",
+    "keyword": "jigsaw desk",
+    "mnemonic_sentence": "Dropping sawdust across the jigsaw desk, the prankster leaned down to tickle {w} his sleepy friend awake.",
     "example_sentences": [
       "The playful older sister used a fluffy feather quill to gently {w} (tickle) her sleeping brother's nose.",
       "A stray wool fiber from his scarf began to persistently {w} (tickle) the inside of his throat until he coughed."
@@ -910,8 +910,8 @@
     ]
   },
   "to sprout": {
-    "keyword": "bean seed",
-    "mnemonic_sentence": "Planted in fertile soil, the tiny bean seed began to sprout {w} vibrant green shoots toward the sun.",
+    "keyword": "bison saddle",
+    "mnemonic_sentence": "Dropped beside the leather bison saddle in damp soil, the fertile pumpkin seed began to sprout {w} green leaves.",
     "example_sentences": [
       "After days of warm spring rain, tiny green shoots began to eagerly {w} (sprout) from the rich garden soil.",
       "If you leave raw potatoes in a warm, dark cupboard, they will quickly {w} (sprout) small white buds."
@@ -936,8 +936,8 @@
     ]
   },
   "to shimmer": {
-    "keyword": "jewel ray",
-    "mnemonic_sentence": "A sparkling jewel ray struck the morning dew, causing the spiderweb to shimmer {w} with diamond light.",
+    "keyword": "jolly zone",
+    "mnemonic_sentence": "Reflecting bright carnival lamps across the jolly zone, the tranquil lake surface seemed to shimmer {w} in the dark.",
     "example_sentences": [
       "The calm surface of the mountain lake seemed to beautifully {w} (shimmer) in the warm afternoon sunlight.",
       "Her elegant silk evening gown caught the candlelight and appeared to gently {w} (shimmer) as she walked."
@@ -962,8 +962,8 @@
     ]
   },
   "to strangle": {
-    "keyword": "two wires",
-    "mnemonic_sentence": "Tangled like two wires, invasive ivy vines began to strangle {w} the tender sapling until it choked.",
+    "keyword": "tuba worm",
+    "mnemonic_sentence": "Coiling like a giant tuba worm, the creeping vine threatened to strangle {w} the garden sapling.",
     "example_sentences": [
       "The invasive climbing vines threatened to completely envelop and {w} (strangle) the young garden saplings.",
       "A sudden knot of irrational panic seemed to tighten in his throat and threaten to {w} (strangle) his voice."
@@ -989,9 +989,9 @@
   },
   "to slumber": {
     "keyword": "good repose",
-    "mnemonic_sentence": "Entering a good repose, the exhausted explorer fell into a peaceful slumber {w} under the tall pines.",
+    "mnemonic_sentence": "Entering good repose, the exhausted explorer lay down to peacefully slumber {w} under the tall pines.",
     "example_sentences": [
-      "After a long day of strenuous mountain trekking, he fell into a deep and uninterrupted {w} (slumber).",
+      "After a long day of strenuous mountain trekking, he lay down to deeply {w} (slumber) until morning.",
       "The weary village seemed to quietly {w} (slumber) under a thick winter blanket of newly fallen snow."
     ],
     "rule_drills": [
@@ -1014,8 +1014,8 @@
     ]
   },
   "to shatter": {
-    "keyword": "shock zap",
-    "mnemonic_sentence": "With a sudden shock zap, the crystal vase fell to the tile floor to shatter {w} into a thousand pieces.",
+    "keyword": "zodiac cup",
+    "mnemonic_sentence": "Slipping off the marble counter, the fragile zodiac cup hit the stone floor to shatter {w} into fragments.",
     "example_sentences": [
       "Dropping the delicate porcelain teacup onto the hard tile floor caused it to instantly {w} (shatter) to bits.",
       "The unexpected harsh betrayal served to permanently {w} (shatter) her long-held illusions about their friendship."
@@ -1105,8 +1105,8 @@
     ]
   },
   "to linger": {
-    "keyword": "path beam",
-    "mnemonic_sentence": "Guided by a warm path beam of lantern light, the happy dinner guests chose to linger {w} on the porch.",
+    "keyword": "penny bank",
+    "mnemonic_sentence": "Standing outside the old penny bank, the curious shoppers decided to linger {w} under the warm streetlamps.",
     "example_sentences": [
       "After the delicious banquet concluded, guests were happy to relax and {w} (linger) around the cozy hearth.",
       "The sweet aroma of freshly brewed coffee continued to pleasantly {w} (linger) in the kitchen all morning."
@@ -1118,8 +1118,8 @@
     ]
   },
   "to dwindle": {
-    "keyword": "view sunken",
-    "mnemonic_sentence": "From the view sunken into the dry lakebed, they watched the community water reserves dwindle {w} away.",
+    "keyword": "view signal",
+    "mnemonic_sentence": "Watching the distant view signal blink weakly, the team saw their emergency rations dwindle {w} to nothing.",
     "example_sentences": [
       "During the prolonged summer drought, municipal water supplies began to noticeably {w} (dwindle) week by week.",
       "As midnight approached, the rowdy crowd outside began to steadily {w} (dwindle) to just a handful of people."
@@ -1157,8 +1157,8 @@
     ]
   },
   "to engulf": {
-    "keyword": "giant flood",
-    "mnemonic_sentence": "Swept up in a giant flood, ferocious ocean waves rose high to engulf {w} the fragile wooden boat.",
+    "keyword": "jungle frog",
+    "mnemonic_sentence": "Leaping like a colossal jungle frog, the sudden flood waters rose up to engulf {w} the wooden footbridge.",
     "example_sentences": [
       "Within minutes of ignition, ferocious wildfire flames threatened to completely {w} (engulf) the pine cabin.",
       "A sudden thick bank of coastal ocean fog rolled inland to quickly {w} (engulf) the entire harbor town."
@@ -1183,15 +1183,15 @@
     ]
   },
   "to garner": {
-    "keyword": "reap fruit",
-    "mnemonic_sentence": "Working hard to reap fruit from his campaign, the candidate managed to garner {w} broad public support.",
+    "keyword": "ribbon fan",
+    "mnemonic_sentence": "Holding a colorful ribbon fan, the talented dancer worked hard to garner {w} enthusiastic applause from the crowd.",
     "example_sentences": [
       "Through tireless community organizing, the young candidate managed to {w} (garner) massive popular support.",
       "The innovative research documentary succeeded to quickly {w} (garner) critical acclaim at the film festival."
     ],
     "rule_drills": [
       "The charity event managed to {w} (garner) widespread community donations and support.",
-      "Her breakthrough research paper helped her {w} (garner) international academic acclaim.",
+      "Her breakthrough research paper helped to {w} (garner) international academic acclaim.",
       "The grassroots political campaign worked tirelessly to {w} (garner) undecided votes."
     ]
   },
@@ -1235,8 +1235,8 @@
     ]
   },
   "to ravage": {
-    "keyword": "ruin rage",
-    "mnemonic_sentence": "Swept up in ruin rage, a swarm of millions of desert locusts descended to ravage {w} the wheat harvest.",
+    "keyword": "roman road",
+    "mnemonic_sentence": "Marching straight down the ancient roman road, the ruthless army arrived to ravage {w} the defenseless farming valley.",
     "example_sentences": [
       "A massive swarm of hungry desert locusts descended upon the countryside to {w} (ravage) fertile grain crops.",
       "The category five coastal hurricane struck the barrier island, threatening to severely {w} (ravage) seaside homes."
@@ -1248,8 +1248,8 @@
     ]
   },
   "to saunter": {
-    "keyword": "stroll kiss",
-    "mnemonic_sentence": "Pausing for a gentle stroll kiss, the relaxed tourists continued to saunter {w} down the sunlit boulevard.",
+    "keyword": "zulu kiss",
+    "mnemonic_sentence": "Pausing for a joyful zulu kiss, the happy tourists continued to saunter {w} down the sunlit boulevard.",
     "example_sentences": [
       "On warm summer evenings, locals loved to casually {w} (saunter) down the wide, tree-lined avenue.",
       "Without any urgency, the leisurely tourists continued to {w} (saunter) through the historic marketplace."
@@ -1274,8 +1274,8 @@
     ]
   },
   "to unravel": {
-    "keyword": "weave go",
-    "mnemonic_sentence": "When you pull the thread and let the weave go, the entire knitted wool sleeve will unravel {w}.",
+    "keyword": "woven gear",
+    "mnemonic_sentence": "Catching a sharp snag on the woven gear, the wool sweater began to unravel {w} along the outer seam.",
     "example_sentences": [
       "If you tug on that loose thread on your wool sweater, the knitted cuff will rapidly begin to {w} (unravel).",
       "Under rigorous questioning by prosecutors, the suspect's carefully constructed alibi began rapidly to {w} (unravel)."
@@ -1287,8 +1287,8 @@
     ]
   },
   "to vanish": {
-    "keyword": "puff of smoke",
-    "mnemonic_sentence": "With a quick puff of smoke, the clever stage magician caused the white dove to vanish {w} into thin air.",
+    "keyword": "post gong",
+    "mnemonic_sentence": "Struck with a loud post gong, the theatrical illusion made the white rabbit vanish {w} from the stage.",
     "example_sentences": [
       "The stage magician waved his silver wand over the locked black box and caused the white dove to {w} (vanish).",
       "As morning sunshine warmed the tranquil valley, the thick white river fog began to rapidly {w} (vanish)."
