@@ -156,7 +156,7 @@ class ConsentGateTests(unittest.TestCase):
         self.assertTrue(before["learner_identity"])
         self.assertTrue(before["experiment_exposures"])
         with SQLiteStore(path) as store:
-            self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 18)
+            self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 19)
             for table, rows in before.items():
                 with self.subTest(table=table):
                     self.assertEqual([tuple(row) for row in store.connection.execute(

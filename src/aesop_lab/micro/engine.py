@@ -6,19 +6,24 @@ import json
 import random
 
 from aesop_lab.assessment.items import normalize_answer
+from aesop_lab.contrast import protocol
 from aesop_lab.ranking.method_ranking import rank_methods
 
 PROVISIONAL = "provisional (draft keys)"
 
 
 class MicroUnitEngine:
-    def __init__(self, pack, store, now, *, daily_limit=3):
+    def __init__(self, pack, store, now, *, daily_limit=3, contrast=None):
         if type(daily_limit) is not int or daily_limit < 1:
             raise ValueError("daily_limit must be a positive integer")
         self.pack, self.store, self.now = pack, store, now
         self.daily_limit = daily_limit
         self.units = {u.id: u for u in pack.units}
         self.methods = sorted(m.id for m in pack.methods)
+        if contrast is not None and not {contrast.baseline, contrast.variant} <= set(self.methods):
+            raise ValueError("both contrast methods must be in the pack")
+        # A frozen two-arm contrast replaces Thompson allocation for this pack.
+        self.contrast = contrast
 
     def _time(self):
         at = self.now()
@@ -45,20 +50,53 @@ class MicroUnitEngine:
     def choose_method(self, unit):
         return self._assignment(unit)[0]
 
-    def _assignment(self, unit):
+    def _pack_version(self):
+        return self.pack.schema_version + ":sha256:" + hashlib.sha256(repr(self.pack).encode()).hexdigest()
+
+    def _block(self, index, ordered):
+        """The frozen allocation block: the stored row if present, else computed (not stored)."""
+        stored = {r["block_index"]: r for r in self.store.contrast_blocks(self.pack.pack_id, self.contrast.contrast_id)}
+        if index in stored:
+            return stored[index]["block_seed"], json.loads(stored[index]["allocation"])
+        seed = protocol.block_seed(self.store.learner_id(), self.pack.pack_id, self.contrast.contrast_id, index)
+        slots = ordered[4 * index:4 * index + 4]
+        allocation = [[slots[p].id if p < len(slots) else None, self.contrast.method(role)]
+                      for p, role in enumerate(protocol.block_roles(seed))]
+        return seed, allocation
+
+    def _contrast_assignment(self, unit, store):
+        ordered = self._ordered_units()
+        position = next(i for i, u in enumerate(ordered) if u.id == unit.id)
+        index = position // 4
+        provenance = dict(policy_version=protocol.POLICY_VERSION, pack_version=self._pack_version(),
+                          eligible_choices=json.dumps([self.contrast.baseline, self.contrast.variant]))
+        decided = self.contrast_status()
+        if decided["outcome"] is not None:
+            # After a terminal decision, new units get the future default and never enter the frozen finding.
+            return decided["future_default"], dict(provenance, policy_branch="post-decision", assignment_seed=None)
+        seed, allocation = self._block(index, ordered)
+        if store:
+            row = self.store.store_contrast_block(self.pack.pack_id, self.contrast.contrast_id, index, seed,
+                                                  allocation, protocol.POLICY_VERSION, self._time())
+            seed, allocation = row["block_seed"], json.loads(row["allocation"])
+        return allocation[position % 4][1], dict(provenance, policy_branch="contrast-block",
+                                                 assignment_seed=f"{seed}:{index}:{position % 4}")
+
+    def _assignment(self, unit, store=False):
         """Read existing assignment, or compute one from current received history."""
         unit = self._unit(unit)
         exposures = self._exposures()
         if unit.id in exposures:
             return exposures[unit.id]["method_id"], None
+        if self.contrast is not None:
+            return self._contrast_assignment(unit, store)
         rng = random.Random(self._seed(unit.id))
         history = [r for uid, r in exposures.items()
                    if uid in self.units and self.units[uid].block == unit.block]
         counts = {m: sum(r["method_id"] == m for r in history) for m in self.methods}
         provenance = dict(assignment_seed=str(self._seed(unit.id)),
                           policy_version="thompson-80-20-warmup2-block-v1",
-                          pack_version=self.pack.schema_version + ":sha256:" + hashlib.sha256(
-                              repr(self.pack).encode()).hexdigest())
+                          pack_version=self._pack_version())
         def assigned(method, branch, choices):
             return method, dict(provenance, policy_branch=branch,
                                 eligible_choices=json.dumps(choices))
@@ -119,7 +157,7 @@ class MicroUnitEngine:
                 raise ValueError("daily new-unit limit reached")
             if unit.id in exposures and exposures[unit.id]["completed_at"]:
                 raise ValueError("completed unit cannot be replayed")
-            method, provenance = self._assignment(unit)
+            method, provenance = self._assignment(unit, store=True)
             row = self.store.assign_micro_unit(self.pack.pack_id, unit.id, method, at, provenance=provenance)
             self.store.mark_micro_unit(self.pack.pack_id, unit.id, at)
         return self._lesson(unit, row)
@@ -177,6 +215,64 @@ class MicroUnitEngine:
             else:
                 excluded[classification].append(uid)
         return dict(outcomes=outcomes, excluded=excluded, provisional=PROVISIONAL)
+
+    def contrast_status(self):
+        """Judge the frozen contrast at each scheduled cutoff that has passed.
+
+        Each look sees only completed units, answers and re-exposures recorded at or
+        before its cutoff, so a late evaluation reproduces the on-time snapshot.
+        """
+        if self.contrast is None:
+            raise ValueError("this engine has no contrast")
+        at = self._time()
+        exposures = [r for r in self._exposures().values()
+                     if r["unit_id"] in self.units and r["policy_branch"] == "contrast-block"]
+        checks = {r["unit_id"]: r for r in self.store.micro_checks(self.pack.pack_id)}
+        roles = {self.contrast.baseline: protocol.BASELINE, self.contrast.variant: protocol.VARIANT}
+        started = [datetime.fromisoformat(r["exposed_at"]) for r in exposures if r["exposed_at"]]
+        day_zero = min(started) if started else None
+        snapshots, excluded = {}, {}
+        for day, _, _ in protocol.LOOKS:
+            cutoff = day_zero and day_zero + timedelta(days=day)
+            if cutoff is None or at < cutoff:
+                break
+            counts = {protocol.BASELINE: [0, 0], protocol.VARIANT: [0, 0]}
+            dropped = {k: 0 for k in ("early", "late", "assisted", "contaminated", "unanswered")}
+            for exposure in exposures:
+                if not exposure["completed_at"] or datetime.fromisoformat(exposure["completed_at"]) > cutoff:
+                    continue
+                check = checks.get(exposure["unit_id"])
+                if not check or datetime.fromisoformat(check["occurred_at"]) > cutoff:
+                    dropped["unanswered"] += 1
+                    continue
+                known = dict(exposure)
+                if known.get("reexposed_at") and datetime.fromisoformat(known["reexposed_at"]) > cutoff:
+                    known["reexposed_at"] = None
+                classification = self._classification(check, known)
+                if classification != "eligible":
+                    dropped[classification] += 1
+                    continue
+                counts[roles[exposure["method_id"]]][check["score_status"] != "correct"] += 1
+            snapshots[day] = {role: tuple(c) for role, c in counts.items()}
+            excluded[day] = dropped
+        judged = protocol.judge(snapshots)
+        for look in judged["looks"]:
+            look["excluded"] = excluded[look["day"]]
+            look["cutoff"] = (day_zero + timedelta(days=look["day"])).isoformat()
+        winner = judged["winner"] and self.contrast.method(judged["winner"])
+        pending = [d for d, _, _ in protocol.LOOKS if d not in snapshots]
+        return dict(
+            contrast_id=self.contrast.contrast_id, scope=self.contrast.scope, topic=self.pack.pack_id,
+            policy_version=protocol.POLICY_VERSION, estimator_version=protocol.ESTIMATOR_VERSION,
+            baseline=self.contrast.baseline, variant=self.contrast.variant,
+            day_zero=day_zero and day_zero.isoformat(), looks=judged["looks"],
+            outcome=judged["outcome"], winner=winner, decision_day=judged["decision_day"],
+            next_look_day=None if judged["outcome"] else (pending[0] if pending else None),
+            # Preference and override handling arrive with stored look snapshots (step 2b);
+            # until then the default is the winner, else the strong baseline.
+            future_default=(winner or self.contrast.baseline) if judged["outcome"] else None,
+            provisional=PROVISIONAL,
+        )
 
     def ranking(self):
         evidence = self.outcomes_by_method()
