@@ -40,16 +40,13 @@ preserve the method and original timestamps. New assignments count toward the
 daily cap; existing units can resume after that cap. The assignment transaction
 serializes competing connections, including warm-up and cap decisions.</li>
 <li><code>complete_unit(unit)</code> records completion once. The unit must have started.</li>
-<li><code>answer_check(unit, answer, assisted=False)</code> scores using the existing
-whitespace-normalizing, case/punctuation-preserving <code>normalize_answer</code>, against
-the candidate accepted strings. It returns the persisted first response,
+<li><code>answer_check(unit, answer, assisted=False)</code> scores using the existing <code>normalize_answer</code> (whitespace normalized) and then <strong>ignores case</strong> on both sides, so <code>RIVER</code> matches <code>river</code>; punctuation must still match. It compares against the candidate accepted strings. It returns the persisted first response,
 score and classification. Repeats cannot replace the first response, including
 an early, assisted or incorrect response. Completion is required; direct early
 or late submissions are retained for reporting.</li>
 <li><code>outcomes_by_method()</code> returns all methods mapped to <code>(matched_key, 1.0)</code>
 observations under <code>outcomes</code>, and unit IDs under <code>excluded</code> for <code>early</code>,
-<code>late</code>, <code>assisted</code>, and <code>missing</code>. Missing means a completed unit without a
-response, including checks still pending. Uncompleted units add no evidence.
+<code>late</code>, <code>assisted</code>, <code>pending</code> and <code>missing</code>. A completed unit with no response is <code>pending</code> while its day-14 window is open (elapsed time 14 days or less), and <code>missing</code> only after the window closes. Uncompleted units add no evidence.
 Assisted takes precedence over timing in these mutually exclusive buckets.</li>
 <li><code>ranking()</code> returns ordered <code>methods</code> with <code>method</code>, <code>posterior_mean</code>,
 <code>probability_best</code>, <code>effective_checks</code>, <code>alpha</code>, <code>beta</code>; plus <code>confidence</code>,
@@ -114,8 +111,8 @@ assertion failures in their corresponding tests. The source was unchanged by
 these runs.</p>
 <p>Final validation on this worktree:</p>
 <ul>
-<li><code>PYTHONPATH=src python -m unittest discover -s tests -q</code>: <strong>335 passed</strong>
-(including 11 engine tests).</li>
+<li><code>PYTHONPATH=src python -m unittest discover -s tests -q</code>: <strong>336 passed</strong>
+(including 12 engine tests, after Claude's integration added the vocabulary case test).</li>
 <li><code>node --test tests/foreman_web_contract.test.mjs tests/personal_comparison_web.test.mjs</code>:
 <strong>51 passed</strong>.</li>
 <li>Deliberate breaks: <strong>11/11 detected</strong>; focused compile checks and
