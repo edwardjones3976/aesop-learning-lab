@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Held-out family delta audit: m2-draft.10</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Held-out family delta audit: m2-draft.10</h1>
+<p>Date: 2026-10-20. Auditor: Codex, Team B (audit only).
+Baseline: <code>15e58d675eaefb9cb5a6716a72b1db4b6cf27783</code>, branch <code>docs/held-out-audit-v10</code>.</p>
+<h2>Scope and result</h2>
+<p>Compared the complete v9 and v10 packs in <code>content/packs/python-functions-recursion/</code>, including all five lessons, diagrams, all 33 items, choices, hints, worked answers, explanations, common mistakes and rubrics. Sources also include <a href="descriptive-pilot-v7.html">protocol v7</a>, its inherited <a href="descriptive-pilot-v6.html">v6 requirements</a>, <code>src/aesop_lab/foreman.py</code> (<code>CURRENT_PACK_PATH</code> selects v10 for fresh learners), <code>experiment/descriptive_v7.py</code>, the shared <code>experiment/descriptive_v2.py</code> classifier, and <code>assessment/items.py</code> scoring normalization.</p>
+<p>This is a delta to the <a href="held-out-family-audit-m2-draft-9.html">v9 audit</a>, not human approval. V7 uses content v10 prospectively; historical assignments remain pinned. All ten held-out items retain their literal <code>-v9</code> item IDs, family IDs, code (<code>body</code>), prompt, complete candidate answer key, check expression <code>result</code>, held-out flag and day-one/day-seven delay. Their <code>content_version</code> changes from <code>v9</code> to <code>v10</code>. All ten have supporting prose changes, quoted below; therefore all ten receive fresh manual traces and separation checks here. None has changed assessment code, prompt or key. No new or removed items or families were found.</p>
+<h2>Item-by-item comparison and traces</h2>
+<p>In every row, item ID and family ID are identical in v9 and v10, and code, prompt and key are identical. The common prompt is “After this code runs, what is the value of result?” String keys accept the listed bare value and the same value enclosed in ASCII single or double quotes; integer keys accept only the listed decimal string. Key status remains <code>candidate</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Delay</th>
+<th>Item ID (both packs)</th>
+<th>Family ID (both packs)</th>
+<th>Candidate value</th>
+<th>Fresh manual trace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>def-return-transfer-01-v9</code></td>
+<td><code>def-return-transfer-a</code></td>
+<td><code>10</code></td>
+<td><code>area(3, 4)</code> returns 12; caller subtracts 2, giving 10.</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>scope-keyword-transfer-01-v9</code></td>
+<td><code>scope-keyword-transfer-a</code></td>
+<td><code>Hi Ana?</code></td>
+<td>Explicit <code>punctuation=&quot;?&quot;</code> replaces <code>!</code>; joining <code>Hi </code>, <code>Ana</code>, <code>?</code> gives <code>Hi Ana?</code>.</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>recursion-halving-transfer-01-v9</code></td>
+<td><code>recursion-halving-transfer-a</code></td>
+<td><code>16</code></td>
+<td>Despite its ID, input decrements: levels 4,3,2,1,0; returned values at levels 0–4 are 1,2,4,8,16.</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>base-case-transfer-01-v9</code></td>
+<td><code>base-case-grow-threshold-day-v6</code></td>
+<td><code>24</code></td>
+<td>Inputs 3,10,17,24; 24 first satisfies <code>n &gt;= 20</code>; earlier calls pass back 24 unchanged.</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>recursive-case-transfer-01-v9</code></td>
+<td><code>recursive-case-transfer-a</code></td>
+<td><code>cba</code></td>
+<td><code>reverse(&quot;c&quot;)</code> returns <code>c</code>; <code>reverse(&quot;bc&quot;)</code> returns <code>cb</code>; <code>reverse(&quot;abc&quot;)</code> returns <code>cba</code>.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>def-return-week-01-v9</code></td>
+<td><code>def-return-shipping-week-v4</code></td>
+<td><code>16</code></td>
+<td><code>shipping(4)</code> gives <code>5 + 2 * 3 = 11</code>; <code>shipping(1)</code> gives 5; sum 16.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>scope-week-01-v9</code></td>
+<td><code>scope-caller-local-default-week-v5</code></td>
+<td><code>[map]!:map</code></td>
+<td>Local <code>word</code> becomes <code>[map]</code>, omitted suffix adds <code>!</code>; caller <code>note</code> stays <code>map</code>; join with <code>:</code>.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>recursion-week-01-v9</code></td>
+<td><code>recursion-nested-wrap-week-v5</code></td>
+<td><code>[[[core]]]</code></td>
+<td>Returns at n=0,1,2,3: <code>core</code>, <code>[core]</code>, <code>[[core]]</code>, <code>[[[core]]]</code>.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>base-case-week-01-v9</code></td>
+<td><code>base-case-threshold-halving-week-v4</code></td>
+<td><code>small!!!</code></td>
+<td>Inputs 20,10,5,2; 2 returns <code>small</code>; three waiting calls each append <code>!</code>.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>recursive-case-week-01-v9</code></td>
+<td><code>recursive-case-lamp-toggle-week-v6</code></td>
+<td><code>on</code></td>
+<td>States at presses 0–5: off,on,off,on,off,on.</td>
+</tr>
+</tbody>
+</table>
+<p>All ten computed values are unambiguous and deterministically scorable against the stored accepted strings. The revised hints and worked answers agree with these traces. Scoring collapses whitespace, preserves case and punctuation, and does not evaluate arbitrary equivalent expressions. No key error found; no key fix proposed.</p>
+<h2>Renewed family separation checks</h2>
+<p>Conservatively include all lessons and diagrams across concepts, all non-held-out items with their worked answers/rubrics, and every other held-out item that could precede the target, including reveals. Day-seven checks include all five day-one checks and all four other day-seven primaries. For day-one checks, other held-outs are also considered conservatively, without assuming the scheduler protects unfamiliarity. The target's own revealed answer cannot precede an unassisted target response. Different IDs alone do not prove separation.</p>
+<h3>Day-seven primaries</h3>
+<p>The unchanged assessment material inherits the detailed family comparisons in v9 audit sections 1–5 and all ten cross-primary pair comparisons in its “Scoring, verification and limitations” section. Those comparisons carry over to v10; the renewed checks against rewritten prose give these results:</p>
+<ul>
+<li><code>def-return-week-01-v9</code>: separate. Shipping/weight, 4 and 1, threshold 2, fee 5 and rate 3 still require two independent calls taking different branches. Tax lessons, double practice and day-one area do not teach that composite branch calculation. Neither string binding, wrapping, halving nor lamp toggling supplies its solution.</li>
+<li><code>scope-week-01-v9</code>: separate. <code>mark</code>, <code>word</code>, <code>suffix</code>, <code>note</code>, <code>map</code>, brackets and colon still combine an omitted default, local rebinding and preservation of the caller's string. Numeric local/global practice and tax instruction do not reproduce this combination; day-one greeting overrides a default instead. Other held-outs expose brackets or punctuation, but not this binding structure.</li>
+<li><code>recursion-week-01-v9</code>: <strong>medium structural-separation concern carries over</strong>. Two-sided brackets and <code>core</code> differ from countdown's numbered prefix, repeat-mark's stars/empty base and day-one reverse's sliced input. Yet repeat-mark already teaches a zero/decrement chain with three waiting calls concatenating strings. Base-case primary first teaches a nonempty base and three punctuation-producing returns. Names, symbols and depth do not settle unfamiliarity. Qualified human review must decide whether two-sided nesting adds enough new structure.</li>
+<li><code>base-case-week-01-v9</code>: separate from practice, but <strong>medium cross-primary concern carries over</strong>. <code>label_depth(20)</code> halves to below 4 and appends marks, unlike decrement-to-zero/counting, factorial, parity reachability and growing-by-seven day-one work. The floor-division prerequisite teaches syntax only. Nesting first nevertheless teaches a nonempty string returning through three punctuation-producing calls; human review must decide whether halving/threshold and suffix-only construction remain sufficiently unfamiliar in that ordering.</li>
+<li><code>recursive-case-week-01-v9</code>: separate. Lamp/presses, off/on and depth 5 require conditional flipping of the smaller call's returned state. Savings also stores a smaller return but doubles a number and adds a month; sums, factorial, leaf-count, reverse, wrapping and halving do not teach flipping. Shared decrement/zero syntax does not supply the return rule.</li>
+</ul>
+<p>Proposed fix for either medium concern, if rejected by the human: prospectively replace the affected assessment with a materially different reduction/return task, assign a new family/version, and re-audit exposure and order. Do not relabel historical assignments. No fix applied.</p>
+<h3>Day-one held-outs</h3>
+<p>The v9 audit considered these as prior exposure to day seven; it did not independently certify their own unfamiliarity. The following judgments extend that scope rather than claiming prior approval:</p>
+<ul>
+<li><code>def-return-transfer-01-v9</code>: <strong>medium near-transfer concern</strong>. Area uses new names, two parameters, inputs 3 and 4, multiplication and caller subtraction; however <code>double(7) + 1</code> practice already teaches a single arithmetic-return call followed by caller arithmetic. New numbers, arity and surface may be insufficient structural distance. Shipping adds branching/two calls but also exposes combining return values. No string or recursive example duplicates area. Human must decide whether area is unfamiliar application or only a close arithmetic variant; if rejected, replace prospectively with a structurally different task/new family.</li>
+<li><code>scope-keyword-transfer-01-v9</code>: separate on static comparison. Greeting/Ana/punctuation, string joining and <code>?</code> differ from the numeric tax default override, local arithmetic and global-binding practice. The same keyword/default principle is taught, but the greeting computation is not copied. The day-seven scope task uses an omitted default and local rebinding, rather than an override; bracket/wrapping examples lack keyword arguments. No additional defect found.</li>
+<li><code>recursion-halving-transfer-01-v9</code>: <strong>medium near-transfer concern</strong>. Leaf-count's level 4/base 1/constant doubling differs from stars, countdown, sums and factorial, but factorial already multiplies a smaller return (by current n), and savings doubles a smaller return then adds month. Constant doubling may be too small a structural change after those worked answers. Other held-outs teach recursion but not this numeric recurrence. Human must adjudicate distance; if insufficient, replace prospectively with a different reduction/combine structure and new family. The misleading “halving” ID does not change the code or key.</li>
+<li><code>base-case-transfer-01-v9</code>: separate. <code>reach_target</code> starts at 3, grows by 7 toward at least 20 and returns the reached input unchanged. Lessons/practice generally shrink toward zero or test parity; day-seven base-case shrinks by halving and transforms returned strings. A shared 20 is a threshold here, a starting input there. Other held-outs do not teach this increasing-input/unchanged-return combination. No additional defect found.</li>
+<li><code>recursive-case-transfer-01-v9</code>: separate. Reverse uses <code>abc</code>, string slicing, a length-at-most-one base and suffixing the removed first character. List-sum practice teaches slicing but adds numeric heads; countdown/repeat-mark prepend symbols using integer decrements. Wrapping and halving accumulate constant punctuation, not reversal of input characters. Other held-outs lack this input-dependent return arrangement. No additional defect found.</li>
+</ul>
+<p>These are conservative static judgments, not evidence about any actual learner's prior knowledge. The two day-one concerns are newly explicit audit judgments, not v10 content regressions: the same structures existed in v9.</p>
+<h2>Does simpler instruction increase held-out overlap?</h2>
+<p>All 33 item bodies, prompts, choices, answer keys and family IDs are unchanged. The five lessons retain the same Python examples; their encountered-family lists are unchanged. Lesson diagrams retain the same computations (three have wording changes). Rewritten hints, annotated examples, explanations and common mistakes add clarity but no new held-out algorithm or answer. There is no demonstrated increase in structural family overlap; wording may affect learning, as v7 explicitly acknowledges, so unchanged code alone is not proof of unchanged exposure effect.</p>
+<p>Specific checks of the revised prose:</p>
+<ul>
+<li>Return instruction still traces <code>price_with_tax(20)</code> and <code>show_total(5)</code>, and practice still explains double and print/None. “The call then stands for the returned value” makes substitution clear but does not introduce shipping branches or area. The area proximity to double predates v10.</li>
+<li>Scope instruction retains <code>total(40, rate=0.10)</code>, default .05, global 99 and local 44.0. Explaining that the default applies when the argument is omitted supports both scope held-outs conceptually, as v9 already did; it does not add a greeting or caller/local string composite worked answer.</li>
+<li>Countdown's rewritten trace says the one call adds <code>&quot;1, &quot;</code> in front and the two call adds <code>&quot;2, &quot;</code> in front. V9 already traced these results. Repeat-mark's worked answer changes “The zero call returns an empty string; each of three waiting calls adds one <code>*</code>, so result is <code>***</code>.” to “The zero call returns an empty string. Each of the three waiting calls adds one <code>*</code>, so result is <code>***</code>.” Neither introduces two-sided wrapping, but both teach the three-waiting-call string construction behind the existing concern.</li>
+<li>Base-case instruction still uses <code>steps_to_zero(3)</code> and the separate <code>17 // 4</code> prerequisite. “For whole numbers of zero or more” replaces “for nonnegative integers”; neither demonstrates recursive halving or growing by seven. Its added definition of a branch does not expose a held-out answer.</li>
+<li>Sum-first instruction and diagram still show 3,2,1,0 returning 0,1,3,6. Savings still returns 5,11,24,51; its rewrite emphasizes each call's own <code>previous</code>. List-sum's annotated solution still removes a head and adds it to a recursive tail sum. This may aid transfer to leaf-count, reverse and lamp, but adds no reversal or conditional state-flip worked solution. The leaf-count proximity to savings/factorial is pre-existing.</li>
+</ul>
+<p>The wrapping/base-case pair is unchanged in either order: both return a nonempty string through three calls that add punctuation. Halving/below-four versus decrement/zero, and suffix-only versus two-sided wrapping, remain their distinctions. Scope first can also expose brackets and <code>!</code>. All ten cross-primary comparisons in the v9 audit still apply; none can be dismissed by assuming other primaries are unseen.</p>
+<h2>Eligibility and review limitations</h2>
+<p>The v9 audit's exact-family cross-primary limitation carries over: current <code>analyze_v7</code> delegates to <code>_analyze</code>, whose prior-family checks compare the exact target family. Distinct but structurally related held-outs do not automatically contaminate each other. Actual attempt/reveal ordering still needs review.</p>
+<p>The v9 audit's outside-study implementation warning does <strong>not</strong> carry over as a statement of current behavior. At this baseline, <code>_classify_first</code> excludes <code>OutsideStudy.SOME</code> for protocol numbers at least 5. <code>_analyze</code> also passes reports through the primary response time from any item of the same concept. Thus v7 excludes a structured SOME report on the primary or an earlier same-concept attempt. Missing/UNKNOWN reports are not affirmative study reports, free-text detail does not override the structured value, and this is not proof that no outside study occurred. Static pack review cannot certify attentive study, actual exposure or session eligibility.</p>
+<p>V10 remains draft, all ten keys are candidate and review receipts are empty. This audit grants no human-reviewed status, independent validation or learning-effect claim. No content, code or tests changed. No code snippets were executed and no test suite was run; ten traces were performed manually. The requested documentation verification is <code>git diff --check</code>; no regression tests are added under the explicit documentation-only scope.</p>
+<h2>Exact held-out prose deltas</h2>
+<p>The assessment fields identified above are identical. For completeness, the following quotes record every changed supporting field of each held-out item, besides the common <code>content_version: &quot;v9&quot; -&gt; &quot;v10&quot;</code>. Unlisted fields are identical. Array entries are quoted in JSON notation so punctuation and accepted spelling remain inspectable.</p>
+<h3><code>def-return-transfer-01-v9</code></h3>
+<ul>
+<li><code>hints.worked_solution</code>: &quot;area(3, 4) returns 3 * 4 = 12; the caller then subtracts 2, so result is 10.&quot; → &quot;area(3, 4) returns 3 * 4 = 12. Then the caller subtracts 2, so result is 10.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply call-and-return reasoning in a previously unseen context.&quot; → &quot;Use call-and-return thinking on an example you have not seen before.&quot;</li>
+<li><code>explanation</code>: &quot;area(3, 4) returns 3 * 4 = 12; the caller then subtracts 2, so result is 10.&quot; → &quot;area(3, 4) returns 3 * 4 = 12. Then the caller subtracts 2, so result is 10.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;The function multiplies width and height before the caller subtracts 2; adding 3 and 4 or skipping the subtraction changes result.&quot;] → [&quot;The function multiplies width by height first. Then the caller subtracts 2. Adding 3 and 4, or skipping the subtraction, gives the wrong result.&quot;]</li>
+</ul>
+<h3><code>scope-keyword-transfer-01-v9</code></h3>
+<ul>
+<li><code>hints.targeted</code>: &quot;greet builds &quot;Hi &quot; + name + punctuation.&quot; → &quot;greet joins &quot;Hi &quot; + name + punctuation.&quot;</li>
+<li><code>hints.worked_solution</code>: &quot;The explicit punctuation=&quot;?&quot; replaces the default &quot;!&quot;. The function concatenates &quot;Hi &quot; + &quot;Ana&quot; + &quot;?&quot;, so result is &quot;Hi Ana?&quot;.&quot; → &quot;The call gives punctuation=&quot;?&quot;, which replaces the default &quot;!&quot;. The function joins &quot;Hi &quot; + &quot;Ana&quot; + &quot;?&quot;, so result is &quot;Hi Ana?&quot;.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply a keyword argument to override a default value in an unfamiliar string-building call.&quot; → &quot;Use a keyword argument to replace a default value in a new call that builds a string.&quot;</li>
+<li><code>explanation</code>: &quot;The explicit punctuation=&quot;?&quot; replaces the default &quot;!&quot;. The function concatenates &quot;Hi &quot; + &quot;Ana&quot; + &quot;?&quot;, so result is &quot;Hi Ana?&quot;.&quot; → &quot;The call gives punctuation=&quot;?&quot;, which replaces the default &quot;!&quot;. The function joins &quot;Hi &quot; + &quot;Ana&quot; + &quot;?&quot;, so result is &quot;Hi Ana?&quot;.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;The explicit punctuation=&quot;?&quot; replaces the default &quot;!&quot; for this call.&quot;] → [&quot;The call gives punctuation=&quot;?&quot;, so this call uses &quot;?&quot; instead of the default &quot;!&quot;.&quot;]</li>
+</ul>
+<h3><code>recursion-halving-transfer-01-v9</code></h3>
+<ul>
+<li><code>hints.targeted</code>: &quot;Each level doubles the value returned by the smaller level.&quot; → &quot;Each level doubles the value returned by the level below it.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply call-stack reasoning to an unfamiliar recursive process.&quot; → &quot;Keep track of waiting calls in a new recursive example.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;The base level returns 1, not 0; four outer levels double that value four times.&quot;] → [&quot;The base level returns 1, not 0. Each of the four levels above it doubles that value.&quot;]</li>
+</ul>
+<h3><code>base-case-transfer-01-v9</code></h3>
+<ul>
+<li><code>hints.nudge</code>: &quot;Which call first satisfies n &gt;= 20?&quot; → &quot;Which call is the first one where n &gt;= 20 is true?&quot;</li>
+<li><code>hints.targeted</code>: &quot;The inputs are 3, 10, 17, and 24; only the last meets the stopping condition.&quot; → &quot;The inputs are 3, 10, 17, and 24. Only 24 meets the stopping condition.&quot;</li>
+<li><code>hints.worked_solution</code>: &quot;reach_target(24) meets n &gt;= 20 and returns 24. Calls at 17, 10, and 3 return that value unchanged, so result is 24.&quot; → &quot;reach_target(24) meets n &gt;= 20 and returns 24. The calls at 17, 10, and 3 pass that value back without changing it, so result is 24.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply reachable base-case reasoning to a growing input and trace the returned value.&quot; → &quot;Use base-case thinking on an input that grows, and trace the returned value.&quot;</li>
+<li><code>explanation</code>: &quot;reach_target(24) meets n &gt;= 20 and returns 24. Calls at 17, 10, and 3 return that value unchanged, so result is 24.&quot; → &quot;reach_target(24) meets n &gt;= 20 and returns 24. The calls at 17, 10, and 3 pass that value back without changing it, so result is 24.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;17 is still below the n &gt;= 20 stopping threshold; the next call receives 24 and returns that value unchanged.&quot;] → [&quot;17 is still below 20, so that call does not stop. The next call gets 24 and returns it, and the earlier calls pass it back unchanged.&quot;]</li>
+</ul>
+<h3><code>recursive-case-transfer-01-v9</code></h3>
+<ul>
+<li><code>hints.worked_solution</code>: &quot;reverse(&quot;c&quot;) returns &quot;c&quot; at the base case. reverse(&quot;bc&quot;) returns &quot;c&quot; + &quot;b&quot; = &quot;cb&quot;; reverse(&quot;abc&quot;) returns &quot;cb&quot; + &quot;a&quot; = &quot;cba&quot;.&quot; → &quot;reverse(&quot;c&quot;) returns &quot;c&quot;, because it is the base case. reverse(&quot;bc&quot;) returns &quot;c&quot; + &quot;b&quot; = &quot;cb&quot;. reverse(&quot;abc&quot;) returns &quot;cb&quot; + &quot;a&quot; = &quot;cba&quot;.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply recursive-call tracing to an unfamiliar task.&quot; → &quot;Trace recursive calls in a new task.&quot;</li>
+<li><code>explanation</code>: &quot;reverse(&quot;c&quot;) returns &quot;c&quot; at the base case. reverse(&quot;bc&quot;) returns &quot;c&quot; + &quot;b&quot; = &quot;cb&quot;; reverse(&quot;abc&quot;) returns &quot;cb&quot; + &quot;a&quot; = &quot;cba&quot;.&quot; → &quot;reverse(&quot;c&quot;) returns &quot;c&quot;, because it is the base case. reverse(&quot;bc&quot;) returns &quot;c&quot; + &quot;b&quot; = &quot;cb&quot;. reverse(&quot;abc&quot;) returns &quot;cb&quot; + &quot;a&quot; = &quot;cba&quot;.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;If every recursive case uses return text[0] + reverse(text[1:]), the function preserves the original order: &quot;abc&quot; for &quot;abc&quot;, not &quot;cba&quot;.&quot;] → [&quot;If each recursive case used return text[0] + reverse(text[1:]), the letters would keep their original order. That gives &quot;abc&quot; for &quot;abc&quot;, not &quot;cba&quot;.&quot;]</li>
+</ul>
+<h3><code>def-return-week-01-v9</code></h3>
+<ul>
+<li><code>hints.nudge</code>: &quot;Find the returned value of each shipping call separately.&quot; → &quot;Find the value returned by each shipping call on its own.&quot;</li>
+<li><code>hints.targeted</code>: &quot;The call with weight 4 takes the second branch; the call with weight 1 takes the first.&quot; → &quot;The call with weight 4 takes the second branch. The call with weight 1 takes the first branch.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply call-and-return reasoning in a previously unseen context.&quot; → &quot;Use call-and-return thinking on an example you have not seen before.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;shipping(4) and shipping(1) take different branches; using one branch for both calls changes the total.&quot;] → [&quot;shipping(4) and shipping(1) take different branches. Using one branch for both calls gives the wrong total.&quot;]</li>
+</ul>
+<h3><code>scope-week-01-v9</code></h3>
+<ul>
+<li><code>hints.nudge</code>: &quot;Keep the caller's note separate from the function's local word, and check whether suffix is supplied.&quot; → &quot;Keep the caller's note separate from the function's local word. Check whether the call gives a suffix.&quot;</li>
+<li><code>hints.targeted</code>: &quot;mark(note) uses the default suffix '!'; inside the call, only the local word is rebound to '[map]'.&quot; → &quot;mark(note) uses the default suffix '!'. Inside the call, only the local word changes, to '[map]'.&quot;</li>
+<li><code>hints.worked_solution</code>: &quot;mark(note) receives 'map' as local word and returns '[map]!' with the default suffix. The caller's note remains 'map', so result is '[map]!:map'.&quot; → &quot;mark(note) gives the local word the value 'map'. It returns '[map]!' using the default suffix. The caller's note is still 'map', so result is '[map]!:map'.&quot;</li>
+<li><code>learning_objective</code>: &quot;Trace an omitted default argument and a locally rebound parameter without changing the caller's binding.&quot; → &quot;Trace a call that leaves out an argument (so its default is used) and gives a parameter a new value, without changing the caller's name.&quot;</li>
+<li><code>explanation</code>: &quot;mark(note) receives 'map' as local word and returns '[map]!' with the default suffix. The caller's note remains 'map', so result is '[map]!:map'.&quot; → &quot;mark(note) gives the local word the value 'map'. It returns '[map]!' using the default suffix. The caller's note is still 'map', so result is '[map]!:map'.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;Rebinding local word does not rebind the caller’s note, and the omitted suffix argument uses its default &quot;!&quot;.&quot;] → [&quot;Changing the local word does not change the caller's note. The call leaves out suffix, so it uses the default &quot;!&quot;.&quot;]</li>
+</ul>
+<h3><code>recursion-week-01-v9</code></h3>
+<ul>
+<li><code>hints.nudge</code>: &quot;Find the innermost value returned by nest(0).&quot; → &quot;Find the innermost value, which nest(0) returns.&quot;</li>
+<li><code>hints.targeted</code>: &quot;Each waiting call places one pair of brackets around the value from its smaller call.&quot; → &quot;Each waiting call puts one pair of brackets around the value from its smaller call.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply call-stack reasoning to an unfamiliar recursive process.&quot; → &quot;Keep track of waiting calls in a new recursive example.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;Each outer call adds one bracket pair around its inner result; appending all opening brackets first without closing them misreads the return path.&quot;] → [&quot;Each outer call wraps one pair of brackets around its inner result. If you add all the opening brackets first and leave out the closing ones, you misread how the values come back.&quot;]</li>
+</ul>
+<h3><code>base-case-week-01-v9</code></h3>
+<ul>
+<li><code>hints.nudge</code>: &quot;Identify the first input below four.&quot; → &quot;Find the first input that is below 4.&quot;</li>
+<li><code>hints.targeted</code>: &quot;Integer halving gives 20, 10, 5, 2. The call at 2 returns the starting label.&quot; → &quot;Halving with // gives 20, 10, 5, 2. The call at 2 returns the starting label.&quot;</li>
+<li><code>learning_objective</code>: &quot;Apply a stopping threshold to recursive integer halving and trace returned values.&quot; → &quot;Use a stopping cutoff with recursive whole-number halving, and trace the returned values.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;Integer halving reaches n = 2 before returning small; the calls at 5, 10, and 20 add their marks afterward.&quot;] → [&quot;Whole-number halving reaches n = 2 before it returns small. After that, the calls at 5, 10, and 20 add their marks.&quot;]</li>
+</ul>
+<h3><code>recursive-case-week-01-v9</code></h3>
+<ul>
+<li><code>hints.targeted</code>: &quot;Each waiting call flips the smaller call’s state; list states for 0, 1, 2, and onward.&quot; → &quot;Each waiting call flips the state from the smaller call. List the states for 0, 1, 2, and so on.&quot;</li>
+<li><code>hints.worked_solution</code>: &quot;lamp_state(0) is off. The states for 1 through 5 presses are on, off, on, off, on; result is on.&quot; → &quot;lamp_state(0) is off. The states for 1 to 5 presses are on, off, on, off, on. So result is on.&quot;</li>
+<li><code>learning_objective</code>: &quot;Trace a recursive step that combines a smaller result by toggling a state in an unfamiliar context.&quot; → &quot;Trace a recursive step that flips the smaller call's state between on and off, in a new example.&quot;</li>
+<li><code>explanation</code>: &quot;lamp_state(0) is off. The states for 1 through 5 presses are on, off, on, off, on; result is on.&quot; → &quot;lamp_state(0) is off. The states for 1 to 5 presses are on, off, on, off, on. So result is on.&quot;</li>
+<li><code>common_mistakes</code>: [&quot;The positive calls do not all return on; each call flips the state returned by the smaller call.&quot;] → [&quot;The calls above zero do not all return on. Each call flips the state returned by the smaller call.&quot;]</li>
+</ul>
+<h2>Human key reviewer: exact v10 decisions required</h2>
+<p>Record accept, edit or reject for each item below in its v10 context. For every string, decide on the bare value and both stored ASCII single-/double-quoted variants. The five day-seven key recommendations and wrapping/base-case decisions carry over from the v9 audit as pending decisions, not recorded approvals. The five day-one key decisions and two near-transfer concerns are explicitly added here.</p>
+<table>
+<thead>
+<tr>
+<th>Item ID in v10</th>
+<th>Candidate value to decide</th>
+<th>Family decision / carryover</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>def-return-week-01-v9</code></td>
+<td><code>16</code></td>
+<td>V9 key recommendation and separate-family judgment carry over.</td>
+</tr>
+<tr>
+<td><code>scope-week-01-v9</code></td>
+<td><code>[map]!:map</code></td>
+<td>V9 key recommendation and separate-family judgment carry over.</td>
+</tr>
+<tr>
+<td><code>recursion-week-01-v9</code></td>
+<td><code>[[[core]]]</code></td>
+<td>V9 decision carries over: accept/reject unfamiliarity after countdown, repeat-mark, reverse and any earlier primary, especially base-case.</td>
+</tr>
+<tr>
+<td><code>base-case-week-01-v9</code></td>
+<td><code>small!!!</code></td>
+<td>V9 decision carries over: accept/reject unfamiliarity when wrapping comes first; assess both pair orderings.</td>
+</tr>
+<tr>
+<td><code>recursive-case-week-01-v9</code></td>
+<td><code>on</code></td>
+<td>V9 key recommendation and separate-family judgment carry over.</td>
+</tr>
+<tr>
+<td><code>def-return-transfer-01-v9</code></td>
+<td><code>10</code></td>
+<td>New explicit day-one review: decide whether area is sufficiently separate from double/caller arithmetic.</td>
+</tr>
+<tr>
+<td><code>scope-keyword-transfer-01-v9</code></td>
+<td><code>Hi Ana?</code></td>
+<td>New explicit day-one key review; static family judgment separate.</td>
+</tr>
+<tr>
+<td><code>recursion-halving-transfer-01-v9</code></td>
+<td><code>16</code></td>
+<td>New explicit day-one review: decide whether constant doubling is sufficiently separate from factorial and savings.</td>
+</tr>
+<tr>
+<td><code>base-case-transfer-01-v9</code></td>
+<td><code>24</code></td>
+<td>New explicit day-one key review; static family judgment separate.</td>
+</tr>
+<tr>
+<td><code>recursive-case-transfer-01-v9</code></td>
+<td><code>cba</code></td>
+<td>New explicit day-one key review; static family judgment separate.</td>
+</tr>
+</tbody>
+</table>
+<p>The human must also retain actual order/answer/reveal review for cross-primary exposure; the exact-family gate does not resolve structural overlap. The older outside-study warning is superseded by the current implementation qualification above. Qualified non-author content validation remains a separate repository gate; this audit and its candidate recommendations do not satisfy it.</p>
+
+</main></body>
+</html>

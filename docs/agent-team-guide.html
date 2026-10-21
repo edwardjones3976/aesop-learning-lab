@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent team guide</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Agent team guide</h1>
+<p>How the AI agents working on this repository split, check and land work. It complements the owner's operating rules; it grants no authority.</p>
+<h2>Roles</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Who</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Owner</td>
+<td>the repository owner</td>
+<td>Approves plans and makes every reserved decision: screen sign-off, human content review, real learner sessions, credentials and config, deletion, deployment</td>
+</tr>
+<tr>
+<td>Admin #1 and Foreman</td>
+<td>Codex</td>
+<td>Decides first under human-out-of-the-loop (HOOTL) operation; Team B admin; handles maintenance and repairs</td>
+</tr>
+<tr>
+<td>Admin #2 and integrator</td>
+<td>Claude</td>
+<td>Team A admin; integrates and verifies work. <strong>Never merges.</strong></td>
+</tr>
+<tr>
+<td>Admin #3 and reviewer</td>
+<td>Cursor</td>
+<td>Independent reviewer and merger</td>
+</tr>
+<tr>
+<td>Workers</td>
+<td>Antigravity; Grok (read-only consults); others once enabled</td>
+<td>Bounded tasks inside one worktree, no commits; their admin commits</td>
+</tr>
+</tbody>
+</table>
+<h2>Rules that never change</h2>
+<ul>
+<li><strong>One author and one distinct non-author reviewer per PR.</strong> The reviewer either merges the exact reviewed commit (<code>gh pr merge N --merge --match-head-commit &lt;sha&gt;</code>) or returns notes to the author. Nobody merges their own work. Never use <code>--admin</code>, delete the branch, or approve via <code>gh pr review</code>.</li>
+<li><strong>One writer per file at a time.</strong> For example, <code>foreman_web/app.js</code> has a single owning team until it is released.</li>
+<li><strong>Every behavior change ships with tests.</strong> A test counts only after it has been shown to fail on a deliberate break. Documentation-only changes need no test; instead, every factual claim about the app (UI strings, endpoints, file paths, protocol rules) is checked against the code or the protocol doc before review.</li>
+<li><strong>The Codex GitHub reviewer's findings are answered before merge.</strong> Each finding is either fixed or declined with a written reason on the PR by an admin.</li>
+<li><strong>No history rewriting</strong> (rebase plus force-push) of shared branches without the owner's authorization. Merge <code>master</code> into the branch instead.</li>
+<li><strong>The owner alone</strong> handles credentials, config files, deletion, deployment and publishing. Silence or an unavailable provider is never approval.</li>
+<li><strong>If a PR depends on an owner-reserved decision</strong> (for example a screen sign-off or human key review), that decision must be recorded before the reviewer merges the exact reviewed commit.</li>
+<li><strong>&quot;Candidate-key match&quot;, never &quot;mastery&quot;</strong>, until the answer keys are human-reviewed.</li>
+<li><strong>Documents are HTML.</strong> Project docs in <code>docs/</code>, and reports and briefs for the owner, are standalone HTML pages, not Markdown (owner decision, 2026-10-21). Copy the shared style from any existing page, include a light and a dark theme, and add each new page to <code>docs/index.html</code>. <code>README.md</code> stays Markdown, because it is the repository front page on GitHub.</li>
+</ul>
+<h2>How work flows</h2>
+<ol>
+<li>The owner approves the plan. Admins split it into teams with even worker counts and file ownership, recorded in a plan file and a contract file that lists frozen IDs, test-asserted strings and learning invariants.</li>
+<li>Each task gets its own Git worktree and branch from <code>origin/master</code>.</li>
+<li>Workers get a bounded order: what to read, which files they may edit, acceptance checks and tests. They do not commit.</li>
+<li>The admin reviews the diff, re-runs the tests, breaks the code on purpose to prove each new test, then commits.</li>
+<li>A second opinion where it is useful: Grok and Codex review read-only on a shared thread until both say PASS.</li>
+<li>The PR is opened. The non-author reviewer merges after checking the exact commit, the tests, green CI, and that any owner decision the PR depends on has been recorded.</li>
+<li>Claude integrates across teams, runs every suite and a browser walkthrough, and writes the acceptance record.</li>
+</ol>
+<h2>The review lane</h2>
+<p>Each PR moves through these steps in order. Each step catches mistakes the earlier ones miss: round 1 had a mislabelled arm count, a key that a wrong answer could also produce, and stale version metadata, and each was caught at a later step.</p>
+<h3>Capacity</h3>
+<ul>
+<li><strong>At most two agent jobs at once</strong> on this laptop. Bridge calls, worker runs, Cursor MCP calls and Playwright runs all count. A third job has been killed for low memory.</li>
+<li>A plan wave names its two jobs and the files each owns, and later steps wait until a slot frees. For example, round 2's first wave was step 1, the version registry (Codex: <code>src/aesop_lab/foreman.py</code> and its tests), and step 2, the similarity guard (Antigravity: <code>tests/heldout_similarity.py</code> and <code>tests/test_heldout_similarity.py</code>).</li>
+</ul>
+<h3>Worktrees</h3>
+<ul>
+<li><strong>At the start of every task</strong>, count the leftover worktrees (<code>git worktree list</code>). Add one only if the total stays <strong>at four or fewer</strong> afterwards. A session can die before its merge, so cleanup at merge time alone is not enough.</li>
+<li><strong>In the merge session</strong>, remove the PR's worktrees (the author's and the reviewer's) <strong>only after checking ignored files</strong>. Run <code>git -C &lt;worktree&gt; status --porcelain --ignored</code>. If it lists anything besides build caches (<code>node_modules/</code>, <code>__pycache__/</code>, <code>test-results/</code>, <code>*.egg-info/</code>), and in particular any <code>.local/</code> folder or <code>*.sqlite3</code> file, <strong>do not remove it</strong>. <code>git status</code> hides ignored files, and <code>git worktree remove</code> deletes them, so a learner database would be lost. Deleting learner data is the owner's decision. Instead of asking, <strong>archive and then remove</strong>: copy the <code>.local/</code> contents to the plan folder's <code>archive\worktree-local\&lt;worktree&gt;\</code>, verify every copy by hash, and only then remove the worktree. Nothing is lost. Keep the branch.</li>
+</ul>
+<h3>Author preflight</h3>
+<p>Before handing work to the integrator, the author confirms:</p>
+<ul>
+<li><strong>Version pins:</strong> the current pack, content version, protocol version and seed agree everywhere the change touches them.</li>
+<li><strong>Arm minimum:</strong> 20 independent learners per arm, matching <code>minimum_independent_learners_per_arm</code>.</li>
+<li><strong>Wording:</strong> &quot;candidate-key match&quot;, never &quot;mastery&quot;, &quot;learned&quot; or a bare &quot;correct&quot; for draft keys.</li>
+<li><strong>New or changed held-out item:</strong> every common mistake gives an answer different from the key, and the structural-similarity guard (<code>tests/test_heldout_similarity.py</code>) passes.</li>
+</ul>
+<h3>Integration</h3>
+<p>The integrator (Claude) reviews the diff, re-runs every suite CI runs: Python (<code>unittest</code>), node contract tests (<code>node --test</code>), the web unit tests (<code>npm test</code> in <code>web/</code>) and Playwright, and <strong>breaks each new test on purpose</strong> to show it fails before committing.</p>
+<h3>Review and merge</h3>
+<ul>
+<li><strong>The non-author reviewer</strong> (Cursor) checks the exact head commit against the PR's stated contract. It merges with <code>gh pr merge N --merge --match-head-commit &lt;sha&gt;</code>, or returns findings.</li>
+<li><strong>The GitHub Codex reviewer:</strong> judge new findings by <code>created_at</code> after the latest commit, because old comments move onto new commits.</li>
+<li><strong>Convergence rule:</strong> after about four review rounds, only P0, P1 or factually wrong findings block. Other findings are fixed or declined with a written reason.</li>
+<li><strong>Bot stall rule:</strong> if the Codex bot shows &quot;running&quot; for more than 30 minutes, comment <code>@codex review</code> once. If it is still stalled, the merge may go ahead without the bot, but every other requirement still applies: a non-author review of the exact commit, tests checked, green CI, any owner decision the PR depends on recorded, and an exact-SHA merge. Any finding it posts later is still fixed or declined.</li>
+</ul>
+<h2>Talking to other agents</h2>
+<p>Use the agent bridge, <code>C:\Users\edwar\.claude\skills\agent-bridge\ask.ps1</code>:</p>
+<ul>
+<li><code>-Thread &lt;name&gt;</code> keeps a conversation going across calls and agents.</li>
+<li><code>-Template &lt;name&gt; -Set &quot;KEY=value;...&quot;</code> builds the standard orders (<code>review-merge</code>, <code>fix-order</code>, <code>worker-task</code>, <code>consult</code>, <code>report</code>).</li>
+<li><code>-ReplyOnly</code> returns just the answer.</li>
+<li><code>-Relay &quot;a,b&quot;</code> lets two agents iterate until one says AGREED.</li>
+<li><code>-Status</code> shows which tools are signed in.</li>
+</ul>
+<p>Bridge calls are read-only. Edits go through the worker route and need a separate linked worktree. Cursor's edit work needs its approval-gated MCP tool.</p>
+<h3>Known quirks</h3>
+<ul>
+<li>Codex read-only cannot read files here, so paste content into the prompt.</li>
+<li>Grok in read-only mode stops if it tries to run a command, so tell it &quot;no shell commands&quot;.</li>
+<li>Cursor in read-only mode can return an empty reply; ask it to &quot;answer in your reply text&quot;.</li>
+<li>Antigravity may save its answer to its own folder; ask it to &quot;reply in text&quot;.</li>
+<li>Copilot was out of monthly quota on 2026-10-20.</li>
+<li>Cursor in read-only mode cannot read the owner's plan folder, so paste briefs into the prompt.</li>
+<li>Grok runs out of turns if a prompt invites it to read files, so give it everything inline and say &quot;do not read files&quot;.</li>
+<li>The worker route rejects text that looks like a credential, including <code>answer_key:</code>. Rephrase it as &quot;the answer_key field is&quot; until the filter is fixed.</li>
+</ul>
+
+</main></body>
+</html>

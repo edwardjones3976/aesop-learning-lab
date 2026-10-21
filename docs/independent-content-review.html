@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Independent content review: Python functions and recursion draft</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Independent content review: Python functions and recursion draft</h1>
+<p><strong>Reviewer:</strong> Codex (independent of the pack's named author, Claude L1)</p>
+<p><strong>Date:</strong> 2026-10-14 (America/Los_Angeles)</p>
+<p><strong>Pack:</strong> <code>python-functions-recursion</code>, <code>m1-draft.1</code></p>
+<p><strong>Decision:</strong> Changes requested. The pack remains <code>draft</code>; all answer keys remain <code>candidate</code>.</p>
+<h2>Scope and method</h2>
+<p>I read all 5 concepts, 5 lessons, 17 items (including their hints and candidate keys), 3 rubrics, and 8 source records. I checked the prerequisite order, item-family and held-out design, and official Python 3.12 documentation. The repository's content test executed the authored trace snippets and compared their results with the candidate keys. I separately assessed quoted and unquoted forms of both string-valued trace answers through the assessment engine. The review receipts in the pack approve 34 individual records and request changes to the 4 records below; an approval of a record does not promote the whole pack or any candidate key to release status.</p>
+<h2>Changes required before full approval</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Required correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scope-keyword-transfer-01</code></td>
+<td>The value is a string. The worked hint displays <code>&quot;Hi Ana?&quot;</code>, but the candidate key accepts only <code>Hi Ana?</code>; the assessment engine marks the quoted Python string value incorrect.</td>
+<td>State the expected answer format in the prompt or accept both unquoted and Python string-literal forms. Check the new accepted forms against the engine.</td>
+</tr>
+<tr>
+<td><code>recursive-case-transfer-01</code></td>
+<td>The worked hint displays <code>&quot;cba&quot;</code>, but the candidate key accepts only <code>cba</code>. A learner who supplies the quoted string value is marked incorrect.</td>
+<td>Apply the same format or accepted-answer correction.</td>
+</tr>
+<tr>
+<td><code>recursion-recognize-choice-01</code></td>
+<td>The selected definition calls itself but has no stopping case. It is technically the only self-call among the choices, yet it models a broken recursive function immediately before the base-case lesson.</td>
+<td>Replace it with a terminating recursive example, or explicitly ask which definition contains a self-call <strong>even though it will not terminate</strong>. Update the worked hint accordingly.</td>
+</tr>
+<tr>
+<td><code>lesson-recursion-as-self-call</code></td>
+<td><code>steps(n)</code> reaches its base case for positive integers, but not for zero or negative inputs; no input domain is stated. A learner may infer that every input terminates.</td>
+<td>State the positive-input domain or guard nonpositive inputs, and explain that making progress toward a reachable base case is required.</td>
+</tr>
+</tbody>
+</table>
+<p>For the two string items, the engine returned <code>correct</code> for the unquoted candidate and <code>incorrect</code> for its quoted Python representation. The exact-value behavior is consistent with the current implementation; the item wording and hints make the accepted-answer boundary ambiguous.</p>
+<h2>Approved scope and limits</h2>
+<p>The remaining scored keys matched their snippets or listed choices. The other lessons, hints, and rubrics were consistent with the cited Python behavior at the level reviewed. The source records point to official Python 3.12 pages, including <a href="https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions">function definitions and recursion</a>, <a href="https://docs.python.org/3.12/reference/expressions.html#calls">calls and return values</a>, <a href="https://docs.python.org/3.12/reference/executionmodel.html#naming-and-binding">local name binding</a>, <a href="https://docs.python.org/3.12/library/exceptions.html#RecursionError">RecursionError</a>, and <a href="https://docs.python.org/3.12/library/sys.html#sys.getrecursionlimit">the recursion limit</a>.</p>
+<p>This review covers the current five-concept slice. The project brief calls for approximately 20 related concepts, so it does not certify the eventual full pack. It does not establish that the learning policy improves delayed retention or transfer. Before promotion, correct the four records, version changed content appropriately, rerun content and assessment checks, and conduct a new independent review of the changed records and any added concepts. The local preview must continue to label this pack as a development draft until that work is complete.</p>
+
+</main></body>
+</html>

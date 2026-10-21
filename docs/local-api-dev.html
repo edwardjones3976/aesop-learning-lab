@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local API development fixture</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Local API development fixture</h1>
+<p>The local HTTP service currently accepts only the explicit development fixture.
+Its answer keys have no human review receipts. Every response carries
+<code>developmentOnly: true</code>; the service rejects a claim that this catalog is
+reviewed. Do not release it as learning content.</p>
+<p>Run from a checkout with <code>PYTHONPATH=src</code>:</p>
+<pre><code class="language-powershell">$env:PYTHONPATH = 'src'
+py -m aesop_lab.api --development-fixtures --db .local/aesop-dev.sqlite3
+</code></pre>
+<p>The server binds to <code>127.0.0.1:8766</code> and accepts requests addressed to
+<code>127.0.0.1:8766</code> or <code>localhost:8766</code>. Browser requests from the local UI at
+<code>http://127.0.0.1:8765</code> or <code>http://localhost:8765</code> are allowed; other
+<code>Origin</code> values are rejected. POST and DELETE requests without one of those
+allowed <code>Origin</code> headers return 403 <code>forbidden_request</code>; GET and OPTIONS are
+unchanged and still accept requests without <code>Origin</code>. POST endpoints require
+<code>Content-Type: application/json</code>; DELETE needs no JSON content type. Loopback
+binding alone does not validate browser requests.
+The fixture's lesson completion is
+recorded on first start and remains fixed in SQLite across restarts. GET
+<code>/api/v1/session/next?availableMinutes=20&amp;mode=recommended</code> is read-only;
+use <code>mode=practice</code> to choose routine practice while a delayed check is due.
+POST <code>/api/v1/attempts</code> uses the body in <code>api-v1.html</code> and records the first
+answer and highest hint level before the next scheduling decision. It also
+accepts optional <code>availableMinutes</code> (default 20); send the session's value
+when submitting a delayed check so the same time-budget gate applies.</p>
+<p>The browser at <code>http://127.0.0.1:8765/</code> now uses this local API by default.
+Run <code>py -m http.server --bind 127.0.0.1 8765</code> from <code>web/</code> in another terminal. Add
+<code>?scenario=default</code> to use the isolated in-memory fixture instead.</p>
+<p>The service also provides <code>POST /api/v1/self-reviews</code>,
+<code>POST /api/v1/answer-revisions</code>, <code>GET /api/v1/export</code>, and
+<code>DELETE /api/v1/data</code>. The development catalog includes an open-ended
+review item. Deleting learner data leaves the content catalog intact; restart
+the development server to start a new fixture lesson clock.</p>
+<p>Reviewed pack loading and five-concept progression remain integration work.
+The current service accepts a real lesson completion through
+<code>LearningService.complete_lesson()</code>; the CLI calls it for the fixture only.</p>
+
+</main></body>
+</html>

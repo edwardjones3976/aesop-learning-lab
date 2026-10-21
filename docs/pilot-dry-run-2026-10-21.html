@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilot-readiness dry run — 2026-10-21</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Pilot-readiness dry run — 2026-10-21</h1>
+<p>Result: <strong>7 PASS, 2 FAIL, 7 OWNER-ONLY</strong> across the 16 numbered steps in
+<code>docs/real-learner-runbook.html</code>. This is software validation with synthetic inputs,
+not learner evidence or authorization to recruit. No real person participated.</p>
+<p>Tested revision: <code>23fa0e19bdbe5cdcfbce338167d7c7280adcce76</code>, branch
+<code>docs/pilot-dry-run</code>, content <code>m2-draft.11</code>, content identity <code>v11</code>, protocol <code>v8</code>,
+seed <code>20261021</code>. The ratified plan was read from the existing owner planning
+directory, <code>C:/Users/edwar/aesop-declutter-plan/next12r2-final.md</code>; it is not in
+this worktree. Four worktrees existed at task start; none was added to the
+project. No push, PR, comment, approval or merge was performed.</p>
+<h2>Method and step results</h2>
+<p><code>scripts/pilot_readiness_dry_run.py</code> drives the actual <code>Preview</code> API against a
+fresh temporary SQLite database and reopens it to simulate a restart. Its clock
+starts at 2026-10-21 12:00 UTC. Four lessons finish at day 0; the fifth finishes
+at day 0.25. Visits occur at days 1.001, 2.001, 6.999, 7.001, 14.001 and
+14.251, so every started concept's window has closed before final export.
+Candidate keys supply deterministic synthetic answers; this is never advice to
+coach a learner. A separate fresh database serves real HTTP and Chromium checks.
+Temporary databases, downloads and overview files are removed by the helpers.</p>
+<p>OWNER-ONLY means the human action was not simulated as consent or an owner
+decision; the associated software claims were checked as described. UI wording
+below was checked through Chromium or the passing renderer contract tests; API
+values were checked against live <code>Preview</code>/HTTP responses. Renderer checks do
+not imply a 14-day browser session.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Result</th>
+<th>Action and actual software behavior; gap where applicable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 — Consent first</td>
+<td>OWNER-ONLY</td>
+<td>No consent conversation or enrollment of a person. Fresh overview/export created no identity or assignment. Opening a lesson created identity, assignment and exposure records. Browser boot calls that lesson endpoint automatically. Thus the warning about opening the preview is true; there is no in-app consent gate (G1). Local SQLite and loopback serving were checked, but a comprehensive network/privacy audit was not performed.</td>
+</tr>
+<tr>
+<td>2 — Run variables</td>
+<td>PASS</td>
+<td>Checked PowerShell expansion and every consumer against the repo. <code>$code</code>, <code>$sha</code>, <code>$wt</code>, relative <code>$db</code> and external <code>$runDir</code> are consistent; <code>$wt\$db</code> resolves the intended SQLite path when the current directory really is <code>$wt</code>. A real approved SHA must replace the placeholder. <code>L01</code> is a template, not proof of uniqueness. The synthetic run uses temporary paths instead of creating a learner worktree or owner run folder.</td>
+</tr>
+<tr>
+<td>3 — Fresh pinned setup</td>
+<td>FAIL</td>
+<td><code>py scripts/run_foreman.py --port 8780 --db ...</code> works; the script exists and accepts both flags. The actual server binds <code>127.0.0.1</code>. Reviewed the existence, SHA and dirty checks. Also executed the setup block in an isolated nested synthetic Git repository with an impossible target beneath a file. Git emitted <code>fatal: could not create leading directories of ...</code>; <code>cd</code> emitted <code>Cannot find path ... because it does not exist.</code> Execution nevertheless reached a harmless <code>py</code> stub printing <code>WOULD CREATE DATABASE IN WRONG WORKTREE</code>. The current directory happened to be clean and at the pinned SHA. Gap: native-command and directory-change failures do not stop this block (G2). No extra project worktree or real server was created by this negative test.</td>
+</tr>
+<tr>
+<td>4 — Return setup</td>
+<td>FAIL</td>
+<td>Reopened the same synthetic database successfully, preserving answers. Then executed the return block from the clean nested synthetic repository with an absent <code>$wt</code>, matching SHA and an existing database sentinel. The failed <code>cd</code> left the old directory active; all subsequent guards passed and the harmless stub printed <code>WOULD START SERVER IN WRONG WORKTREE</code>. Paths/flags are correct, but the block does not reliably enforce the stated stop-on-failure rule (G2).</td>
+</tr>
+<tr>
+<td>5 — Setup log</td>
+<td>OWNER-ONLY</td>
+<td>No owner run log was created. Browser notice actually read <code>Draft content · m2-draft.11 · Candidate answer keys; independent review remains required. Results are for development, not mastery claims.</code> The version and exact temporary database path were checked; recording browser, zone and approved revision remains the owner's action.</td>
+</tr>
+<tr>
+<td>6 — Briefing</td>
+<td>OWNER-ONLY</td>
+<td>No learner was briefed. The app permits omitted confidence and offers outside-study value <code>some</code>, displayed as <code>Yes, some outside study</code>. Its question is <code>Since studying this concept here, have you studied it elsewhere?</code> An answer with that value classified the later outcome <code>contaminated</code>. Post-submit feedback is compared with candidate keys.</td>
+</tr>
+<tr>
+<td>7 — Lesson and first practice</td>
+<td>PASS</td>
+<td>Opened and completed all five lessons through <code>lesson</code> / <code>complete_lesson</code>, then saved first answers through <code>first_answer</code> before hints. Lesson completion and exposure records persisted. Chromium showed <code>I've studied the worked answer →</code> and then <code>Save first answer →</code>. Practice payloads withheld unrequested hint text and keys; the worked lesson itself remains intentionally visible.</td>
+</tr>
+<tr>
+<td>8 — Assistance</td>
+<td>PASS</td>
+<td>Saved an answer, requested a hint, and submitted. Hint API returned level <code>nudge</code>; submission reported <code>assisted: true</code>, and hint history survived storage. This assisted-only concept did not qualify for a day-1 check. Hints are available only after saving in the normal UI. No human assistance was given.</td>
+</tr>
+<tr>
+<td>9 — Interruptions</td>
+<td>OWNER-ONLY</td>
+<td>Run-log writing remains human. Closed/reopened the Preview store after saving: the session returned the identical <code>firstAnswer</code>; renderer tests showed <code>Saved first answer to resume</code>. A changed first answer was rejected with HTTP status 409 and exact API message <code>This answer ID already belongs to another answer.</code> Requesting a session without saving left no draft. Such an unsaved answer must be logged as <code>lost before save</code>; software cannot reconstruct it.</td>
+</tr>
+<tr>
+<td>10 — Day 1</td>
+<td>PASS</td>
+<td>At day 1.001, a qualifying concept had <code>reviewSchedule.status: due</code>; renderer produced <code>Delayed review due</code>. At day 2.001 an unused day-1 check was <code>overdue</code>, rendered <code>Delayed review overdue</code>. Delayed activity had <code>checkDelayDays: 1</code>. Incorrect day-1 answers were retained. The concept with only hinted practice still received practice after its own day 1; no check was manufactured to qualify it.</td>
+</tr>
+<tr>
+<td>11 — Days 7–14</td>
+<td>PASS</td>
+<td>At day 6.999 no week check was offered. At day 7.001 eligible concepts received <code>checkDelayDays: 7</code>. Another concept first answered its still-unused day-1 check incorrectly at day 7.001; immediately requesting the next session offered its week check, with exact reason <code>It is time for your day-7 question on something you have not seen before.</code> Left that week check unanswered and verified <code>missing</code> after its window closed. Another <code>missing</code> concept lacked qualifying practice. The overview also reported <code>missing</code> before closure, as the runbook explicitly warns. Early is a classifier-only fixture, explained below.</td>
+</tr>
+<tr>
+<td>12 — Return log</td>
+<td>OWNER-ONLY</td>
+<td>No human run log was fabricated. Session recommendation reasons and raw attempt context are available. The renderer labels these <code>Why this activity?</code>. After consuming both checks, the API reason was <code>Keep practicing. There is no new later question available.</code> Outside study is optional and defaults to <code>unknown</code>; the owner must record concept-specific declarations each visit.</td>
+</tr>
+<tr>
+<td>13 — After day 14</td>
+<td>PASS</td>
+<td>At day 14.001, an unused day-1 check was still offered; after answering it, the unused week check was offered and recorded <code>late</code>. Resubmitting the same draft returned the same result without adding an attempt. The first response stayed decisive. No persisted timestamp was changed and no answered check was replayed to replace an outcome.</td>
+</tr>
+<tr>
+<td>14 — Local capture</td>
+<td>PASS</td>
+<td>Actual Chromium <code>Export data</code> download was named <code>aesop-foreman-data.json</code>; it included raw assignment/exposure records, <code>displayPreferences</code> and <code>derived.overview</code>. The controlled-clock export also included raw attempts/drafts/hints and matched <code>overview()</code> exactly. Real <code>curl.exe -s http://127.0.0.1:8780/api/v2/overview -o &lt;temporary overview path&gt;</code> succeeded and matched the browser download's overview. The runbook endpoint/path syntax is correct. Downloads were synthetic and temporary; no owner <code>$runDir</code> was used.</td>
+</tr>
+<tr>
+<td>15 — Report</td>
+<td>OWNER-ONLY</td>
+<td>No learner report or owner sharing decision was made. Checked exported categories and actual delays below. The export remained <code>insufficient_evidence</code>, with zero <code>eligible</code> observations and a fixed 20 independent learners per arm requirement. Owner aggregation must keep categories separate, omit answers/notes and reduce timestamps to days. Candidate-key review policy remains an owner prerequisite (G3).</td>
+</tr>
+<tr>
+<td>16 — Deletion</td>
+<td>OWNER-ONLY</td>
+<td>No decision about a person's data was made. On synthetic data, API deletion removed learner records, reopening preserved <code>deleted: true</code>, and opening a lesson failed with 409 <code>learner_deleted</code>. Chromium smoke tests showed <code>Your data was deleted</code>, retained the state across reload/settings changes, and enrolled again only after explicit <code>Start again</code>. The dry-run journey never pressed it. Actual file removal happened after connections/server closed. Browser site-data clearing, deleting every external copy and writing the deletion date remain owner actions, not verified by the app.</td>
+</tr>
+</tbody>
+</table>
+<h2>Export classifications</h2>
+<p>The final controlled-clock download payload (<code>Preview.export</code>, the same backend
+used by <code>/api/v2/export</code>) contained these observations in <code>derived.overview.experiment</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Classification</th>
+<th>Target / actual delay; reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>function-definition-and-return</td>
+<td><code>provisional</code></td>
+<td>Week target 7 days; actual 7.001 days (604886.4 seconds), unassisted candidate-key match with draft keys.</td>
+</tr>
+<tr>
+<td>parameters-and-local-scope</td>
+<td><code>contaminated</code></td>
+<td>Week target 7 days; actual 7.001 days from raw attempt and lesson-completion records; structured outside-study report <code>some</code>.</td>
+</tr>
+<tr>
+<td>recursion-as-self-call</td>
+<td><code>missing</code></td>
+<td>Week target 7 days; week check left unanswered after an incorrect day-1 response unlocked it; own window closed before final export.</td>
+</tr>
+<tr>
+<td>base-case</td>
+<td><code>late</code></td>
+<td>Week target 7 days, window through day 14; actual 14.001 days (1209686.4 seconds).</td>
+</tr>
+<tr>
+<td>recursive-case-and-trace</td>
+<td><code>missing</code></td>
+<td>Lesson completed at day 0.25; only hinted practice, so qualifying practice/day-1 prerequisites absent. Final export at day 14.251 is after this concept's own window.</td>
+</tr>
+</tbody>
+</table>
+<p>Counts: provisional 1, contaminated 1, missing 2, late 1, eligible 0. Assistance
+is also recorded in raw attempts and concept evidence; it must not be combined
+with independent evidence. In the primary experiment classifier, a hinted
+primary answer is <code>contaminated</code>, not a separate <code>assisted</code> primary category.</p>
+<p><code>early</code> cannot be generated by following the normal monotonic-clock scheduler:
+it refuses week checks before day 7. The retained helper therefore constructs
+one <strong>in-memory</strong> copy of the provisional attempt at day 6.999 and passes it to
+the exact v8 analyzer used by export. It returned <code>early</code>, with no eligible
+observation. A subsequent assertion verified the persisted export was unchanged.
+This checks the classification rule, not an early browser journey. No stored
+timestamp was edited. Existing boundary tests also cover early/late classification.</p>
+<p><code>derived.overview</code> has actual delay on provisional/late observations; contaminated
+observations omit it there. Raw records still contain the required timestamps,
+so the owner can calculate their delays without imputation (G4). No response
+means no actual response delay for <code>missing</code>.</p>
+<h2>Gaps</h2>
+<ol>
+<li><strong>BLOCKER — Consent is procedural only (G1).</strong> Browser boot opens a lesson,
+creating identity, assignment and exposure before any in-app confirmation.
+The runbook's consent-first owner workaround is accurate, but this is not
+ready for an unattended real learner. <strong>Ratified step 8</strong> supplies the gate
+and consent wording; step 9 remains the owner's go/no-go.</li>
+<li><strong>SHOULD-FIX — Setup/return blocks can continue in the wrong directory (G2).</strong>
+Reproduced for runbook steps 3 and 4 under PowerShell's default nonterminating
+error behavior. Validate native exit codes, make directory changes terminate
+on failure, and verify the resolved worktree directory before starting. A
+matching clean SHA alone cannot distinguish two worktrees containing different
+learner databases. <strong>No ratified step explicitly fixes these command guards.</strong>
+Fix and recheck them before using these commands for a real learner.</li>
+<li><strong>BLOCKER — Owner key-review/reporting policy decision remains outside this
+dry run (G3).</strong> Software correctly returns <code>provisional</code> and
+<code>insufficient_evidence</code>; it does not supply the owner's written decision on
+qualified review versus permanent provisional reporting. <strong>Ratified step 11</strong>
+supplies that decision and is an explicit prerequisite for step 9. This is
+a governance dependency, not a classifier failure or a claim that an external
+owner decision was exhaustively searched for.</li>
+<li><strong>NOTE — Some delay reporting requires raw-record arithmetic (G4).</strong>
+<code>contaminated</code> observations omit <code>elapsedDays</code>/<code>elapsedSeconds</code> in the primary
+derived observation. The raw export makes the runbook's actual-delay report
+possible, but the owner must join the first attempt to its lesson completion.
+<strong>No ratified step explicitly fixes this presentation gap.</strong></li>
+<li><strong>NOTE — Early checks are defensive classifier coverage (G5).</strong> The normal
+scheduler prevents early week responses; this dry run covered <code>early</code> with
+an in-memory v8 fixture rather than an impossible normal-path session.
+<strong>No ratified fix required.</strong> Browser clearing, consent, comprehensive privacy
+assurance and owner reporting remain outside automated software validation.</li>
+</ol>
+<h2>Commands and verification</h2>
+<p>Commands ran in this worktree (PowerShell); supporting reads used <code>Get-Content</code>
+and <code>rg</code> against the runbook, plan, server, scheduler, classifier, UI and tests:</p>
+<pre><code class="language-powershell">git status --short
+git worktree list
+git branch --show-current
+git log -1 --format='%H'
+py --version
+py scripts/run_foreman.py --help
+py scripts/pilot_readiness_dry_run.py
+$env:PYTHONPATH='src'
+py -m unittest discover -s tests -p test_foreman_http.py
+py -m unittest discover -s tests -p test_personal_pilot_journey.py
+py -m unittest discover -s tests -p test_key_outcome_locks.py
+py -m unittest discover -s tests -p test_foreman.py
+py -m unittest discover -s tests -p test_experiment_v2.py
+node --test tests/foreman_web_contract.test.mjs
+npm ci --prefix tests/browser --ignore-scripts
+npm test --prefix tests/browser
+node tests/browser/dry-run-download.mjs
+git diff --check
+</code></pre>
+<p>Results: controlled-clock helper PASS; Python HTTP 1/1, journey 1/1, key locks
+3/3, Preview 24/24, classifier/boundaries 13/13; renderer contracts 36/36; Chromium 5/5; actual browser
+download/curl helper PASS. One initial helper run failed because its synthetic
+wrong-answer generator assumed every item had choices; corrected the helper to
+support text answers, then reran successfully. No application defect inferred
+from that harness error. The full unrelated suite was not run.</p>
+<p>The two command-negative reproductions used a clean nested Git repository under
+<code>.local/dry-run-command-check</code>, local synthetic commits, and a PowerShell function
+<code>py</code> that only printed the would-start marker. For step 3, <code>$wt</code> was an impossible
+child of a file; for step 4, it was an absent directory. <code>$sha</code> matched that nested
+repository. The numbered runbook blocks were otherwise used directly, including
+their SHA/dirty/database checks. This setup never launched a server on the
+sentinel file and never changed project worktree registration. The ignored
+synthetic fixture was removed after the check.</p>
+<p>Only this report and two reusable synthetic validation helpers are committed.
+The runbook and application code are unchanged. Independent Claude review and
+Cursor merge remain outstanding.</p>
+
+</main></body>
+</html>

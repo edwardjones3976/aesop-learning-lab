@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consent gate: round 2, step 8</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Consent gate: round 2, step 8</h1>
+<p>Local implementation on <code>feat/consent-gate</code>, based on
+<code>f5b700e3481eefd0b86f5d22804e50d920e8c0cb</code>. No push, PR, approval or merge.
+Claude integrates; Cursor reviews/merges under the existing gates.</p>
+<p>Schema v16 adds <code>learner_consent(slot, text_version, confirmed_at)</code>. Confirmation
+is idempotent and records <code>consent-v1</code> before any enrollment. Export includes
+raw records as <code>learnerConsent</code>. Deletion removes consent atomically with learner
+data; the existing tombstone prevents re-enrollment until Start again. Restart
+only clears that tombstone, so new consent is then required.</p>
+<p>Legacy choice: <strong>migration</strong>, rather than lazy recording. Existing identities
+receive <code>legacy-pre-gate</code> and the migration's UTC timestamp; this timestamp is
+not represented as an earlier affirmative consent. Existing runs continue.
+The gzip fixture was generated using the unchanged v15 base code, with a lesson
+opening, before editing storage. Its test compares every preexisting table row.</p>
+<p>The consent screen replaces the workspace and navigation until confirmed, has
+one button (I agree — start learning), and no inputs. Its shipped text is:</p>
+<blockquote>
+<p>Your answers, hint use, confidence, outside-study notes and timing are stored on this computer only. They are not sent to any outside service, including AI models.</p>
+<p>Results are compared with draft answer keys. They stay provisional and are not a grade or a judgment of what you know.</p>
+<p>One person's answers are not enough evidence to show which teaching method works better.</p>
+<p>You can stop at any time, and you can ask for your data to be deleted.</p>
+</blockquote>
+<p>The phrase about a judgment of what you know expresses the requested limit
+without putting the word <code>mastery</code> into consent markup.</p>
+<p>Enforcement uses <code>SQLiteStore.require_active_learner</code>, preserving the prior
+<code>learner_deleted</code> priority and adding HTTP 409 <code>consent_required</code>. Preview and
+learning-service entry points enforce it, with an additional HTTP route guard.
+The v2 response retains <code>error</code> and also exposes <code>code</code>.</p>
+<p>Gated v2 endpoints:</p>
+<ul>
+<li>GET <code>/api/v2/session</code>, <code>/api/v2/personal-comparison</code>.</li>
+<li>POST <code>/api/v2/lesson</code>, <code>/api/v2/lesson-completions</code>, <code>/api/v2/first-answers</code>,
+<code>/api/v2/hints</code>, <code>/api/v2/attempts</code>, <code>/api/v2/self-reviews</code>,
+<code>/api/v2/revisions</code>, <code>/api/v2/overrides</code>.</li>
+<li>POST <code>/api/v2/personal-comparison/{enroll,start,complete,open,hint,answer,reveal,override}</code>.</li>
+</ul>
+<p>GET overview and export stay read-only and available before consent. Overview
+includes <code>consentRequired</code>; export creates no identity. POST consent records
+only consent. Delete and restart remain available and create no learner rows.</p>
+<p>The v1 API can write learner state, so the gate also covers GET
+<code>/api/v1/session/next</code> and POST <code>/api/v1/attempts</code>, <code>/api/v1/self-reviews</code>,
+<code>/api/v1/answer-revisions</code>, plus the underlying lesson-completion service.
+Export and deletion remain available. No v1 consent route was added; confirmation
+is through the preview or storage, with v1 changes limited to enforcement.
+No protocol modules, packs, or classifications changed. Runbook step 1 retains
+the owner's conversation, describes the app record and removes the workaround.
+Step 3 and 4 command blocks compare byte-for-byte equal to the base content.</p>
+<p>Validation commands (PowerShell: set <code>$env:PYTHONPATH</code> to the absolute <code>src</code>
+path so browser subprocesses inherit it):</p>
+<pre><code class="language-text">PYTHONPATH=src python -m unittest discover -s tests -q
+node --test tests/foreman_web_contract.test.mjs tests/personal_comparison_web.test.mjs
+(cd web &amp;&amp; npm test)
+(cd tests/browser &amp;&amp; npx playwright test)
+PYTHONPATH=src python scripts/check_consent_breaks.py
+</code></pre>
+<p>Final validation:</p>
+<table>
+<thead>
+<tr>
+<th>Suite</th>
+<th style="text-align:right">Passed</th>
+<th style="text-align:right">Failed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python unittest discovery</td>
+<td style="text-align:right">280</td>
+<td style="text-align:right">0</td>
+</tr>
+<tr>
+<td>Foreman and personal-comparison Node contracts</td>
+<td style="text-align:right">51</td>
+<td style="text-align:right">0</td>
+</tr>
+<tr>
+<td>web npm test</td>
+<td style="text-align:right">17</td>
+<td style="text-align:right">0</td>
+</tr>
+<tr>
+<td>Playwright Chromium</td>
+<td style="text-align:right">6</td>
+<td style="text-align:right">0</td>
+</tr>
+</tbody>
+</table>
+<p><code>python -m compileall -q src tests scripts/check_consent_breaks.py</code> and
+<code>git diff --check</code> also passed. The six new Python tests passed again after
+mutations were restored. Node and Playwright were rerun after correcting UTF-8
+encoding in the new consent button label.</p>
+<p>All <strong>14 deliberate breaks failed as intended</strong>, with no survivors. The
+repeatable runner restores exact original source bytes in <code>finally</code> blocks.
+Run it separately from normal suites.</p>
+<table>
+<thead>
+<tr>
+<th>Deliberate break</th>
+<th>Detected by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bypass v2 active/consent check</td>
+<td>fresh endpoints: 19 assertions failed</td>
+</tr>
+<tr>
+<td>Bypass v1 active/consent check</td>
+<td>v1 endpoints: 4 assertions failed</td>
+</tr>
+<tr>
+<td>Confirmation does not persist</td>
+<td>consent/enrollment test failed</td>
+</tr>
+<tr>
+<td>Treat legacy learner as unconsented</td>
+<td>legacy opens/works test failed</td>
+</tr>
+<tr>
+<td>Delete exposure rows during migration</td>
+<td>v15 preservation test failed</td>
+</tr>
+<tr>
+<td>Keep consent after deletion</td>
+<td>deletion/restart test failed</td>
+</tr>
+<tr>
+<td>Auto-consent on restart</td>
+<td>deletion/restart test failed</td>
+</tr>
+<tr>
+<td>Remove privacy statement</td>
+<td>Node consent markup test failed</td>
+</tr>
+<tr>
+<td>Add mastery wording</td>
+<td>Node consent markup test failed</td>
+</tr>
+<tr>
+<td>Add prechecked checkbox</td>
+<td>Node consent markup test failed</td>
+</tr>
+<tr>
+<td>Render workspace before consent</td>
+<td>Node workspace contract failed</td>
+</tr>
+<tr>
+<td>Ignore consent in boot</td>
+<td>Node boot contract failed</td>
+</tr>
+<tr>
+<td>Bypass browser boot gate</td>
+<td>fresh-server Playwright test failed</td>
+</tr>
+<tr>
+<td>Bypass server gate</td>
+<td>fresh-server Playwright test failed</td>
+</tr>
+</tbody>
+</table>
+<p>Initial setup issues were resolved: browser dependencies needed <code>npm ci</code>;
+Python subprocesses needed an absolute <code>PYTHONPATH</code>; historical journeys needed
+explicit consent; downgrade-style old migration tests required idempotent table
+creation, consistent with the older migrations. No suite failure remains.</p>
+<p>Changed implementation: <code>src/aesop_lab/storage/sqlite.py</code>, <code>src/aesop_lab/foreman.py</code>,
+<code>src/aesop_lab/api/{http,service}.py</code>, <code>foreman_web/{app.js,index.html,style.css}</code>.
+Tests: new <code>tests/test_consent_gate.py</code>, v15 fixture and provenance,
+<code>scripts/check_consent_breaks.py</code>, consent contracts and browser journey, and
+explicit confirmation in the preexisting API, Foreman, registry, key lock,
+M1 journey, personal comparison, pilot journey and synthetic-cohort tests.
+Docs: this report and <code>docs/real-learner-runbook.html</code>.</p>
+<p>Scope/uncertainties: no known implementation blocker. The privacy text reflects
+the existing local-only architecture; this task is not a comprehensive network
+privacy audit or a real-learner pilot. Non-author review and repository gates
+remain for integration. Browser validation uses Chromium, as configured in CI.</p>
+<p>Exact changed files:</p>
+<ul>
+<li><code>docs/consent-gate-validation-2026-10-21.html</code></li>
+<li><code>docs/real-learner-runbook.html</code></li>
+<li><code>foreman_web/app.js</code></li>
+<li><code>foreman_web/index.html</code></li>
+<li><code>foreman_web/style.css</code></li>
+<li><code>scripts/check_consent_breaks.py</code></li>
+<li><code>src/aesop_lab/api/http.py</code></li>
+<li><code>src/aesop_lab/api/service.py</code></li>
+<li><code>src/aesop_lab/foreman.py</code></li>
+<li><code>src/aesop_lab/storage/sqlite.py</code></li>
+<li><code>tests/browser/foreman_smoke.spec.mjs</code></li>
+<li><code>tests/fixtures/consent-v15.md</code></li>
+<li><code>tests/fixtures/consent-v15.sqlite3.gz</code></li>
+<li><code>tests/foreman_web_contract.test.mjs</code></li>
+<li><code>tests/test_api.py</code></li>
+<li><code>tests/test_consent_gate.py</code></li>
+<li><code>tests/test_foreman.py</code></li>
+<li><code>tests/test_foreman_http.py</code></li>
+<li><code>tests/test_foreman_registry.py</code></li>
+<li><code>tests/test_key_outcome_locks.py</code></li>
+<li><code>tests/test_m1_journey.py</code></li>
+<li><code>tests/test_personal_comparison.py</code></li>
+<li><code>tests/test_personal_pilot_journey.py</code></li>
+<li><code>tests/test_synthetic_cohort_v8.py</code></li>
+</ul>
+
+</main></body>
+</html>

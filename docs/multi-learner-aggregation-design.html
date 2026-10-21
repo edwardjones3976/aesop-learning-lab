@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-learner aggregation design</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Multi-learner aggregation design</h1>
+<h2>1. Scope and implementation gate</h2>
+<p>Design only: round 2, step 12 of <code>aesop-declutter-plan/next12r2-final.md</code> (ratified 2026-10-21). No aggregator, recruitment, upload endpoint or consent change is implemented here. Implementation must wait for the owner's written step-9 <strong>go</strong>, following the step-11 key-review policy. This design grants no permission to share data. Claude checks the document; Cursor independently reviews and merges through repository gates.</p>
+<p>The existing application analyzes one learner per SQLite database. Its export contains raw records and <code>derived.overview</code>, not a safe sharing payload (<code>src/aesop_lab/storage/sqlite.py:SQLiteStore.export_all</code>; <code>src/aesop_lab/foreman.py:Preview.export</code>). Proposed requirements below are new design requirements, not claims that these capabilities already exist.</p>
+<h2>2. Input: the only shared payload</h2>
+<p>The owner derives a strict, allowlisted JSON summary locally from each learner's export. <strong>Only that per-learner summary leaves the learner's computer; never the raw export, SQLite database or complete overview.</strong> One summary describes one learner and one protocol/content cohort.</p>
+<p><strong>A summary may be made only after every started concept's own primary window has closed.</strong> <code>_analyze</code> labels a concept <code>missing</code> as soon as it has no primary-family response, even before its window opens (<code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>). The runbook says to ignore that label until the concept's day-14 window closes (<code>docs/real-learner-runbook.html</code>, step 11). Because the summary drops timestamps and the aggregator rejects a second file under the same learner code, an early summary would freeze a premature <code>missing</code>. The converter must therefore refuse to produce a summary while any started concept's window is still open, and the aggregator must reject a started row without <code>windowClosed: true</code>. Assigned but unstarted concepts carry <code>started: false</code> and <code>windowClosed: null</code>; their <code>missing</code> is terminal once the run has ended. The run ends only when every started concept's window has closed (<code>docs/real-learner-runbook.html</code>, After the run).</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>summarySchemaVersion</code></td>
+<td>Fixed summary contract version, initially <code>aggregation-summary-v1</code>.</td>
+</tr>
+<tr>
+<td><code>learnerCode</code></td>
+<td>Random study-scoped code with at least 128 random bits; not a name, UUID from the app, or hash of that UUID. Reused for that person's submissions within the study.</td>
+</tr>
+<tr>
+<td><code>protocolId</code>, <code>protocolVersion</code></td>
+<td>Exact persisted protocol identity, not inferred from current defaults.</td>
+</tr>
+<tr>
+<td><code>contentVersion</code>, <code>packVersion</code></td>
+<td>Exact activity content version and pinned pack version. Current v8 uses content <code>v11</code>, pack <code>m2-draft.11</code>.</td>
+</tr>
+<tr>
+<td><code>contentReviewStatus</code></td>
+<td><code>draft</code> or <code>reviewed</code>, verified against the pinned material and owner policy; candidate keys require <code>draft</code>.</td>
+</tr>
+<tr>
+<td><code>evidenceOrigin</code></td>
+<td><code>real_human_observations</code> or <code>synthetic_software_validation</code>; separate cohorts, never pooled. A declaration is not proof of provenance.</td>
+</tr>
+<tr>
+<td><code>verification</code></td>
+<td>Fixed fields: converter version, source code revision, <code>localClassificationVerified: true</code>, and <code>ownerChecked: true</code>. No arbitrary strings or embedded logs.</td>
+</tr>
+<tr>
+<td><code>concepts[]</code></td>
+<td>One row per assigned concept, including missing outcomes; no repeated concept IDs.</td>
+</tr>
+<tr>
+<td><code>concepts[].started</code></td>
+<td><code>true</code> when the concept's lesson completion is recorded, otherwise <code>false</code>. An unstarted concept has no window; at summary time its <code>missing</code> is terminal, because the run has ended.</td>
+</tr>
+<tr>
+<td><code>concepts[].windowClosed</code></td>
+<td>For a started concept, it must be <code>true</code>: the converter verified locally, from the raw lesson-completion time and the protocol window, that this concept's primary window (day 7 through day 14 after its own lesson completion) had fully closed when the summary was made. For an unstarted concept, it must be <code>null</code>. Any other combination is rejected.</td>
+</tr>
+<tr>
+<td><code>concepts[].conceptId</code></td>
+<td>Fixed concept ID from the pinned protocol.</td>
+</tr>
+<tr>
+<td><code>concepts[].arm</code></td>
+<td>Persisted <code>text</code> or <code>diagram</code> assignment.</td>
+</tr>
+<tr>
+<td><code>concepts[].classification</code></td>
+<td>Verified category from section 4.</td>
+</tr>
+<tr>
+<td><code>concepts[].targetDelayDays</code></td>
+<td>Integer protocol target, currently 7.</td>
+</tr>
+<tr>
+<td><code>concepts[].actualDelayDays</code></td>
+<td>Whole completed elapsed days from exposure completion to the decisive first-family response: floor of elapsed seconds / 86400; null when no valid pair exists. Never a negative number.</td>
+</tr>
+<tr>
+<td><code>concepts[].hintAssisted</code></td>
+<td>Boolean for assistance on that decisive response; null if no response exists.</td>
+</tr>
+<tr>
+<td><code>concepts[].outsideStudy</code></td>
+<td><code>some</code>, <code>none</code>, <code>unknown</code> or null; preserves unknown/missing rather than treating them as no study. <code>some</code> when study for that concept was reported as <code>some</code> on <strong>any same-concept attempt at or before the decisive response's time</strong> (simultaneous reports count; later ones do not), matching v8 contamination (<code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>, prior same-concept outside-study check), or when it was reported to the owner.</td>
+</tr>
+<tr>
+<td><code>concepts[].outsideStudyReportedToOwner</code></td>
+<td>Boolean; records a structured owner exclusion without transmitting the learner's explanation.</td>
+</tr>
+<tr>
+<td><code>concepts[].keyMatch</code></td>
+<td><code>match</code>, <code>nonmatch</code> or null, derived locally; only retained for provisional, eligible or late scored observations. No answer or answer key.</td>
+</tr>
+<tr>
+<td><code>concepts[].exposureComparability</code></td>
+<td><code>unavailable</code>, <code>mismatched</code> or <code>unverified</code>, as applicable; this design cannot establish controlled exposure.</td>
+</tr>
+</tbody>
+</table>
+<p>Version pins and targets come from <code>src/aesop_lab/experiment/descriptive_v8.py:ExposureV8.__post_init__</code>, <code>:analyze_v8</code> and its <code>DESCRIPTIVE_V8</code> configuration; the pack pin is checked by <code>tests/test_synthetic_cohort_v8.py:SyntheticV8CohortValidationTests.test_forty_synthetic_learner_databases_validation</code>. Persisted assignments are checked locally by <code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code> and <code>:_assign_condition</code>.</p>
+<p>Excluded at every nesting level: answer text, answer keys, revisions, free-text notes (including outside-study detail, override reasons and run logs), names/contact details, learner identity UUID, hashes of that identity, attempt/draft IDs, database paths, raw record arrays, complete <code>derived</code>/overview objects, elapsed seconds, fractional days, and timestamps finer than a day. No calendar timestamps are needed at all. Unknown fields are rejected, not silently copied. The raw-field risks are visible in <code>src/aesop_lab/storage/sqlite.py:SQLiteStore.export_all</code>; these exclusions and the allowlist are proposed privacy controls.</p>
+<h2>3. Local de-identification and sharing check</h2>
+<p>The <strong>owner runs the future converter locally on the learner's computer</strong> with the pinned content and code. No agent or external processor receives the source export. The converter reconstructs assignments, exposures and attempts and re-runs the pinned analyzer (<code>src/aesop_lab/foreman.py:Preview.experiment_findings</code>; <code>src/aesop_lab/experiment/descriptive_v8.py:analyze_v8</code>). It compares the result with <code>derived.overview.experiment</code>, refusing discrepancies, version mismatches, malformed records or ambiguous identity. It never treats a supplied classification as authority.</p>
+<p>The first primary-family encounter, ordered by occurrence time then attempt ID, remains decisive; a later successful response cannot replace it (<code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>). The owner checks this selection, classifications, assignment/version pins, assistance and outside-study flags against the local records. For categories without derived delays, the converter joins that same first attempt to the completed exposure locally; it does not invent a zero (<code>:_classify_first</code> returns no delay for several exclusions). Exact time arithmetic precedes removal of timestamps and rounding.</p>
+<p>The owner generates or retrieves the random code from a private study register, confirms separate sharing consent, and inspects the final serialized summary. A strict schema/privacy check must pass before sharing. Source exports, identity-to-code mappings, consent records and detailed verification logs remain on their originating computer, outside Git and agent prompts. The shared verification block records completion, not those private records. Consent is an owner check, not something a summary boolean can establish.</p>
+<h2>4. Aggregation and refusal rules</h2>
+<ol>
+<li>Partition by exact protocol ID/version, content version, pack version, review status and evidence origin. Different protocol or content versions are <strong>never pooled</strong>, relabeled or migrated. A single output may contain separately labeled cohorts only. Existing version/type/assignment checks are in <code>src/aesop_lab/experiment/descriptive_v8.py:ExposureV8.__post_init__</code> and <code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>; cross-file partitioning is new.</li>
+<li>Reject duplicate learner codes within a study, including identical resubmissions and codes appearing in different cohorts; never silently pick a newer file. Reject duplicate concept rows and conflicting assignments. The owner's private register must also detect a person submitting under another code or after restarting a database. Random codes alone cannot prove distinct people; unresolved independence means refusal. Existing duplicate exposure/assignment checks operate only within one database (<code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>); study-wide duplicate detection is proposed.</li>
+<li>Preserve the analyzer's categories: <code>missing</code>, <code>exposure_incomparable</code>, <code>invalid</code>, <code>contaminated</code>, <code>ungraded</code>, <code>early</code>, <code>late</code>, <code>provisional</code>, <code>eligible</code>. Assistance is a flag, not a replacement classification. Incomplete exposure/no first response is missing; mismatched exposure is separate. Wrong metadata/future responses are invalid; non-held-out, previously encountered or hinted checks are contaminated; v8 also contaminates outside study reported by the first response. Unsupported scoring is ungraded. The exact elapsed window is inclusive day 7 through day 14; earlier and later remain separate. Sources: <code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>, <code>:_classify_first</code>.</li>
+<li>Verify classifications locally using those exact rules before de-identification. The aggregator requires supported converter/code provenance and completed local verification, validates enums, pins, row uniqueness, candidate-key restrictions and logical consistency (for example, assisted cannot be provisional). It rejects inconsistency rather than repairing a label. Whole-day delays cannot distinguish day 14 from day 14 plus one second; they must <strong>never</strong> be used to reclassify. Existing display uses fractional boundary-aware days (<code>src/aesop_lab/api/delay_display.py:display_delay_days</code>); this summary deliberately uses coarser days. The aggregator cannot independently reconstruct first-response timing, assignment hashing or scoring without excluded records. Unverifiable provenance requires owner-local re-verification, never a request to upload raw data.</li>
+<li>With candidate keys, no observation is <code>eligible</code>: otherwise qualifying observations are <code>provisional</code>, whether matching or not. Keep early/late/contaminated categories intact. Reject an eligible label under draft keys. Apply the owner's step-11 policy; this design does not assert that a decision has already been recorded or that a named review automatically validates keys. Sources: <code>src/aesop_lab/experiment/descriptive_v2.py:_classify_first</code>, <code>:DescriptiveProtocolV2.public</code>; governance: ratified steps 9 and 11.</li>
+<li>One learner contributes at most <strong>one independent unit per concept-arm</strong>. Count enrollment, provisional outcomes and eligible reviewed outcomes separately. Do not sum five concept observations into five people; learners can occur in both arms across concepts, so cross-concept totals are correlated. No pooled cross-concept effect estimate or confidence interval is specified. Existing separation of learner and observation counts is in <code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code> and <code>:DescriptiveProtocolV2.public</code>.</li>
+<li>For every concept comparison, keep <code>insufficient_evidence</code> until <strong>each arm</strong> has at least <code>minimum_independent_learners_per_arm</code> verified independent learners with eligible reviewed outcomes (currently 20). Assigned counts or provisional counts do not satisfy that gate. Twenty per arm is necessary, not sufficient: candidate keys and unverified exposure still prevent sufficient-evidence claims. Current local <code>_analyze</code> always returns <code>insufficient_evidence</code>; its count semantics and <code>:effect_policy_gate_v2</code> establish the conservative constraints. The latter is v2-specific and must not be invoked as authorization for v8. This design keeps aggregate status <code>insufficient_evidence</code>; any future status transition needs a separately reviewed specification.</li>
+</ol>
+<p>An outside-study report made only to the owner is an additional, explicitly flagged exclusion; retain the verified software classification but exclude the row from outcome denominators and show the separate exclusion count. Do not overwrite history to simulate an app report. This follows <code>docs/real-learner-runbook.html</code>, Report rules; code scope is app-recorded reports in <code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code> and <code>:_classify_first</code>.</p>
+<h2>5. Privacy and separate sharing consent</h2>
+<p>Step 8's <code>consent-v1</code> covers storing data <strong>on this computer only</strong>. It is not permission to transmit a learner summary to a collector, repository, AI service or other processor. The in-app gate merged in #57 (schema v16 <code>learner_consent</code>, text version <code>consent-v1</code>) records only that local consent; it is not a sharing mechanism. The runbook's local aggregate guidance is not a substitute for specific sharing consent. No summary is shared until the owner has approved wording and the learner has explicitly agreed.</p>
+<p><strong>OWNER-REVIEW — draft separate consent, not approved or active:</strong></p>
+<blockquote>
+<p>I separately agree that the owner may send a de-identified summary of my study observations to [named recipients and processors] for [specified aggregation/report purpose]. The summary contains a random study code, protocol/content versions, and per-concept study arm, classification, whole-day target/actual delay, hint assistance, outside-study flags, candidate-key match status and exposure-comparability status, plus software verification metadata. It contains no answers, free-text notes, exact timestamps or app identity UUID. Combining these details may still make me recognizable, especially in a small group. Recipients will store it at [location] for [retention period], with access limited to [roles]; [state whether any AI processor receives it and its retention]. I may decline sharing and stop participation. I can request deletion through [contact/process] until [cutoff]; already distributed aggregate reports may not be retractable. I may inspect the summary before it is sent. My original local-storage consent does not authorize this sharing.</p>
+</blockquote>
+<p>The owner must replace every bracketed item, decide retention/deletion arrangements and record an explicit opt-in separately from local consent. Blank terms mean no sharing. Per-learner summaries remain restricted data; outward reports omit learner codes and must receive a small-cell/privacy review before distribution. These are proposed controls, not implemented consent or anonymity guarantees.</p>
+<h2>6. Output report contract and claim limits</h2>
+<p>Produce a deterministic machine-readable report and a matching readable table. Header: report schema/converter revision, exact cohort pins, review status, evidence origin, number accepted/rejected with fixed reason codes, <code>analysisUnit: independent_learner</code>, threshold 20 and <code>status: insufficient_evidence</code> with reasons. Refusal logs must not echo rejected raw values or private filenames.</p>
+<p>For each concept and arm, show unique learners assigned, counts for every classification (including zeros), owner-only outside-study exclusions, distinct provisional/eligible outcome counts, and candidate-key matches/nonmatches in their respective categories. Show target and whole-day actual-delay distributions with null-delay counts; label actual delays as completed whole days, unsuitable for testing window boundaries. Show assistance, outside-study unknown/missing counts and exposure-comparability counts separately. Count late matches separately from on-time matches. Denominators exclude missing, invalid, contaminated, ungraded, early, late and owner-excluded rows; candidate-key summaries use only provisional rows and are explicitly provisional. Never blend categories to improve a rate. These count distinctions follow <code>src/aesop_lab/experiment/descriptive_v2.py:_analyze</code>; aggregate formatting is proposed.</p>
+<p>Do not publish learner codes or individual rows in the outward report. Include an uncertainty statement: candidate keys are provisional; exposure comparability is unverified; repeated concepts within a learner are dependent; de-identification does not guarantee anonymity. Never claim mastery, validated retention, a causal method effect, a method winner, or automatic policy/scheduler authorization. No significance test, causal effect estimate or confidence interval is specified here. Even reviewed descriptive outcomes do not establish causal superiority (<code>src/aesop_lab/experiment/descriptive_v2.py:DescriptiveProtocolV2.public</code>, <code>:effect_policy_gate_v2</code>). Synthetic results validate software mechanics only (<code>tests/test_synthetic_cohort_v8.py:expected_classification</code> and <code>:SyntheticV8CohortValidationTests.test_forty_synthetic_learner_databases_validation</code>).</p>
+<h2>7. Future implementation validation</h2>
+<p>No tests or implementation are added by this design. After the step-9 go, require:</p>
+<ul>
+<li>Synthetic local exports generated through the real Preview API, adapting <code>tests/test_synthetic_cohort_v8.py:SyntheticV8CohortValidationTests.test_forty_synthetic_learner_databases_validation</code> and <code>:expected_classification</code>. Exercise all seven scripted paths and compare converter output to a fresh pinned analyzer result. Existing cohort totals of 20 assigned per arm across concepts do not prove 20 qualifying learners per concept-arm.</li>
+<li>Golden JSON and readable reports with stable ordering, explicit zero/null counts and exact denominators. Test input-order invariance and separate synthetic/human cohorts; label all fixtures synthetic.</li>
+<li>Refusal fixtures for raw exports, nested answers/notes/UUIDs, fractional delays, fine timestamps, unknown fields, unsupported schemas, missing verification/consent checks, malformed values, foreign protocol/content versions and altered classifications. Ensure refusal logs do not leak their contents.</li>
+<li>Duplicate tests: repeated file, changed filename, same code with conflicting values, repeated concept, cross-cohort repeated code and owner-register detection of the same person under two codes. No evidence claim when independence is unresolved.</li>
+<li>Boundary tests at day 7 and day 14 and one second either side: classify locally before flooring; ensure identical whole-day values cannot override different verified classes. Include absent completion/response, invalid metadata, ties ordered by attempt ID, prior family exposure, hints, ungraded scoring, outside study before versus after the decisive response, and an owner-only report.</li>
+<li>Window-closure tests: the converter refuses while any started concept's window is open, including the case where <code>_analyze</code> already reports <code>missing</code>. A summary made one second after day 14 for each started concept is accepted. A started row without <code>windowClosed: true</code> is rejected, and so is an unstarted row with a non-null <code>windowClosed</code>. A finished run that includes an assigned but unstarted concept is summarizable, with that row <code>missing</code>. An outside-study report at the same timestamp as the decisive response yields <code>outsideStudy: some</code>.</li>
+<li>Threshold tests with 19/20/21 qualifying independent learners in each concept-arm; more concepts from one learner never increase that count. Candidate keys always yield zero eligible outcomes, including when assigned totals exceed 20. Exposure limitations retain <code>insufficient_evidence</code>.</li>
+<li>Deliberately break classification verification, raw-field refusal, deduplication and provisional-only counting to prove the new tests fail. Non-author review and repository CI gates remain required; synthetic success is never human-learning evidence.</li>
+</ul>
+<h2>8. Open questions for the owner</h2>
+<ul>
+<li>Where is the written step-9 go/no-go, and which step-11 policy applies: named qualified review/date or permanent provisional reporting?</li>
+<li>Who receives summaries, including any AI processor, and what storage, retention, deletion cutoff and completed sharing-consent wording are approved?</li>
+<li>Who maintains the private study register and verifies that different random codes represent different people across computers/restarts?</li>
+<li>What outward audience and minimum cell-size/suppression policy are acceptable for small cohorts?</li>
+<li>Is this conservative descriptive-only contract sufficient, or should a later independently reviewed specification address exposure verification and any status transition?</li>
+</ul>
+
+</main></body>
+</html>

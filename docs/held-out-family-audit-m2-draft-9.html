@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Held-out family audit: m2-draft.9</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Held-out family audit: m2-draft.9</h1>
+<p>Date: 2026-10-20. Auditor: Codex, Team B, ratified plan step 7 (audit only).
+Baseline: <code>4d6baf37261eedb4350ea240a258b951eaabe8b2</code>, branch <code>docs/held-out-audit</code>.</p>
+<h2>Scope and decision standard</h2>
+<p>Sources: <code>docs/descriptive-pilot-v6.html</code>, the complete lessons (including diagrams), items, hints, worked solutions, rubrics and explanations in <code>content/packs/python-functions-recursion/pack-m2-draft.9.json</code>; primary mapping inherited through <code>src/aesop_lab/experiment/descriptive_v6.py</code> to <code>descriptive_v3.py</code>; answer normalization in <code>src/aesop_lab/assessment/items.py</code>.</p>
+<p>V6 requires the first unassisted, unfamiliar, deterministically scored primary response at days 7–14. A distinct family ID alone does not prove unfamiliarity. This audit compares semantic structure as well as names, numbers and surface. Reusing basic function/recursion syntax is necessary for assessing the same concept; a renamed or renumbered studied solution is insufficient. The protocol does not prescribe a numerical threshold for structural distance, so borderline judgments are explicitly reserved for human review.</p>
+<p>All five mapped primary families occur once, are marked held out, have delay 7, and use trace items with candidate keys and a <code>result</code> check expression. No primary family ID occurs in lesson encountered-family metadata or another item. Those metadata checks pass; they cannot establish a particular learner's actual exposure history. Comparisons below conservatively include every non-held-out item and all five day-one held-out items, because these could precede day seven. Worked answers are included even if a particular learner never reveals them. All five lessons and diagrams were compared across concepts, not just within the target concept. Every other day-seven primary is also treated as potentially encountered before each target, including its revealed worked answer; the pairwise comparisons below cover either ordering.</p>
+<h2>Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Primary item</th>
+<th>Primary family</th>
+<th>Candidate value</th>
+<th>Family judgment</th>
+<th>Defect severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Function definition and return</td>
+<td><code>def-return-week-01-v9</code></td>
+<td><code>def-return-shipping-week-v4</code></td>
+<td><code>16</code></td>
+<td>Separate</td>
+<td>None found</td>
+</tr>
+<tr>
+<td>Parameters and local scope</td>
+<td><code>scope-week-01-v9</code></td>
+<td><code>scope-caller-local-default-week-v5</code></td>
+<td><code>[map]!:map</code></td>
+<td>Separate</td>
+<td>None found</td>
+</tr>
+<tr>
+<td>Recursion as self-call</td>
+<td><code>recursion-week-01-v9</code></td>
+<td><code>recursion-nested-wrap-week-v5</code></td>
+<td><code>[[[core]]]</code></td>
+<td>Borderline structural distance; human decision needed</td>
+<td>Medium concern</td>
+</tr>
+<tr>
+<td>Base case</td>
+<td><code>base-case-week-01-v9</code></td>
+<td><code>base-case-threshold-halving-week-v4</code></td>
+<td><code>small!!!</code></td>
+<td>Separate from earlier practice; wrapping-first ordering needs human decision</td>
+<td>Medium cross-primary concern</td>
+</tr>
+<tr>
+<td>Recursive case and trace</td>
+<td><code>recursive-case-week-01-v9</code></td>
+<td><code>recursive-case-lamp-toggle-week-v6</code></td>
+<td><code>on</code></td>
+<td>Separate</td>
+<td>None found</td>
+</tr>
+</tbody>
+</table>
+<p>No incorrect candidate key or ambiguous computed value was found. This is an author-side audit, not qualified non-author validation, human approval, or evidence of a verified learning effect. No review receipt or <code>human_reviewed</code> status is conferred.</p>
+<h2>1. Function definition and return</h2>
+<p>Item <code>def-return-week-01-v9</code>; family <code>def-return-shipping-week-v4</code>.</p>
+<p>The shipping surface, <code>shipping</code>/<code>weight</code> names and piecewise rule differ from the lesson's <code>price_with_tax(20)</code> and <code>show_total(5)</code> examples (<code>lesson-price-with-tax-v4</code> and <code>def-return-recall-v4</code>). Compared with <code>def-return-choice-a</code>, <code>def-return-recall-v4</code> and <code>def-return-explain-v4</code>, this requires computed return values rather than identifying <code>return</code>, recalling <code>None</code>, or explaining print versus return. Compared with <code>def-return-trace-a</code> (<code>double(7) + 1</code>) and day-one <code>def-return-transfer-a</code> (<code>area(3, 4) - 2</code>), it evaluates two independent calls, takes different branches, and adds their results. Inputs 4 and 1, threshold 2, base fee 5 and rate 3 form a new calculation; individual constants overlap other content, but the rule and call structure are not copied. The scope lesson's tax helper also lacks branching and two-call combination. No other lesson, practice, rubric or worked solution teaches this shipping calculation.</p>
+<p>Candidate accepted list: <code>[&quot;16&quot;]</code>. <code>shipping(4) = 5 + (4 - 2) * 3 = 11</code>; <code>shipping(1) = 5</code>; result is 16. Unambiguous integer, deterministically scorable. Hints and explanation agree. Defect: none found; no fix proposed.</p>
+<h2>2. Parameters and local scope</h2>
+<p>Item <code>scope-week-01-v9</code>; family <code>scope-caller-local-default-week-v5</code>.</p>
+<p>The word-marking surface (<code>mark</code>, <code>word</code>, <code>suffix</code>, <code>note</code>, <code>map</code>, brackets and colon) replaces the lesson's numeric tax helper (<code>lesson-keyword-default-global-v4</code>: global rate 99, default .05, explicit .10, price 40). It uses an omitted default and a caller variable retained after local rebinding, rather than an explicit keyword override and matching global/local names. Against <code>scope-local-trace-a</code> (both local-return and global-choice items), it changes arithmetic to string construction and combines the returned value with the unchanged caller value. <code>scope-parameter-choice-v4</code> and <code>scope-local-explain-v4</code> teach binding principles but contain no equivalent composite trace. Day-one <code>scope-keyword-transfer-a</code> is the nearest string example: <code>greet(&quot;Ana&quot;, punctuation=&quot;?&quot;)</code> overrides its default and returns a single greeting; the primary instead uses its default, rebinds the local argument name, and then reuses the original caller binding. It is not a name-only rewrite. There are no numeric inputs to vary here. The recursion primary also uses brackets, but has a recursive nesting structure, not local rebinding; none of the earlier cross-concept examples supplies this answer.</p>
+<p>Candidate accepted list: <code>[&quot;[map]!:map&quot;, &quot;'[map]!:map'&quot;, &quot;\&quot;[map]!:map\&quot;&quot;]</code>. Local <code>word</code> becomes <code>[map]</code>; default suffix adds <code>!</code>; caller <code>note</code> remains <code>map</code>; colon joins the two. All accepted spellings denote the same answer, with optional surrounding quotes. Unambiguous and deterministically scorable. Hints and explanation agree. Defect: none found; no fix proposed.</p>
+<h2>3. Recursion as self-call</h2>
+<p>Item <code>recursion-week-01-v9</code>; family <code>recursion-nested-wrap-week-v5</code>.</p>
+<p><code>nest</code> and the <code>core</code>/bracket surface differ from <code>countdown</code> and its numbered <code>go</code> message (<code>lesson-countdown-prepend-v4</code>). The lesson uses <code>str(n) + &quot;, &quot; + countdown(n - 1)</code>; the primary puts a constant on each side of the recursive result. Its base string is new and its requested depth is 3 rather than the lesson's 2. However, <code>recursion-application-v4</code> already asks for a three-level string result from <code>'*' + repeat_mark(n - 1)</code> with an empty-string base. The primary retains the zero test, decrement-by-one chain, three waiting calls and concatenated return. The additional suffix and nonempty center require tracking nesting, but the control structure is substantially studied. This is not a literal copy, yet changed names and symbols alone would not prove an unfamiliar family.</p>
+<p>Other same-concept families are less close: <code>recursion-recognize-a</code> identifies a terminating self-call, <code>recursion-explain-a</code> explains it, <code>recursion-call-order-v4</code> follows entries 2, 1, 0, and day-one <code>recursion-halving-transfer-a</code> actually doubles the returned numeric value over decremented levels. Cross-concept day-one <code>recursive-case-transfer-a</code> returns <code>reverse(text[1:]) + text[0]</code>, so suffix concatenation on unwind may also have been seen, although input shrinking and the output reversal differ. Numeric sum/factorial/threshold examples elsewhere do not directly supply nested bracket output.</p>
+<p>Candidate accepted answers are <code>[[[core]]]</code>, <code>'[[[core]]]'</code>, and <code>&quot;[[[core]]]&quot;</code> (ordinary ASCII surrounding quotes for the latter two). Returns at n=0,1,2,3 are <code>core</code>, <code>[core]</code>, <code>[[core]]</code>, <code>[[[core]]]</code>. Unambiguous and deterministically scorable; hints and explanation agree.</p>
+<p>Defect/concern: <strong>Medium — uncertain structural separation</strong>, not a demonstrated key error or literal duplicate. Proposal: a qualified human reviewer should explicitly accept or reject two-sided wrapping as enough new application relative to countdown, repeat-mark, reverse and a potentially earlier day-seven base-case primary (<code>base-case-week-01-v9</code>), which also demonstrates three waiting calls accumulating a string. If rejected, prospectively replace the item with a task that changes the input reduction and return operation beyond concatenation around an n-minus-one chain, assign a new family/version, and re-audit all earlier examples. Do not silently relabel the existing family or alter historical assignments. No fix applied.</p>
+<h2>4. Base case</h2>
+<p>Item <code>base-case-week-01-v9</code>; family <code>base-case-threshold-halving-week-v4</code>.</p>
+<p><code>label_depth(20)</code> halves its integer input, stops below 4, returns <code>small</code>, and adds punctuation on unwind. The lesson's <code>steps_to_zero(3)</code> (<code>lesson-decrement-to-zero-v4</code>) subtracts one to zero and counts calls. Its prerequisite <code>17 // 4</code> example teaches floor-division syntax, not this algorithm. <code>base-case-trace-a</code> computes factorial by decrementing and multiplying; <code>base-case-choice-a</code> and <code>base-case-explain-a</code> identify/explain stopping rather than trace this threshold. <code>base-case-recognize-v4</code> stops <code>pulse</code> at nonpositive values; <code>base-case-reachability-v4</code> tests parity under subtraction by two. Day-one <code>base-case-grow-threshold-day-v6</code> increases 3 by 7 until at least 20 and passes the result unchanged. The primary reverses the direction, uses halving and a strict lower threshold, and transforms returned strings. Its 20 overlaps the day-one threshold, but serves as the starting input instead, not an answer substitution.</p>
+<p>Across concepts, countdown/repeat-mark teach string accumulation, while leaf-count multiplies return values rather than halving inputs; reverse shrinks a string by slicing. None combines halving, a below-four stop and return-path punctuation. Names, surface and structure therefore differ meaningfully even though individual syntax and constants have been taught.</p>
+<p>Candidate accepted list: <code>[&quot;small!!!&quot;, &quot;'small!!!'&quot;, &quot;\&quot;small!!!\&quot;&quot;]</code>. Inputs are 20,10,5,2; 2 returns <code>small</code>; the other three calls append <code>!</code>. Unambiguous and deterministically scorable. Hints and explanation agree. Concern: <strong>Medium — cross-primary structural exposure</strong> if nesting precedes this item; see the pairwise comparison and proposed ordering review below. No key defect found; no fix applied.</p>
+<h2>5. Recursive case and trace</h2>
+<p>Item <code>recursive-case-week-01-v9</code>; family <code>recursive-case-lamp-toggle-week-v6</code>.</p>
+<p>The lamp/presses surface, <code>lamp_state</code>/<code>previous</code> names, <code>off</code>/<code>on</code> values and depth 5 differ from the lesson's sum-first trace of 3 (<code>recursive-case-trace-a</code>). The lesson diagram, <code>recursive-case-trace-a</code> practice on 4, and <code>recursive-case-explain-v4</code> all add the current input to a smaller sum. <code>recursive-case-choice-a</code> concerns progress; <code>recursive-case-recognize-v4</code> counts with <code>1 +</code> a smaller result. <code>recursive-case-design-a</code> and its worked answer add a list head to a recursively summed tail. Day-one <code>recursive-case-transfer-a</code> reverses text using slicing and concatenation.</p>
+<p>The nearest practice is <code>recursive-case-savings-growth-a</code>: it also stores a smaller return in a local variable, but doubles that number and adds the month (base 5, input 3, result 51). The primary instead branches on the returned state and alternates two strings; a learner cannot reuse the studied arithmetic recurrence. Other lessons/practices and day-one examples use arithmetic, concatenation or unchanged returns, never conditional state flipping on the return path. Zero-base/decrement syntax is shared; the combination rule is new. Depth 5 and the base string <code>off</code> do not reproduce an earlier solution.</p>
+<p>Candidate accepted list: <code>[&quot;on&quot;, &quot;'on'&quot;, &quot;\&quot;on\&quot;&quot;]</code>. States at 0 through 5 are off,on,off,on,off,on. Unambiguous and deterministically scorable; hints and explanation agree. Defect: none found; no fix proposed.</p>
+<h2>Scoring, verification and limitations</h2>
+<p>Scoring normalizes whitespace, while retaining case and punctuation; these are finite accepted-string keys, not a general evaluator accepting all equivalent Python expressions. For these prompts, optional surrounding quotes are covered on strings; numeric keys use plain decimal integers. No scoring ambiguity was found. This audit manually traced all five results and checked their candidate keys, hints and explanations; it did not execute content code or run tests. No content, code or tests were changed.</p>
+<p>All practice and lesson families were inspected. The most relevant families are listed above; the remaining cross-concept families cover return/print identification, local binding, numeric sums, factorial, progress recognition and list summation rather than an additional copy of any primary task. Day-one families and every potentially earlier day-seven primary are included conservatively. The following ten comparisons cover all four other primaries for each target, in either order, including answer/reveal exposure:</p>
+<table>
+<thead>
+<tr>
+<th>Potentially ordered pair of day-seven primaries</th>
+<th>Structural comparison and implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>def-return-week-01-v9</code> / <code>scope-week-01-v9</code></td>
+<td>Both return values, but shipping combines two numeric branch results; scope joins strings after local rebinding and preserves a caller variable. Neither supplies the other's solution.</td>
+</tr>
+<tr>
+<td><code>def-return-week-01-v9</code> / <code>recursion-week-01-v9</code></td>
+<td>Independent numeric calls and branching differ from recursive two-sided string nesting. Shared function syntax does not supply the target trace.</td>
+</tr>
+<tr>
+<td><code>def-return-week-01-v9</code> / <code>base-case-week-01-v9</code></td>
+<td>Both use thresholds, but shipping has no recursive reduction or unwind; base-case halves input and appends punctuation on return. Neither reproduces the other's calculation.</td>
+</tr>
+<tr>
+<td><code>def-return-week-01-v9</code> / <code>recursive-case-week-01-v9</code></td>
+<td>Shipping branches on input weight and adds two call results; the lamp branches on a recursively returned state. Neither teaches the other's combination rule.</td>
+</tr>
+<tr>
+<td><code>scope-week-01-v9</code> / <code>recursion-week-01-v9</code></td>
+<td>Scope exposes bracket construction, which reduces surface novelty for nesting; it does not expose a recursive chain. Nesting does not teach default arguments or caller/local rebinding. Separation remains plausible, subject to the wrapping concern.</td>
+</tr>
+<tr>
+<td><code>scope-week-01-v9</code> / <code>base-case-week-01-v9</code></td>
+<td>Both construct strings and append <code>!</code>, reducing surface novelty; scope uses one local rebind and caller-value join, while base-case halves through a threshold and accumulates three suffixes. Their control structures and required binding reasoning differ.</td>
+</tr>
+<tr>
+<td><code>scope-week-01-v9</code> / <code>recursive-case-week-01-v9</code></td>
+<td>Both use strings and local variables, but scope depends on a default and preserved caller binding; the lamp recursively alternates a state. Neither supplies the other's return rule.</td>
+</tr>
+<tr>
+<td><code>recursion-week-01-v9</code> / <code>base-case-week-01-v9</code></td>
+<td><strong>Closest cross-primary pair:</strong> both return a nonempty base string through three waiting calls and concatenate constant punctuation. Base-case first can teach string accumulation for nesting; nesting first can teach unwind construction for base-case. Halving/below-four stopping versus decrement/zero stopping, and suffix-only versus two-sided wrapping, distinguish them. This strengthens the medium wrapping concern; human review must assess both orderings and whether base-case retains enough unfamiliarity after nesting.</td>
+</tr>
+<tr>
+<td><code>recursion-week-01-v9</code> / <code>recursive-case-week-01-v9</code></td>
+<td>Both use a zero base and decrement-by-one string-return chain. Nesting concatenates around the smaller result; the lamp conditionally flips that result. Either exposes the recursive skeleton, but neither supplies the other's combination rule.</td>
+</tr>
+<tr>
+<td><code>base-case-week-01-v9</code> / <code>recursive-case-week-01-v9</code></td>
+<td>Both return strings through recursion; base-case halves to a threshold and accumulates suffixes, while the lamp decrements to zero and flips state. Either exposes unwind tracing, but reduction, stopping and return operations differ.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Medium limitation — cross-primary exposure is not automatically excluded.</strong> <code>analyze_v6</code> delegates to <code>descriptive_v2._analyze</code> and <code>_classify_first</code>. Earlier attempts populate <code>prior_families</code>, but contamination checks membership of the exact target family ID (also against exposure metadata). All five primary family IDs differ, so an earlier answer or reveal of another primary does not trigger this family check, even when it teaches relevant structure. The comparisons above therefore cannot be replaced by an eligibility assumption. Proposal: independently review actual ordering and answer/reveal history, explicitly adjudicate the wrapping/base-case pair in both orders, and prospectively define how related-family exposure should be handled. No implementation change applied.</p>
+<p><strong>Medium limitation — outside-study exclusion is not enforced by this classifier.</strong> V6 requires outside-study responses to remain ineligible, but <code>_classify_first</code> examines neither outside-study field. A delayed attempt recording <code>outside_study=OutsideStudy.SOME</code> can still be classified <code>eligible</code> (reviewed content) or <code>provisional</code> (draft content) if the other checks pass. Stored outside-study information and the analyzer's classification therefore do not establish protocol eligibility. Proposal: manually reconcile outside-study records before interpreting primary observations and separately fix and validate the classifier against the protocol. No implementation change applied.</p>
+<p>Actual ordering, prior exposure, outside study and attentive study are not facts established by this static pack audit. The implementation does check target-family contamination, target-response assistance and delayed timing, but those checks do not cover the two limitations above. Embedded held-out worked solutions are not themselves evidence of prior exposure; revealing the target's own solution before its primary response would violate the unassisted requirement. Revealing another primary requires the structural/order review described above.</p>
+<p>The pack is draft, all five keys are candidate, and review receipts are empty. Human key review and qualified non-author validation remain gates. This audit does not approve, merge, or change those gates. The unresolved family concern is recursion wrapping, including its overlap with the base-case primary in either ordering; the two eligibility limitations above also require follow-up; there is no code-execution or learner-session evidence claimed here.</p>
+<h2>Human key reviewer: exact decisions required</h2>
+<p>Record a written accept, edit or reject for each of these five keys; the following recommendations are provisional:</p>
+<ul>
+<li><code>def-return-week-01-v9</code>: accept candidate <code>16</code> if the shipping trace is confirmed.</li>
+<li><code>scope-week-01-v9</code>: accept <code>[map]!:map</code> and its stored single-/double-quoted variants if caller/local reasoning is confirmed.</li>
+<li><code>recursion-week-01-v9</code>: confirm <code>[[[core]]]</code> and its stored single-/double-quoted variants; separately decide whether nested wrapping is sufficiently unfamiliar after countdown, repeat-mark, day-one reverse and any earlier day-seven primary, especially <code>base-case-week-01-v9</code>. If not, reject the family for prospective primary use pending replacement and re-audit.</li>
+<li><code>base-case-week-01-v9</code>: accept <code>small!!!</code> and its stored single-/double-quoted variants if the three unwind steps are confirmed; separately decide whether halving and threshold stopping remain sufficiently unfamiliar when <code>recursion-week-01-v9</code> has already been answered or revealed. If not, reject the family for that ordering pending a prospective remedy and re-audit.</li>
+<li><code>recursive-case-week-01-v9</code>: accept <code>on</code> and its stored single-/double-quoted variants if the five toggles are confirmed.</li>
+</ul>
+
+</main></body>
+</html>

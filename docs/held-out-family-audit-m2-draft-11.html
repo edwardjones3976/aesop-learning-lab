@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Held-out family delta audit: m2-draft.11</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Held-out family delta audit: m2-draft.11</h1>
+<p>This is a bounded delta against <a href="held-out-family-audit-m2-draft-10.html">the v10 audit</a>, not independent human approval. The owner's step-7 review rejected the unfamiliar-family claim for <code>recursion-week-01-v9</code> (<code>recursion-nested-wrap-week-v5</code>): <code>repeat_mark</code> practice already teaches essentially the same decrement-to-zero string construction.</p>
+<p>V11 replaces it with <code>recursion-week-01-v11</code>, family <code>recursion-converge-week-v8</code>, concept <code>recursion-as-self-call</code>, a held-out day-seven trace with candidate key <code>6</code>. Calls are <code>(0,8) -&gt; (2,7) -&gt; (4,6) -&gt; (6,5)</code>. The last call returns low, 6; earlier calls pass it back unchanged. Each common mistake gives a different answer: returning high gives 5, stopping one call early gives 4, and moving only low gives 8. Integration changed the call from Codex's <code>meet(1, 10)</code>, where the final call was <code>(7,7)</code> and returning high also gave the key. Both arguments must change at each self-call.</p>
+<p>Compared all five lesson bodies and diagrams and all 33 item bodies, choices, hints, explanations, mistakes and rubrics against v10. No other learner-visible example uses two converging arguments. The removed <code>nest</code> occurs only in the historical v10 pack. No lesson encountered-family list or other v11 metadata references its removed family, so no such list required editing.</p>
+<p>The recursive shapes verified in the actual pack are:</p>
+<ul>
+<li>Decrement-to-zero string builders: lesson <code>countdown</code> and practice <code>repeat_mark</code>; <code>nest</code> is the removed v10 check.</li>
+<li>Numeric accumulation: lesson <code>steps_to_zero</code>, practice <code>total_to</code>, lesson <code>sum_first</code>, list summation and factorial practice. These combine a smaller return with other work.</li>
+<li>Doubling: day-one <code>leaf_count</code>; savings practice doubles a smaller result and adds the current month.</li>
+<li>Halving: day-seven <code>label_depth</code> reduces one argument and adds punctuation to the returned string.</li>
+<li>Slicing: day-one <code>reverse</code> and list-sum design practice reduce a sequence and combine its parts.</li>
+<li>Single-argument growth: day-one base-case <code>reach_target</code> grows by seven to a fixed threshold, passing the reached value back unchanged. This is the closest return shape, but it has one changing argument and a fixed boundary, rather than two changing boundaries.</li>
+<li>Lamp toggling: the other day-seven recursive-case check flips a returned state.</li>
+<li>Single-argument unchanged returns: call-order <code>down</code> decrements to zero; recognition <code>pulse</code> decrements to a nonpositive cutoff and returns a literal. Neither changes two inputs.</li>
+<li>Recognition and reachability choices include unchanged inputs, subtraction, zero tests and parity failures. None introduces two changing arguments converging on each other.</li>
+</ul>
+<p>The remaining nonrecursive material covers definition/return, printing versus None, arithmetic return/caller arithmetic, local/global binding, keyword/default arguments, area, shipping and string marking. The two-parameter examples such as tax, area, greeting and marking do not self-call or update two boundaries. Their prose and diagrams supply no converging-call trace. This comparison includes every other held-out item conservatively, regardless of check order. The target's own hints and reveal are assistance, not prior independent exposure.</p>
+<p>All other nine held-outs are unchanged apart from <code>content_version</code>: <code>def-return-transfer-01-v9</code>, <code>scope-keyword-transfer-01-v9</code>, <code>recursion-halving-transfer-01-v9</code>, <code>base-case-transfer-01-v9</code>, <code>recursive-case-transfer-01-v9</code>, <code>def-return-week-01-v9</code>, <code>scope-week-01-v9</code>, <code>base-case-week-01-v9</code>, and <code>recursive-case-week-01-v9</code>. All other 23 items and all lessons are also unchanged apart from version fields. The new regression test compares the complete pack after removing the one replacement and version fields, and compares serialized bytes of every retained item.</p>
+<p>Protocol v8 selects the new primary family prospectively. Historical v10/v7 material remains frozen. Scoring, normalization, UI and storage are unchanged. Static separation is not proof of unfamiliarity for a real learner; prior exposure and independent content/key review remain required. The earlier audit's unrelated concerns remain unresolved by this bounded replacement.</p>
+<h2>Verification and integration handoff</h2>
+<p>Python: <code>PYTHONPATH=src python -m unittest discover -s tests -q</code>, Node contracts and the browser smoke test: see the PR for the integrated counts. The browser smoke test now takes the learner's assignment from the protocol instead of assuming one.</p>
+<p>Mutation proof: changing only the new candidate key to <code>5</code> makes <code>test_new_key_executes_to_six</code> fail; the content tests pass with the key restored.</p>
+<h2>Intentionally retained historical references</h2>
+<p>Every retained literal <code>m2-draft.10</code> or standalone <code>v7</code> is confined to these locations (including baseline comparisons in this audit):</p>
+<ul>
+<li>Frozen packs <code>pack-m2-draft.7.json</code>, <code>pack-m2-draft.8.json</code>, <code>pack-m2-draft.10.json</code>: historical identities or prerequisites; untouched.</li>
+<li>Frozen protocols <code>descriptive_v4.py</code>, <code>descriptive_v7.py</code>: historical content v7 and protocol v7; untouched.</li>
+<li>Historical docs <code>content-correction-v8.html</code>, <code>content-review-v7.html</code>, <code>descriptive-pilot-v4.html</code>, <code>descriptive-pilot-v7.html</code>, <code>held-out-family-audit-m2-draft-10.html</code>, <code>personal-intelligence-pilot.html</code>: historical review and protocol records; untouched.</li>
+<li>Historical tests <code>test_personal_comparison.py</code>, <code>test_experiment_v4.py</code>, <code>test_experiment_v5.py</code>, <code>test_experiment_v7.py</code>, <code>test_m2_content_v7.py</code>, <code>test_m2_content_v8.py</code>, <code>test_m2_content_v10.py</code>: frozen fixture identities and regression expectations; untouched.</li>
+<li><code>foreman.py</code>: V10_PACK_PATH/PACK_BY_VERSION; protocol-v7-to-content-v10 assignment pin; content-v7 historical routes; v10 policy and plain-language branches; v10 method/analysis routes; historical versions in shared version tuples. All preserve original learner behavior.</li>
+<li><code>test_foreman.py</code>: historical content-v7/protocol-v4 test and the added content-v10/protocol-v7 restart test.</li>
+<li><code>test_m2_content_v11.py</code>: v10 baseline file reads for exact comparison.</li>
+<li><code>descriptive-pilot-v8.html</code> and this audit: explicit baseline, replacement rationale and historical-pinning documentation.</li>
+</ul>
+<h2>Complete pack diff excluding version fields</h2>
+<pre><code class="language-diff">--- v10 (version fields omitted)
++++ v11 (version fields omitted)
+@@ -1075,37 +1075,35 @@
+       ]
+     },
+     {
+-      &quot;id&quot;: &quot;recursion-week-01-v9&quot;,
++      &quot;id&quot;: &quot;recursion-week-01-v11&quot;,
+       &quot;concept_id&quot;: &quot;recursion-as-self-call&quot;,
+-      &quot;family_id&quot;: &quot;recursion-nested-wrap-week-v5&quot;,
++      &quot;family_id&quot;: &quot;recursion-converge-week-v8&quot;,
+       &quot;activity_type&quot;: &quot;trace&quot;,
+       &quot;evidence_kind&quot;: &quot;transfer&quot;,
+       &quot;held_out&quot;: true,
+       &quot;check_delay_days&quot;: 7,
+       &quot;prompt&quot;: &quot;After this code runs, what is the value of result?&quot;,
+-      &quot;body&quot;: &quot;def nest(n):\n    if n == 0:\n        return 'core'\n    return '[' + nest(n - 1) + ']'\nresult = nest(3)&quot;,
+-      &quot;choices&quot;: [],
+-      &quot;answer_key&quot;: {
+-        &quot;status&quot;: &quot;candidate&quot;,
+-        &quot;accepted&quot;: [
+-          &quot;[[[core]]]&quot;,
+-          &quot;'[[[core]]]'&quot;,
+-          &quot;\&quot;[[[core]]]\&quot;&quot;
++      &quot;body&quot;: &quot;def meet(low, high):\n    if low &gt;= high:\n        return low\n    return meet(low + 2, high - 1)\nresult = meet(0, 8)&quot;,
++      &quot;choices&quot;: [],
++      &quot;answer_key&quot;: {
++        &quot;status&quot;: &quot;candidate&quot;,
++        &quot;accepted&quot;: [
++          &quot;6&quot;
+         ]
+       },
+       &quot;check_expression&quot;: &quot;result&quot;,
+       &quot;hints&quot;: [
+         {
+           &quot;level&quot;: &quot;nudge&quot;,
+-          &quot;text&quot;: &quot;Find the innermost value, which nest(0) returns.&quot;
+-        },
+-        {
+-          &quot;level&quot;: &quot;targeted&quot;,
+-          &quot;text&quot;: &quot;Each waiting call puts one pair of brackets around the value from its smaller call.&quot;
+-        },
+-        {
+-          &quot;level&quot;: &quot;worked_solution&quot;,
+-          &quot;text&quot;: &quot;nest(0) returns 'core'; nest(1) returns '[core]', nest(2) returns '[[core]]', and nest(3) returns '[[[core]]]'.&quot;
++          &quot;text&quot;: &quot;Keep track of both arguments in each call. Check the stopping condition before making another call.&quot;
++        },
++        {
++          &quot;level&quot;: &quot;targeted&quot;,
++          &quot;text&quot;: &quot;Each new call adds 2 to low and subtracts 1 from high. When low &gt;= high, return low and pass that value back unchanged.&quot;
++        },
++        {
++          &quot;level&quot;: &quot;worked_solution&quot;,
++          &quot;text&quot;: &quot;The calls use (0, 8), (2, 7), (4, 6), and (6, 5). At (6, 5), low &gt;= high is true, so the call returns low, which is 6. Each waiting call passes that value back unchanged, so result is 6.&quot;
+         }
+       ],
+       &quot;source_ids&quot;: [
+@@ -1113,9 +1111,11 @@
+       ],
+       &quot;learning_objective&quot;: &quot;Keep track of waiting calls in a new recursive example.&quot;,
+       &quot;difficulty&quot;: &quot;advanced&quot;,
+-      &quot;explanation&quot;: &quot;nest(0) returns 'core'; nest(1) returns '[core]', nest(2) returns '[[core]]', and nest(3) returns '[[[core]]]'.&quot;,
+-      &quot;common_mistakes&quot;: [
+-        &quot;Each outer call wraps one pair of brackets around its inner result. If you add all the opening brackets first and leave out the closing ones, you misread how the values come back.&quot;
++      &quot;explanation&quot;: &quot;The calls use (0, 8), (2, 7), (4, 6), and (6, 5). At (6, 5), low &gt;= high is true, so the call returns low, which is 6. Each waiting call passes that value back unchanged, so result is 6. At (4, 6), the stopping condition is still false. The base case returns low, not high, and both arguments change in each self-call.&quot;,
++      &quot;common_mistakes&quot;: [
++        &quot;Stopping at low = 4 is one call too early: 4 is still below 6.&quot;,
++        &quot;The base case returns low, not high. Returning high gives 5.&quot;,
++        &quot;Change both arguments in every self-call: add 2 to low and subtract 1 from high. Moving only low gives (0, 8), (2, 8), (4, 8), (6, 8), (8, 8) and returns 8.&quot;
+       ]
+     },
+     {
+</code></pre>
+
+</main></body>
+</html>

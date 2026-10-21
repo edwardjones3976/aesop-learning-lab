@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser API v1 contract</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Browser API v1 contract</h1>
+<p>The browser client uses an injected <code>LearningApi</code> adapter. A local HTTP implementation may be added behind it; the UI must also run against a fixture adapter for isolated testing. JSON field names below are stable for V1. Timestamps are UTC ISO 8601 strings.</p>
+<h2><code>GET /api/v1/session/next?availableMinutes=20</code></h2>
+<pre><code class="language-json">{
+  &quot;activity&quot;: {
+    &quot;id&quot;: &quot;functions-base-case-01&quot;,
+    &quot;conceptId&quot;: &quot;base-case&quot;,
+    &quot;contentVersion&quot;: &quot;v1&quot;,
+    &quot;familyId&quot;: &quot;base-case-trace-a&quot;,
+    &quot;type&quot;: &quot;trace&quot;,
+    &quot;evidenceKind&quot;: &quot;application&quot;,
+    &quot;prompt&quot;: &quot;What value does this function return for n = 2?&quot;,
+    &quot;body&quot;: &quot;def f(n):\n    if n == 0: return 1\n    return n * f(n - 1)&quot;,
+    &quot;choices&quot;: [],
+    &quot;hints&quot;: [
+      {&quot;level&quot;: &quot;nudge&quot;, &quot;text&quot;: &quot;Find the stopping condition.&quot;},
+      {&quot;level&quot;: &quot;targeted&quot;, &quot;text&quot;: &quot;Evaluate f(0), then f(1).&quot;},
+      {&quot;level&quot;: &quot;worked_solution&quot;, &quot;text&quot;: &quot;f(0)=1, f(1)=1, f(2)=2.&quot;}
+    ]
+  },
+  &quot;recommendation&quot;: {
+    &quot;policyVersion&quot;: &quot;pilot-v1&quot;,
+    &quot;reason&quot;: &quot;This concept is due for an independent check.&quot;,
+    &quot;evidenceAttemptIds&quot;: []
+  }
+}
+</code></pre>
+<p>The response can instead contain <code>&quot;activity&quot;: null</code> with a clear <code>reason</code> when nothing is due. The client does not infer or invent a recommendation.</p>
+<h2><code>POST /api/v1/attempts</code></h2>
+<pre><code class="language-json">{
+  &quot;activityId&quot;: &quot;functions-base-case-01&quot;,
+  &quot;contentVersion&quot;: &quot;v1&quot;,
+  &quot;firstAnswer&quot;: &quot;2&quot;,
+  &quot;hintLevel&quot;: &quot;none&quot;,
+  &quot;confidence&quot;: 0.7,
+  &quot;outsideStudy&quot;: &quot;none&quot;,
+  &quot;outsideStudyDetail&quot;: null,
+  &quot;activeSeconds&quot;: 54
+}
+</code></pre>
+<p>Response:</p>
+<pre><code class="language-json">{
+  &quot;attemptId&quot;: &quot;example-attempt-1&quot;,
+  &quot;scoreStatus&quot;: &quot;correct&quot;,
+  &quot;gradingMethod&quot;: &quot;reviewed_exact_key&quot;,
+  &quot;assisted&quot;: false,
+  &quot;nextReason&quot;: &quot;Try a different application tomorrow.&quot;
+}
+</code></pre>
+<p>The server records the first answer before hints or solution reveal. The client sends the highest viewed hint level. <code>confidence</code> and <code>outsideStudy</code> may be null outside an experiment. In an experiment, the UI prompts for them and the server records missing answers explicitly.</p>
+<h2>Learner controls</h2>
+<ul>
+<li><code>GET /api/v1/insights</code> returns separate evidence by kind, due reviews, recommendation reasons, and experiment findings with scope and uncertainty.</li>
+<li><code>POST /api/v1/recommendations/override</code> records the learner choice and reason without rewriting the original recommendation.</li>
+<li><code>GET /api/v1/export</code> returns the local record as JSON.</li>
+<li><code>DELETE /api/v1/data</code> deletes all learner records after a confirmation step; it does not delete the reviewed content pack.</li>
+</ul>
+<p>Errors use <code>{ &quot;code&quot;: &quot;stable_code&quot;, &quot;message&quot;: &quot;human-readable explanation&quot; }</code>. Validation failures return HTTP 400; absent IDs return 404; unavailable local storage returns 503. The UI displays these messages without treating the attempted action as successful.</p>
+<h2>Open-ended review extension</h2>
+<p>An explanation or code-design attempt response keeps <code>scoreStatus: &quot;ungraded&quot;</code> and includes a versioned <code>rubric</code> with <code>id</code>, <code>version</code>, and <code>criteria</code>. Each criterion has <code>id</code>, <code>description</code>, <code>shownDescription</code>, and <code>partialDescription</code>. The example and common mistakes are withheld from this response. These fields are review guidance, not an answer key or an automatic score.</p>
+<p><code>POST /api/v1/self-reviews</code> accepts <code>attemptId</code>, <code>rubricId</code>, <code>rubricVersion</code>, optional <code>confidence</code> (0–1 or null), and one judgment per criterion. A judgment has <code>criterionId</code>, <code>rating</code> (<code>shown</code>, <code>partial</code>, <code>not_shown</code>, <code>unsure</code>), and <code>evidence</code>. Shown and partial ratings require a quote from the locked first answer; the others require empty evidence. The server validates the attempt, item, rubric version, and evidence before appending the review. It returns <code>reviewId</code>, <code>nextStep</code> (<code>independent_check</code> only if every criterion is shown; otherwise <code>targeted_retry</code>), and <code>comparison</code> with <code>annotatedExample</code> and <code>commonMistakes</code>. Neither next step changes the attempt score or credits mastery.</p>
+<p><code>POST /api/v1/answer-revisions</code> accepts <code>reviewId</code> and a nonempty <code>answer</code>, returning <code>revisionId</code>. The revision is a separate append-only learner event. Both review and revision events are included in export and removed by learner-data deletion. The browser fixture and local HTTP service implement these adapter methods.</p>
+<p>The <code>nextStep</code> value is guidance for the future scheduler; the current scheduler does not yet schedule a targeted retry from self review alone.</p>
+
+</main></body>
+</html>

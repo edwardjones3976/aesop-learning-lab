@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal scope comparison v1 (prospective feasibility protocol)</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Personal scope comparison v1 (prospective feasibility protocol)</h1>
+<p>This draft protocol asks whether adding a labeled diagram to the same worked Python explanation and retrieval-practice routine is associated with better delayed independent tracing for one learner. It is a software and content feasibility pilot, not a causal test of instructional superiority. Historical text-versus-diagram protocols v1–v4 and their records remain separate.</p>
+<h2>Design fixed before observation</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Precommitted rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Protocol</td>
+<td><code>scope-text-diagram-single-learner</code>, version <code>v1</code></td>
+</tr>
+<tr>
+<td>Content</td>
+<td><code>scope-comparison-draft.1</code>; <code>parameters-and-local-scope</code> only</td>
+</tr>
+<tr>
+<td>Unit</td>
+<td>One instructional micro-unit, with one worked example, one practice family, and one delayed held-out family</td>
+</tr>
+<tr>
+<td>Sequence</td>
+<td>Four fixed units in two approximately matched pairs (bonus A/B, step C/D). The SHA-256 low bit of protocol ID, version, seed <code>20261018</code>, and learner ID selects ABBA or BAAB. One unit in each pair receives each condition. Assignment is persisted before exposure and never recalculated over a saved assignment.</td>
+</tr>
+<tr>
+<td>Treatment</td>
+<td>Text: worked code, correct answer, identical steps and misconceptions. Diagram: those exact materials plus a labeled binding/return flow diagram. Practice procedure, hint, feedback, and delay are shared.</td>
+</tr>
+<tr>
+<td>Eligibility</td>
+<td>Enroll before any recorded lesson, attempt, or exposure on this concept. No replacement of older assignments. Outside study is recorded when supplied, with absent left absent.</td>
+</tr>
+<tr>
+<td>Exposure</td>
+<td>Record start and completion timestamps, condition, content version, and worked/practice family IDs. No attentive time is inferred. A practice or delayed question's first display is separately timestamped.</td>
+</tr>
+<tr>
+<td>Primary outcome</td>
+<td>First response to the unit's unfamiliar held-out trace, unassisted and with an explicit report of no outside study at both exposure completion and delayed response, first viewed and answered within 30 minutes, at least seven and at most 14 actual days after completion of its worked exposure. The candidate key must pass independent technical review before being treated as eligible.</td>
+</tr>
+<tr>
+<td>Secondary outcomes</td>
+<td>Practice candidate match and assistance, delayed candidate match outside the window, completion and missingness, actual elapsed delay.</td>
+</tr>
+<tr>
+<td>Practice first answer</td>
+<td>Only submission records and locks the first practice answer. A hint opened before submission marks that first recorded response assisted. Typed but unsubmitted text is not evidence; the interface must not silently erase it. Delayed primary questions offer no hints.</td>
+</tr>
+<tr>
+<td>Contamination</td>
+<td>A previously encountered held-out family, reported outside study, use of the standard lesson/practice path after enrollment, assisted delayed response, or interrupted held-out question over 30 minutes is ineligible. Unknown outside-study status is separately ineligible. Preserve each response and report its reason. No held-out answer is shown before the first response.</td>
+</tr>
+<tr>
+<td>Missingness</td>
+<td>Assigned units without completed exposure or delayed response remain missing; no imputation. Early and late returns are retained descriptively, not silently counted as eligible.</td>
+</tr>
+<tr>
+<td>Analysis</td>
+<td>Show counts and candidate matches by arm, per-unit classifications, and missing/contaminated/assisted counts. Four responses from one learner are dependent observations. Do not treat them as four participants or compute a conventional independent-sample interval. Status remains <code>insufficient_evidence</code> regardless of observed direction.</td>
+</tr>
+<tr>
+<td>Uncertainty</td>
+<td>No effect estimate supports method superiority: unit, order, prior knowledge, and carryover remain confounded. The same concept across four units creates expected learning carryover. No human learning benefit is implied by synthetic tests.</td>
+</tr>
+</tbody>
+</table>
+<p>The assignment was chosen to exercise both conditions within one learner while keeping a balanced condition count in each pair. Delayed code has different normalized Python statement/expression structure from every worked and practice item and from the other delayed items. This only protects structural family separation; the target scope skill repeats and carryover remains likely. The small number of units and repeated concept exposure make the results descriptive only. A later milestone needs qualified human content validation and more independent comparable units or learners before effectiveness claims.</p>
+<p>The fixed answer keys passed nonauthor AI engineering review documented in <code>scope-comparison-content-review.html</code>, but content remains draft and the keys remain candidates for qualified human subject-matter validation. The engineering review checks technical correctness and structural separation; it does not establish empirical difficulty equivalence or actual learner unfamiliarity.</p>
+
+</main></body>
+</html>

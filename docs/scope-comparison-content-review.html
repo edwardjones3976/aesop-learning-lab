@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scope comparison content review</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Scope comparison content review</h1>
+<p><strong>Status:</strong> Draft content; nonauthor AI engineering review completed 2026-10-18. This is not qualified human subject-matter validation.</p>
+<p><strong>Reviewed source:</strong> <code>src/aesop_lab/api/personal_comparison.py</code>, SHA-256 <code>063409b48c843647d9beca7da102def4845c8fbea2c9fc388d9bb411ba98d30c</code>. The final Git commit must retain this hash for this receipt to apply.</p>
+<p><strong>Reviewer:</strong> <code>/root/independent_review</code>, read-only nonauthor engineering agent. The reviewer authored no candidate files.</p>
+<p><strong>Scope examined:</strong> All 12 fixed Python snippets and numeric answer keys, all four worked binding/return diagrams, misconceptions, approximate within-pair operation counts, normalized AST family separation, held-out answer protection, and evidence classification. The reviewer executed the trusted authored snippets through the focused test. No learner-submitted code was executed.</p>
+<p><strong>Findings and dispositions:</strong></p>
+<ul>
+<li>A delayed submission could display feedback from a different unit. Feedback now selects the newest response by timestamp and event order.</li>
+<li>Delayed questions originally differed mainly by numbers and identifiers. They now have distinct statement/expression structures from every worked/practice item and each other, verified by a normalized-AST test.</li>
+<li>Due delayed checks could be held behind later new units. They now preempt new study when due.</li>
+<li>Worked completion initially claimed practice-family exposure before display. The family is now appended only when the practice question is opened.</li>
+<li>Unknown outside study and standard-path scope exposure could be mistaken for eligible evidence. They now receive ineligible classifications, including an opened but incomplete standard lesson and saved practice draft.</li>
+<li>Within-pair difficulty matching remains approximate. Each pair has similar statement and operation counts, but equivalence has not been established empirically.</li>
+</ul>
+<p><strong>Review verdict:</strong> No remaining blocking technical finding on the reviewed source and UI state. Candidate numeric keys and diagrams passed nonauthor AI engineering review. The content remains draft; true unfamiliarity, human difficulty comparability, and instructional effectiveness remain unvalidated. The software report must retain <code>insufficient_evidence</code> regardless of observed direction.</p>
+
+</main></body>
+</html>
