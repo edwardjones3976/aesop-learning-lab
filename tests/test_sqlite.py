@@ -9,7 +9,7 @@ from aesop_lab.domain.models import (
     Activity, ActivityType, AnswerRevision, Attempt, Concept, CriterionReview, EvidenceKind,
     ExperimentAssignment, HintLevel, OutsideStudy, ReviewRating, ScoreStatus, SelfReview,
 )
-from aesop_lab.storage.sqlite import SQLiteStore
+from aesop_lab.storage.sqlite import SCHEMA_VERSION, SQLiteStore
 
 
 class SQLiteStoreTests(unittest.TestCase):
@@ -56,7 +56,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 connection.execute("PRAGMA user_version = 12")
                 connection.commit()
             with SQLiteStore(path) as store:
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
                 self.assertEqual(store.export_all()["personalAssignments"][0]["protocol_version"], "v1")
                 self.assertEqual(store.export_all()["personalHintEvents"], [])
                 self.assertEqual(store.export_all()["personalSolutionReveals"], [])
@@ -109,7 +109,7 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 check = store.get_activity("old-check", "v2")
                 self.assertEqual(check.check_delay_days, 1)
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
 
     def test_v1_database_adds_review_tables_without_losing_attempts(self) -> None:
         with TemporaryDirectory() as directory:
@@ -130,7 +130,7 @@ class SQLiteStoreTests(unittest.TestCase):
             with SQLiteStore(path) as store:
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.export_all()["selfReviews"], [])
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
 
     def test_lists_order_by_instant_not_offset_text(self) -> None:
         from datetime import timedelta
@@ -172,7 +172,7 @@ class SQLiteStoreTests(unittest.TestCase):
                     connection.execute("PRAGMA user_version = 2")
                     connection.commit()
                 with SQLiteStore(path) as store:
-                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
+                    self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
                     self.assertEqual(store.export_all()["selfReviews"], [])
                     self.assertEqual(store.export_all()["lessonCompletions"], [])
                     self.assertEqual(store.get_concept("c1", "v1").title, "Concept")
@@ -198,7 +198,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertEqual(store.list_self_reviews("t1"), (review,))
                 self.assertEqual(store.record_lesson_completion("c1", "v1", now), now)
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
 
     def test_merged_master_v3_upgrades_without_losing_learner_records(self) -> None:
         with TemporaryDirectory() as directory:
@@ -219,7 +219,7 @@ class SQLiteStoreTests(unittest.TestCase):
                 connection.execute("PRAGMA user_version = 3")
                 connection.commit()
             with SQLiteStore(path) as store:
-                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], 14)
+                self.assertEqual(store.connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
                 self.assertEqual(store.lesson_completed_at("c1", "v1"), now)
                 self.assertEqual(store.list_attempts("c1")[0].id, "t1")
                 self.assertIn("check_delay_days", {row[1] for row in

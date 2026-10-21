@@ -18,7 +18,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 
 
 class SQLiteStore:
@@ -280,7 +280,26 @@ class SQLiteStore:
                 """)
                 self.connection.execute("PRAGMA user_version = 14")
 
+        if current < 15:
+            with self.connection:
+                self.connection.execute(
+                    "CREATE TABLE IF NOT EXISTS learner_deletion (slot INTEGER PRIMARY KEY CHECK(slot = 1))")
+                self.connection.execute("PRAGMA user_version = 15")
+
+    def learner_deleted(self) -> bool:
+        return self.connection.execute("SELECT 1 FROM learner_deletion").fetchone() is not None
+
+    def require_active_learner(self) -> None:
+        if self.learner_deleted():
+            from aesop_lab.api.service import ApiError
+            raise ApiError("learner_deleted", "Your data was deleted. Start again to enroll as a new learner.", 409)
+
+    def restart_learner(self) -> None:
+        with self.connection:
+            self.connection.execute("DELETE FROM learner_deletion")
+
     def learner_id(self) -> str:
+        self.require_active_learner()
         existing = self.existing_learner_id()
         if existing:
             return existing
@@ -661,12 +680,15 @@ class SQLiteStore:
         """).fetchall()
         return frozenset(row[0] for row in versions)
 
-    def delete_all(self) -> None:
+    def delete_all(self, *, mark_deleted: bool = False) -> None:
         # Zero deleted cell payloads, including on databases created before this
         # setting was enabled. VACUUM below also removes older free-page copies.
         self.connection.execute("PRAGMA secure_delete = ON")
         self.connection.execute("PRAGMA journal_size_limit = 0")
         with self.connection:
+            # Commit the consent marker atomically with removing learner rows.
+            if mark_deleted:
+                self.connection.execute("INSERT OR IGNORE INTO learner_deletion VALUES (1)")
             self.connection.execute("DELETE FROM personal_solution_reveals")
             self.connection.execute("DELETE FROM personal_hint_events")
             self.connection.execute("DELETE FROM personal_recommendation_overrides")
