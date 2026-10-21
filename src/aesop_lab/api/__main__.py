@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 
 from aesop_lab.storage.sqlite import SQLiteStore
 
@@ -23,6 +24,9 @@ def main() -> None:
     with SQLiteStore(args.db) as store:
         service = LearningService(store, CONCEPT, fixture_items(), reviewed=False,
                                   allow_development_fixtures=True)
+        # The fixture content and learner are synthetic; record consent explicitly
+        # so the server-side gate stays in force for every other path.
+        store.confirm_consent(datetime.now(timezone.utc))
         service.complete_lesson()
         print(f"Development fixture API on http://127.0.0.1:{args.port}", flush=True)
         serve(service, args.port)

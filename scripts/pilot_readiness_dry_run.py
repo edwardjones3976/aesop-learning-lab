@@ -27,6 +27,9 @@ def main():
             assert p.store.existing_learner_id() is None
             assert p.overview()["packVersion"] == "m2-draft.11"
             assert p.export()["experimentAssignments"] == []
+            # Runbook step 1: the synthetic learner confirms the in-app consent screen.
+            assert p.overview()["consentRequired"]
+            p.consent()
             ids = p.pack.learning_order()
 
             def day(value):

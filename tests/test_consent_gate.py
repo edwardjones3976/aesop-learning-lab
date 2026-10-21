@@ -171,3 +171,72 @@ class ConsentGateTests(unittest.TestCase):
         preview.lesson(cid)
         preview.complete_lesson(cid)
         self.assertIsNotNone(preview.session(cid)["activity"])
+
+
+class ConsentMigrationAndStartupTests(unittest.TestCase):
+    """Cursor's #57 findings: history without an identity, the v1 dev server, the overview."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.path = Path(self.temp.name) / "learner.db"
+
+    def _as_v15_with_completion_only(self):
+        # Simulate a pre-gate v1-v3 learner: lesson history but no identity row.
+        with SQLiteStore(self.path):
+            pass
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("INSERT INTO lesson_completions VALUES (?, ?, ?)",
+                       ("function-definition-and-return", "v1", "2026-01-01T00:00:00+00:00"))
+            self.assertIsNone(db.execute("SELECT 1 FROM learner_identity").fetchone())
+            db.execute("DROP TABLE learner_consent")
+            db.execute("PRAGMA user_version = 15")
+
+    def test_history_without_identity_migrates_as_legacy_consent(self):
+        self._as_v15_with_completion_only()
+        with SQLiteStore(self.path) as store:
+            self.assertTrue(store.has_consent())
+            row = store.connection.execute("SELECT text_version FROM learner_consent").fetchone()
+            self.assertEqual(row[0], "legacy-pre-gate")
+
+    def test_empty_v15_database_still_requires_consent(self):
+        with SQLiteStore(self.path):
+            pass
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("DROP TABLE learner_consent")
+            db.execute("PRAGMA user_version = 15")
+        with SQLiteStore(self.path) as store:
+            self.assertFalse(store.has_consent())
+
+    def test_overview_before_consent_is_a_flag_not_an_error(self):
+        preview = Preview(self.path)
+        self.addCleanup(preview.store.close)
+        overview = preview.overview()
+        self.assertTrue(overview["consentRequired"])
+        self.assertIsNone(preview.store.existing_learner_id())
+
+    def test_pre_gate_v1_learner_keeps_working_through_preview(self):
+        # Cursor's reproduction: a v15 database with a v1 lesson completion and no
+        # identity must open, show no consent screen, and keep its schedule.
+        self._as_v15_with_completion_only()
+        preview = Preview(self.path)
+        self.addCleanup(preview.store.close)
+        overview = preview.overview()
+        self.assertFalse(overview["consentRequired"])
+        self.assertEqual(overview["packVersion"], preview.pack.pack_version)
+        self.assertTrue(any(c["lessonComplete"] for c in overview["concepts"]))
+
+    def test_v1_development_server_starts(self):
+        import subprocess, sys, os
+        env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "aesop_lab.api", "--development-fixtures",
+             "--db", str(Path(self.temp.name) / "dev.sqlite3"), "--port", "0"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+        try:
+            line = proc.stdout.readline()
+            self.assertIn("Development fixture API", line, line)
+        finally:
+            proc.kill()
+            proc.wait(timeout=10)
+            proc.stdout.close()

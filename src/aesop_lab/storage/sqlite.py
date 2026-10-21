@@ -295,11 +295,20 @@ class SQLiteStore:
                         text_version TEXT NOT NULL, confirmed_at TEXT NOT NULL
                     )
                 """)
-                # Existing identities predate the gate: never interrupt their run.
-                self.connection.execute("""
+                # Any learner history predates the gate: never interrupt that run.
+                # v1-v3 packs record lessons and attempts without an identity row,
+                # so every learner-state table counts, not just learner_identity.
+                history = " OR ".join(f"EXISTS (SELECT 1 FROM {table})" for table in (
+                    "learner_identity", "lesson_completions", "attempts", "practice_drafts",
+                    "practice_hint_events", "self_reviews", "answer_revisions",
+                    "experiment_assignments", "experiment_exposures", "recommendation_overrides",
+                    "personal_assignments", "personal_exposures", "personal_responses",
+                    "personal_question_views", "personal_recommendation_overrides",
+                    "personal_hint_events", "personal_solution_reveals"))
+                self.connection.execute(f"""
                     INSERT OR IGNORE INTO learner_consent
                     SELECT 1, 'legacy-pre-gate', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-                    FROM learner_identity WHERE slot = 1
+                    WHERE {history}
                 """)
                 self.connection.execute("PRAGMA user_version = 16")
 
