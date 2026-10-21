@@ -71,10 +71,24 @@ class GateRunTests(unittest.TestCase):
                             "--scenarios", "null"], check=True, capture_output=True)
             report = (Path(folder) / "contrast-gate.html").read_text(encoding="utf-8")
             data = json.loads((Path(folder) / "contrast-gate.json").read_text(encoding="utf-8"))
-        self.assertIn("partial run: not a gate result", report)
+        self.assertIn("not a gate result", report)
         self.assertFalse(data["gate_passed"])
         self.assertEqual(len(data["learners"]["null"]), 10)
         self.assertLess(report.index("Gate:"), report.index("Gate requirements"))
+
+    def test_only_the_preregistered_configuration_is_official(self):
+        self.assertTrue(gate.is_official(list(gate.SCENARIOS), 50))
+        self.assertFalse(gate.is_official(list(gate.SCENARIOS), 1))
+        self.assertFalse(gate.is_official(["null"], 50))
+
+    def test_an_existing_report_is_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "contrast-gate.json").write_text("{}", encoding="utf-8")
+            done = subprocess.run([sys.executable, str(SCRIPT), "--out", folder, "--learners", "1",
+                                   "--scenarios", "null"], capture_output=True, text=True)
+            self.assertNotEqual(done.returncode, 0)
+            self.assertIn("already holds a gate report", done.stderr)
+            self.assertEqual((Path(folder) / "contrast-gate.json").read_text(encoding="utf-8"), "{}")
 
 
 if __name__ == "__main__":

@@ -129,8 +129,9 @@ def simulate_learner(job: tuple[str, int, int]) -> dict:
         answers = []  # (time, unit_id)
         order = [u.id for u in engine._ordered_units()]
         studied = 0
-        # Units studied after day 21 cannot be checked by the day-28 cutoff, so stop there.
-        for day in range(22):
+        # Units studied after day zero + 21 cannot be checked by the day-28 cutoff, so stop there.
+        first_day = active.index(True) if True in active else len(active)
+        for day in range(min(first_day + 22, len(active))):
             if not active[day]:
                 continue
             for slot in range(UNITS_PER_DAY):
@@ -141,7 +142,7 @@ def simulate_learner(job: tuple[str, int, int]) -> dict:
                 studied += 1
                 if rng.random() < 0.90:
                     answers.append((clock[0] + timedelta(days=rng.uniform(7, 10)), unit))
-        day_zero = START + timedelta(days=active.index(True)) if True in active[:22] else START
+        day_zero = START + timedelta(days=first_day if first_day < len(active) else 0)
         for at, unit in sorted(answers):
             day = (at - START).days
             while day < len(active) and not active[day]:
@@ -254,8 +255,8 @@ def pct(x) -> str:
 
 def report_html(summaries: list[dict], config: dict) -> str:
     gate = all(s["passed"] for s in summaries)
-    complete = set(config["scenarios"]) == set(SCENARIOS)
-    verdict = ("PASS" if gate else "FAIL") + ("" if complete else " (partial run: not a gate result)")
+    complete = config["official"]
+    verdict = ("PASS" if gate else "FAIL") + ("" if complete else " (partial or non-default run: not a gate result)")
     rows = []
     for s in summaries:
         for i, c in enumerate(s["requirements"]):
@@ -294,6 +295,11 @@ table {{ border-collapse:collapse; display:block; overflow-x:auto; margin:16px 0
 """
 
 
+def is_official(names, learners_per_seed) -> bool:
+    """Only the full, pre-registered configuration is a gate result."""
+    return set(names) == set(SCENARIOS) and learners_per_seed == LEARNERS_PER_SEED
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--out", type=Path, required=True, help="report folder, created if missing")
@@ -307,6 +313,8 @@ def main() -> int:
     if unknown or args.learners < 1 or args.workers < 1:
         parser.error(f"unknown scenarios {unknown}" if unknown else "learners and workers must be positive")
     seeds = list(RERUN_SEEDS if args.rerun else ACCEPTANCE_SEEDS)
+    if (args.out / "contrast-gate.json").exists():
+        parser.error(f"{args.out} already holds a gate report: use a fresh folder")
     started = time.monotonic()
     summaries, learners = [], {}
     with ProcessPoolExecutor(args.workers) if args.workers > 1 else _Serial() as pool:
@@ -319,14 +327,18 @@ def main() -> int:
                   f"{time.monotonic() - started:.0f} s)", flush=True)
     config = {"seeds": seeds, "learners_per_seed": args.learners, "scenarios": names,
               "policy_version": protocol.POLICY_VERSION, "estimator_version": protocol.ESTIMATOR_VERSION,
-              "model": SCENARIOS, "seconds": time.monotonic() - started}
+              "model": SCENARIOS, "seconds": time.monotonic() - started,
+              "official": is_official(names, args.learners)}
     args.out.mkdir(parents=True, exist_ok=True)
-    gate = all(s["passed"] for s in summaries) and set(names) == set(SCENARIOS)
+    gate = all(s["passed"] for s in summaries) and config["official"]
     (args.out / "contrast-gate.json").write_text(json.dumps(
         {"gate_passed": gate, "config": config, "summaries": summaries, "learners": learners}, indent=1), encoding="utf-8")
     (args.out / "contrast-gate.html").write_text(report_html(summaries, config), encoding="utf-8")
-    print(f"gate {'PASS' if gate else 'FAIL'}: {args.out / 'contrast-gate.html'} ({config['seconds']:.0f} s)", flush=True)
-    return 0
+    label = ("PASS" if gate else "FAIL") if config["official"] else "no gate verdict (partial or non-default run)"
+    print(f"gate {label}: "
+          f"{args.out / 'contrast-gate.html'} ({config['seconds']:.0f} s)", flush=True)
+    # A failed official gate exits non-zero; exploratory runs report but do not fail.
+    return 1 if config["official"] and not gate else 0
 
 
 class _Serial:
