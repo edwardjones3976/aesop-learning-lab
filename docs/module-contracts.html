@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module contracts and ownership</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="module-contracts-and-ownership">Module contracts and ownership</h1>
+<p>The dependency direction is <code>web -&gt; api -&gt; domain ports &lt;- adapters</code>. The domain types and ports have no UI or database imports. Content, assessment, scheduling, and experiments communicate through versioned records. SQLite is an adapter, not the source of policy.</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Owner</th>
+<th>Public contract</th>
+<th>Depends on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>domain</code></td>
+<td>Codex</td>
+<td>Concept ID, content version, activity, attempt, hint event, outcome, learner evidence, recommendation, experiment assignment</td>
+<td>Standard library only</td>
+</tr>
+<tr>
+<td><code>storage</code></td>
+<td>Codex</td>
+<td>Repository ports for content, attempts, schedule, experiments; migrations; export and deletion</td>
+<td><code>domain</code></td>
+</tr>
+<tr>
+<td><code>scheduler</code></td>
+<td>Codex</td>
+<td>Pure <code>recommend(state, available_time, policy_version)</code> returning choice and reason</td>
+<td><code>domain</code></td>
+</tr>
+<tr>
+<td><code>api</code></td>
+<td>Codex</td>
+<td>Versioned HTTP or application service boundary; input validation and error shapes</td>
+<td>Ports and services</td>
+</tr>
+<tr>
+<td><code>content</code></td>
+<td>Claude</td>
+<td>Versioned programming pack and schema validator; source and review receipts</td>
+<td><code>domain</code></td>
+</tr>
+<tr>
+<td><code>assessment</code></td>
+<td>Claude</td>
+<td>Deterministic scoring, hint ladder, scoring limits, rubric hooks</td>
+<td><code>domain</code>, <code>content</code></td>
+</tr>
+<tr>
+<td><code>experiments</code></td>
+<td>Claude</td>
+<td>Fixed protocol, seeded assignment, exposure log, outcome summary with uncertainty</td>
+<td><code>domain</code>, repository ports</td>
+</tr>
+<tr>
+<td><code>web</code></td>
+<td>Cursor</td>
+<td>Session, practice, review, and override screens</td>
+<td><code>api</code> only</td>
+</tr>
+<tr>
+<td><code>insights</code></td>
+<td>Cursor</td>
+<td>Evidence view, comparison view, export/correction/deletion controls</td>
+<td><code>api</code> only</td>
+</tr>
+<tr>
+<td><code>authoring</code></td>
+<td>Cursor</td>
+<td>Content preview and validation command/UI</td>
+<td><code>content</code> schema only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="contract-rules">Contract rules</h2>
+<ul>
+<li>IDs and content versions are immutable once attempts reference them. Corrections create a new content version.</li>
+<li>Every recorded attempt includes activity ID, content version, timestamp, first answer, assistance level, method, and selection reason. Optional confidence, response time, and outside-study notes remain explicitly optional.</li>
+<li>A score has a grading method and limits. An open-ended attempt stays ungraded; self or human review is recorded separately. Passing code tests never asserts conceptual understanding.</li>
+<li>Self review is a separate append-only event tied to the locked first-answer attempt and a rubric ID/version. Every criterion receives shown, partial, not shown, or unsure. Shown and partial require a quote from the first answer. The annotated example appears only after the review is saved. A later revision is another event and never replaces the first answer or changes its ungraded status. Even an all-shown self review only queues an independent check; it does not credit mastery.</li>
+<li>The experiment protocol is immutable during a run; policy changes create a new protocol version.</li>
+<li>API responses expose recommendation reasons and evidence scope. UI copy may explain them but may not invent unsupported conclusions.</li>
+<li>Add contract fixtures before modules depend on each other. Breaking changes require a version bump and all affected owner reviews.</li>
+<li>The browser boundary is specified in <a href="api-v1.html">API v1</a>. Cursor owns the UI adapter and fixtures; Codex owns the service and local transport that satisfy it.</li>
+</ul>
+<h2 id="v1-decisions-for-independent-implementation">V1 decisions for independent implementation</h2>
+<ul>
+<li>The content pack topic is <strong>Python functions and recursion</strong>. L1 owns a directed acyclic prerequisite graph and stable IDs. Every lesson, item, answer key, and source reference has a content version and a human review receipt with reviewer, date, and outcome.</li>
+<li>Activity types are <code>choice</code>, <code>trace</code>, <code>explanation</code>, and <code>code_design</code>. L1 tags each item with one evidence kind: <code>recognition</code>, <code>recall</code>, <code>explanation</code>, <code>application</code>, or <code>transfer</code>. Choice and trace can be deterministically scored against reviewed keys. Explanation and code design return <code>ungraded</code> pending rubric-based self or human review. No learner code is executed in V1.</li>
+<li>Hint levels are <code>none</code>, <code>nudge</code>, <code>targeted</code>, and <code>worked_solution</code>. Any hint beyond <code>none</code> makes the attempt assisted. Revealing a worked solution cannot create a correct first answer. Record first answer before any hint.</li>
+<li>L1 assigns an item family ID and marks held-out transfer items. An item is unfamiliar only when its family has not appeared in a prior lesson, example, practice item, or attempt for that learner. Transfer additionally requires a different context or application, documented by L1 and reviewed by L2.</li>
+<li>A concept reaches the V1 defined standard only after two correct, first-try, unassisted attempts from different item families, with one at least 24 hours after the prior lesson, plus one correct held-out application or transfer item. This is an operational pilot threshold, not a claim of permanent mastery.</li>
+<li>The first experiment compares a text explanation plus retrieval practice with the same explanation plus a labeled diagram and the same retrieval practice. L3 freezes versioned materials, time budget, assignment seed, matched concept pairs, primary outcome, and analysis rule before enrollment. Primary outcome is correctness on held-out, unassisted application items approximately seven days later. Report descriptive results and uncertainty; with too little data, report <code>insufficient_evidence</code> rather than a causal win.</li>
+<li>Within a comparison run, prompt for confidence before revealing the answer and prompt for outside study (<code>none</code>, <code>some</code>, <code>unknown</code>, plus optional detail). Outside comparison runs these fields remain optional. An unanswered prompt is recorded as missing, never silently interpreted as zero or none.</li>
+</ul>
+<h2 id="integration-sequence">Integration sequence</h2>
+<ol>
+<li>Codex lands domain records, ports, API examples, and a minimal SQLite migration.</li>
+<li>Claude and Cursor build against the examples in isolated branches/worktrees; no shared-file edits during parallel work.</li>
+<li>Integrate one vertical slice: lesson -&gt; attempt -&gt; hint -&gt; score -&gt; learner evidence -&gt; next activity -&gt; delayed review -&gt; insights.</li>
+<li>Integrate the fixed comparison only after the baseline slice passes. Re-run content validation and contract tests on the exact merge candidate.</li>
+<li>Run a scripted local acceptance journey, keyboard check, export/delete check, and delayed-assessment clock simulation before release.</li>
+</ol>
+
+</main></body>
+</html>

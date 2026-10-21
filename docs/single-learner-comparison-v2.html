@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal scope comparison v2 (prospective feasibility protocol)</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="personal-scope-comparison-v2-prospective-feasibility-protocol">Personal scope comparison v2 (prospective feasibility protocol)</h1>
+<p>This version keeps the v1 research question and assignment unit: for one learner, is a labeled binding diagram alongside a worked text explanation associated with stronger delayed independent tracing than the same text without the diagram? The two presentations share the worked code, reasoning, practice procedure, feedback, and held-out rule. Four fixed micro-units form two approximately matched pairs. A persisted seeded ABBA or BAAB sequence puts one unit from each pair in each condition. The learner, not each answer, is the person being studied; unit observations are dependent.</p>
+<p>V2 uses protocol <code>scope-text-diagram-single-learner</code> version <code>v2</code> and content <code>scope-comparison-draft.2</code>. It prospectively replaces v1 for new enrollment because its practice questions add control flow and local rebinding, rather than repeating the worked computation with new names and numbers. V1 assignments and source remain readable through the frozen v1 implementation. An existing v1 assignee cannot silently reenroll in v2. Earlier five-concept protocols and content versions remain separate.</p>
+<h2 id="fixed-outcome-and-eligibility-rules">Fixed outcome and eligibility rules</h2>
+<p>The primary outcome is the first unassisted response to each unit's held-out scope trace, from an item family not previously encountered, between 7 and 14 actual days after worked exposure completion. The learner must report no outside study at exposure completion and delayed response. A previously exposed family, standard-path concept exposure after assignment, reported outside study, assistance, or a held-out question open for over 30 minutes makes the response ineligible. Unknown outside study is separately ineligible. Early and late responses remain descriptive records. Missing responses stay missing; none is imputed. A draft candidate-key match is labeled as such, even when technically checked by a nonauthor AI reviewer.</p>
+<p>The primary comparison lists eligible candidate matches and classification counts by arm. It does not estimate a causal effect or compute an independent-participant confidence interval from four units in one learner. Unit content, order, prior knowledge, and carryover can explain an observed difference. The status remains <code>insufficient_evidence</code> regardless of direction. No favorable result automatically changes teaching policy.</p>
+<h2 id="separate-personal-evidence-dimensions">Separate personal evidence dimensions</h2>
+<p>The scope comparison measures a narrow application trace: predicting a returned value and unchanged global binding. It separately records practice candidate matches, help use, delayed candidate matches, actual elapsed delay, missingness, and contamination. The five-concept pilot records recognition, recall, explanation, application, and transfer activity kinds, but those outcomes are not comparably assigned within this scope experiment. Explanation, general transfer, and broader retained understanding therefore remain unmeasured here. Open explanations are not automatically graded as objectively correct.</p>
+<p>Optional confidence is captured before a first answer and paired descriptively with its draft candidate-key match. Missing confidence remains missing. These pairs do not establish calibrated accuracy while keys and difficulty remain unvalidated. Exposure start and completion timestamps measure an elapsed interval, not attentive study duration or sustainability; the latter remains unknown. No combined mastery percentage is computed.</p>
+<h2 id="decision-rule-and-learner-choice">Decision rule and learner choice</h2>
+<p>The versioned <code>scope-next-v1</code> rule uses recorded practice responses, assistance, due times, and missing evidence to explain the next study, practice, or delayed-check activity. It shows the evidence behind the choice, the intended benefit, uncertainty, and a permitted alternative. A learner may defer an unopened due check to the next sequential unit; the original recommendation and override choice are persisted, and the held-out family is preserved for the return. This choice is not proof that a preferred presentation improves learning. The rule does not use an observed text-versus-diagram difference to alter future experimental assignments or standard five-concept policy.</p>
+<p>Content remains draft. The <a href="scope-comparison-content-review-v2.html">nonauthor AI engineering review</a> checks Python behavior, candidate keys, diagrams, hint behavior, and item-family separation. A qualified human subject-matter review and empirical difficulty assessment remain necessary before educational validity claims. Simulated learners and controlled clocks verify software transitions, not actual human learning.</p>
+
+</main></body>
+</html>

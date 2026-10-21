@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Micro-unit pack format</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="micro-unit-pack-format">Micro-unit pack format</h1>
+<p><code>micro-unit-pack/1</code> is a separate, strict JSON format. Existing <code>content-pack/1</code>
+Python packs and their loader are unchanged. Import <code>load_micro_unit_pack</code>,
+<code>parse_micro_unit_pack</code>, or <code>validate_micro_unit_pack</code> from
+<code>aesop_lab.content.micro_unit</code>. Parsing returns frozen typed records; variants
+are a read-only mapping. Validation returns the existing path/code/message
+<code>Issue</code> records; parsing raises <code>ContentValidationError</code> containing all issues.
+Unknown fields are rejected, including attempts to add extra checks or weights.</p>
+<p>Short schema (all strings nonempty; all fields required unless marked optional):</p>
+<pre><code class="language-text">pack: {kind: &quot;micro_unit&quot;, schema_version: &quot;micro-unit-pack/1&quot;, pack_id,
+       methods: [method, ...], units: [unit, ...]}
+method: {id, name, description}
+unit: {id, target: {word, gloss}, variants: {method_id: lesson_text, ...},
+       check: check, practice?: [{id, prompt}, ...]}
+check: {id, family_id, prompt,
+        answer_key: {status: &quot;candidate&quot;, accepted: [answer, ...]},
+        check_delay_days: 7, held_out: true}
+</code></pre>
+<p>For example, one unit for a pack declaring only <code>cued_retrieval</code>:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;voma&quot;,
+  &quot;target&quot;: {&quot;word&quot;: &quot;voma&quot;, &quot;gloss&quot;: &quot;river&quot;},
+  &quot;variants&quot;: {&quot;cued_retrieval&quot;: &quot;voma means river. Cover the meaning and recall it.&quot;},
+  &quot;check&quot;: {
+    &quot;id&quot;: &quot;voma-day7&quot;,
+    &quot;family_id&quot;: &quot;voma-recall&quot;,
+    &quot;prompt&quot;: &quot;Give the English meaning of voma.&quot;,
+    &quot;answer_key&quot;: {&quot;status&quot;: &quot;candidate&quot;, &quot;accepted&quot;: [&quot;river&quot;]},
+    &quot;check_delay_days&quot;: 7,
+    &quot;held_out&quot;: true
+  }
+}
+</code></pre>
+<p>See <code>tests/fixtures/micro-unit-sample.json</code> for a complete pack with three
+methods and four independent word targets. This is a format fixture, not a
+reviewed teaching pack. The full intended method set also includes
+<code>rule_then_drill</code>; method IDs are pack-declared, not a global enum.</p>
+<p>Validation requires nonempty methods and units, unique method and unit IDs,
+unique check family IDs across units, and unique item IDs across checks and
+practice. Every declared method needs exactly one string variant per unit;
+undeclared variants are rejected. A check must be one object, have a nonempty
+candidate answer list, integer delay 7, and literal boolean <code>true</code> held-out.
+Duplicate accepted strings are rejected. Practice is optional and never adds
+units, checks, families, or weights.</p>
+<p>Leak detection guards only the check prompt. Every accepted answer is matched
+against its own check prompt as a whole word or phrase, ignoring case, so &quot;me&quot;
+does not match &quot;mean&quot;. Variants are not checked: a vocabulary lesson exists to
+teach the answer, including accepted synonyms. For example, gloss &quot;to borrow&quot;
+with the accepted answer &quot;borrow&quot; is legitimate in every variant. Integration
+(Claude) removed an earlier variant rule, because it would have rejected exactly
+such synonyms. This is not a semantic independence or paraphrase detector.
+Independent review must still assess target independence and teaching quality.</p>
+<p>Mapping to design #60's unit rules: the unit ID denotes one independent target,
+not a method variant or practice item. A2 must select exactly one variant for
+one exposure and assign exactly one day-7 check at weight 1. There is no
+configurable weight, additional delayed-check list, scheduling, assignment,
+content registration, or review approval in this format implementation.
+Candidate keys do not claim independent review or authorize scoring.</p>
+<p>A2 must decide the stable method IDs for production (including rule-then-drill),
+assignment/balancing and exposure persistence, the meaning of day 7 relative to
+exposure timestamps, candidate-key review/scoring gates, and how practice is
+served without re-exposing held-out checks. Prefer an answer policy before
+adding case or whitespace normalization. The referenced design and topic-decision
+files were absent from this worktree; this mapping follows the supplied work order.</p>
+<p>Validation tests live in <code>tests/test_micro_unit_content.py</code>. Each broken-fixture
+test asserts a specific issue path/code and that parsing raises. Separate tests
+cover allowed teaching reveals, typed loading, immutable variants, optional
+practice, and collecting multiple issues.</p>
+<h2 id="a1-verification">A1 verification</h2>
+<p>Required Python discovery passed: 311 tests. The final focused micro-unit suite
+passed: 23 tests (including two additional malformed-input tests). The Node web
+contract suite passed: 39 tests. Diagnostic
+break checks temporarily suppressed the specific path/code from each of these
+11 guards in memory: missing variant, unknown method, duplicate unit/family/check
+IDs, missing key, non-candidate key, wrong delay, held-out flag, prompt leak,
+and non-target variant leak. Every corresponding test failed: 11/11 detected.
+Integration then replaced the variant-leak rule with whole-word, case-insensitive
+prompt matching. Restoring the old substring rule fails the two new prompt tests.
+The source files were not modified by those break checks. These checks verify
+guard sensitivity; they do not establish semantic independence of the fixture.</p>
+
+</main></body>
+</html>

@@ -1,0 +1,325 @@
+"""Deterministic generator for the invented lexicon micro-units.
+
+Generates 100 phonotactically valid, unique invented words with everyday English glosses
+and four distinct lesson method variants (retrieval, keyword, example_sentence, rule_drill),
+plus held-out delayed evaluation checks.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import random
+from typing import Any, Dict, List, Tuple
+
+# Default seed for deterministic generation
+DEFAULT_SEED = 20261021
+
+METHOD_DEFINITIONS = [
+    {
+        "id": "retrieval",
+        "name": "Cued Retrieval Practice",
+        "description": "Show the pair, then prompt the learner to recall the gloss before revealing it.",
+    },
+    {
+        "id": "keyword",
+        "name": "Keyword Mnemonic",
+        "description": "A keyword mnemonic linking the sound to an English keyword, then to the meaning, with a vivid image sentence.",
+    },
+    {
+        "id": "example_sentence",
+        "name": "Contextual Examples",
+        "description": "The word used in two short English-frame sentences that make the meaning clear.",
+    },
+    {
+        "id": "rule_drill",
+        "name": "Rule Then Drill",
+        "description": "A short explicit definition statement followed by two quick drill lines.",
+    },
+]
+
+# 50 concrete, everyday nouns and their acceptable answer variants
+NOUN_GLOSSES: List[Tuple[str, List[str]]] = [
+    ("kettle", ["kettle"]),
+    ("bucket", ["bucket"]),
+    ("pillow", ["pillow"]),
+    ("blanket", ["blanket"]),
+    ("candle", ["candle"]),
+    ("mirror", ["mirror"]),
+    ("ladder", ["ladder"]),
+    ("hammer", ["hammer"]),
+    ("shovel", ["shovel"]),
+    ("needle", ["needle"]),
+    ("anchor", ["anchor"]),
+    ("barrel", ["barrel"]),
+    ("basket", ["basket"]),
+    ("bottle", ["bottle"]),
+    ("bridge", ["bridge"]),
+    ("button", ["button"]),
+    ("carpet", ["carpet"]),
+    ("castle", ["castle"]),
+    ("chimney", ["chimney"]),
+    ("compass", ["compass"]),
+    ("cradle", ["cradle"]),
+    ("curtain", ["curtain"]),
+    ("dagger", ["dagger"]),
+    ("drawer", ["drawer"]),
+    ("feather", ["feather"]),
+    ("fence", ["fence"]),
+    ("fountain", ["fountain"]),
+    ("furnace", ["furnace"]),
+    ("garlic", ["garlic"]),
+    ("helmet", ["helmet"]),
+    ("jacket", ["jacket"]),
+    ("lantern", ["lantern"]),
+    ("locket", ["locket"]),
+    ("mattress", ["mattress"]),
+    ("meadow", ["meadow"]),
+    ("cauldron", ["cauldron"]),
+    ("necklace", ["necklace"]),
+    ("orchard", ["orchard"]),
+    ("pebble", ["pebble"]),
+    ("quiver", ["quiver"]),
+    ("ribbon", ["ribbon"]),
+    ("saddle", ["saddle"]),
+    ("scissors", ["scissors"]),
+    ("sponge", ["sponge"]),
+    ("tunnel", ["tunnel"]),
+    ("valley", ["valley"]),
+    ("wagon", ["wagon"]),
+    ("whistle", ["whistle"]),
+    ("window", ["window"]),
+    ("anvil", ["anvil"]),
+]
+
+# 50 concrete, everyday verbs and their acceptable answer variants
+VERB_GLOSSES: List[Tuple[str, List[str]]] = [
+    ("to borrow", ["to borrow", "borrow"]),
+    ("to whisper", ["to whisper", "whisper"]),
+    ("to harvest", ["to harvest", "harvest"]),
+    ("to sharpen", ["to sharpen", "sharpen"]),
+    ("to polish", ["to polish", "polish"]),
+    ("to scatter", ["to scatter", "scatter"]),
+    ("to crumble", ["to crumble", "crumble"]),
+    ("to stumble", ["to stumble", "stumble"]),
+    ("to wander", ["to wander", "wander"]),
+    ("to tremble", ["to tremble", "tremble"]),
+    ("to kindle", ["to kindle", "kindle"]),
+    ("to untie", ["to untie", "untie"]),
+    ("to squeeze", ["to squeeze", "squeeze"]),
+    ("to bounce", ["to bounce", "bounce"]),
+    ("to splash", ["to splash", "splash"]),
+    ("to gallop", ["to gallop", "gallop"]),
+    ("to paddle", ["to paddle", "paddle"]),
+    ("to juggle", ["to juggle", "juggle"]),
+    ("to fasten", ["to fasten", "fasten"]),
+    ("to tickle", ["to tickle", "tickle"]),
+    ("to sprout", ["to sprout", "sprout"]),
+    ("to wither", ["to wither", "wither"]),
+    ("to shimmer", ["to shimmer", "shimmer"]),
+    ("to swallow", ["to swallow", "swallow"]),
+    ("to strangle", ["to strangle", "strangle"]),
+    ("to wrestle", ["to wrestle", "wrestle"]),
+    ("to slumber", ["to slumber", "slumber"]),
+    ("to ponder", ["to ponder", "ponder"]),
+    ("to shatter", ["to shatter", "shatter"]),
+    ("to glisten", ["to glisten", "glisten"]),
+    ("to plunge", ["to plunge", "plunge"]),
+    ("to scramble", ["to scramble", "scramble"]),
+    ("to trample", ["to trample", "trample"]),
+    ("to trickle", ["to trickle", "trickle"]),
+    ("to clamber", ["to clamber", "clamber"]),
+    ("to linger", ["to linger", "linger"]),
+    ("to dwindle", ["to dwindle", "dwindle"]),
+    ("to beckon", ["to beckon", "beckon"]),
+    ("to bestow", ["to bestow", "bestow"]),
+    ("to engulf", ["to engulf", "engulf"]),
+    ("to fathom", ["to fathom", "fathom"]),
+    ("to garner", ["to garner", "garner"]),
+    ("to ignite", ["to ignite", "ignite"]),
+    ("to muster", ["to muster", "muster"]),
+    ("to pilfer", ["to pilfer", "pilfer"]),
+    ("to ravage", ["to ravage", "ravage"]),
+    ("to saunter", ["to saunter", "saunter"]),
+    ("to throttle", ["to throttle", "throttle"]),
+    ("to unravel", ["to unravel", "unravel"]),
+    ("to vanish", ["to vanish", "vanish"]),
+]
+
+
+def load_excluded_words() -> set[str]:
+    """Load the committed exclusion list of words the generator must skip."""
+    excluded_path = Path(__file__).resolve().parent / "excluded_words.txt"
+    if not excluded_path.exists():
+        raise FileNotFoundError(f"Excluded words file not found at {excluded_path}")
+    with open(excluded_path, "r", encoding="utf-8") as f:
+        return set(
+            line.strip().lower()
+            for line in f
+            if line.strip() and not line.strip().startswith("#")
+        )
+
+
+def load_authoring_data() -> Dict[str, Dict[str, Any]]:
+    """Load the unit-specific authored texts for all 100 glosses."""
+    authoring_path = (
+        Path(__file__).resolve().parent.parent
+        / "content"
+        / "drafts"
+        / "invented-lexicon-authoring.json"
+    )
+    if not authoring_path.exists():
+        raise FileNotFoundError(f"Authoring data file not found at {authoring_path}")
+    with open(authoring_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def generate_phonotactic_words(
+    rng: random.Random, excluded_words: set[str], count: int = 100
+) -> List[str]:
+    """Deterministically generate pronounceable CV/CVC syllables, 2-3 syllables each, not in excluded_words."""
+    onset_c = ["b", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "r", "s", "t", "v", "w", "z"]
+    vowels = ["a", "e", "i", "o", "u"]
+    coda_c = ["l", "m", "n", "r", "s", "t", "k"]
+
+    words: List[str] = []
+    while len(words) < count:
+        syll_count = rng.choice([2, 3])
+        syllables: List[str] = []
+        for _ in range(syll_count):
+            s = rng.choice(onset_c) + rng.choice(vowels)
+            if rng.random() < 0.3:
+                s += rng.choice(coda_c)
+            syllables.append(s)
+        candidate = "".join(syllables)
+        if len(candidate) >= 4 and candidate not in excluded_words and candidate not in words:
+            words.append(candidate)
+    return words
+
+
+def build_lexicon_data(seed: int = DEFAULT_SEED, unreviewed: bool = False) -> Dict[str, Any]:
+    """Deterministically build the complete invented lexicon data structure."""
+    if seed != DEFAULT_SEED and not unreviewed:
+        raise ValueError(
+            f"Seed {seed} has not been authored/reviewed. "
+            f"The authored curriculum belongs to default seed {DEFAULT_SEED}. "
+            f"Pass --unreviewed to generate an unreviewed lexicon."
+        )
+
+    rng = random.Random(seed)
+    excluded_words = load_excluded_words()
+    authoring_data = load_authoring_data()
+
+    words = generate_phonotactic_words(rng, excluded_words, count=100)
+
+    # Combine nouns and verbs, then randomly shuffle with same seed to ensure irregularity
+    items = list(NOUN_GLOSSES + VERB_GLOSSES)
+    rng.shuffle(items)
+
+    units: List[Dict[str, Any]] = []
+
+    for i in range(100):
+        word = words[i]
+        gloss, accepted = items[i]
+        is_verb = gloss.startswith("to ")
+        base = gloss[3:] if is_verb else gloss
+        gloss_phrase = f"'to {base}'" if is_verb else f"'{gloss}'"
+
+        auth = authoring_data[gloss]
+
+        # 1. Retrieval variant (teach pair first, prompt retrieval, confirm answer)
+        # Note: Must NOT contain check prompt or 'What does'
+        retrieval = (
+            f"The invented word {word} means {gloss_phrase}.\n"
+            f"Now cover the line above. What is the meaning of {word}? Say it aloud before checking.\n"
+            f"Answer: {gloss_phrase}. Remember {word}!"
+        )
+
+        # 2. Keyword variant (sound-alike keyword + vivid image sentence connecting keyword to meaning)
+        kw = auth["keyword"]
+        mnem_sentence = auth["mnemonic_sentence"].format(w=f"({word})")
+        keyword = (
+            f"Think of {word} as {kw}. {mnem_sentence} "
+            f"Remember that {word} means {gloss_phrase} whenever you hear {kw}."
+        )
+
+        # 3. Example sentence variant (two unit-specific sentences implying meaning clearly)
+        ex1 = auth["example_sentences"][0].format(w=word)
+        ex2 = auth["example_sentences"][1].format(w=word)
+        example_sentence = (
+            f"{ex1} {ex2} "
+            f"Always remember, {word} represents this meaning."
+        )
+
+        # 4. Rule drill variant (1 rule line + 2 practice lines with answer)
+        raw_drill = auth["rule_drills"][0].replace(f"({base})", "").replace(f"({word})", "").replace("{w}", "___")
+        drill_fill = " ".join(raw_drill.split())
+        rule_drill = (
+            f"Rule: The word {word} means {gloss_phrase}.\n"
+            f"Fill in: {drill_fill} (Answer: {word})\n"
+            f"Which word means {gloss_phrase}? (Answer: {word})"
+        )
+
+        # Delayed check
+        wrong_example = items[(i + 1) % 100][0]
+
+        unit = {
+            "id": word,
+            "word": word,
+            "gloss": gloss,
+            "variants": {
+                "retrieval": retrieval,
+                "keyword": keyword,
+                "example_sentence": example_sentence,
+                "rule_drill": rule_drill,
+            },
+            "check": {
+                "prompt": f"What does {word} mean?",
+                "accepted": accepted,
+                "family_id": f"{word}-meaning",
+                "check_delay_days": 7,
+                "held_out": True,
+                "wrong_example": wrong_example,
+            },
+        }
+        units.append(unit)
+
+    res: Dict[str, Any] = {
+        "seed": seed,
+        "methods": METHOD_DEFINITIONS,
+        "units": units,
+    }
+    if unreviewed:
+        res["unreviewed"] = True
+    return res
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generate invented lexicon draft.")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="RNG seed for generation")
+    parser.add_argument(
+        "--unreviewed",
+        action="store_true",
+        help="Allow running with non-default unreviewed seeds",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("content/drafts/invented-lexicon-v1.json"),
+        help="Output JSON file path",
+    )
+    args = parser.parse_args()
+
+    data = build_lexicon_data(seed=args.seed, unreviewed=args.unreviewed)
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    print(f"Generated {len(data['units'])} units to {args.output} (seed={args.seed})")
+
+
+if __name__ == "__main__":
+    main()

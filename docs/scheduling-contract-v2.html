@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-day and one-week check contract</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="one-day-and-one-week-check-contract">One-day and one-week check contract</h1>
+<p>This extends <a href="scheduling-contract-v1.html">the original scheduler contract</a> for the
+<code>m1-draft.3</code> development pack. The original v1 and v2 packs and learner records
+remain pinned to their versions. The new pack uses <code>pilot-v2</code> in recommendations.</p>
+<p>Each activity has <code>check_delay_days</code>: zero for practice, one or seven for a
+held-out check. The delay is measured from the persisted lesson completion time.
+The earlier check must have an attempt before the seven-day check becomes
+eligible. Its score and hint level do not determine eligibility, so a weak
+day-one result does not remove the opportunity to observe week-one retention.
+The seven-day item has a different, previously unattempted family. An attempted
+held-out item is not offered again.</p>
+<p>An unassisted correct scored answer after lesson completion is still needed to
+open the first check. Practice remains available before and after either due
+time. A learner can choose practice when a check is due. <code>nextCheckAt</code> is the
+next eligible check time, which may already be past. It is not a claim that an
+attempt occurred or that a learner retained the concept.</p>
+<p><code>delayedChecks</code> records each attempted interval with <code>checkDelayDays</code>, assistance,
+score, and <code>independentSuccess</code>. <code>delayedOutcomeByDay</code> reports <code>observed</code> or
+<code>insufficient_evidence</code> for each interval separately. Both keys and instructional
+items remain unreviewed candidates; these observations are not mastery estimates.</p>
+
+</main></body>
+</html>

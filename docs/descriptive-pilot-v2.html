@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prospective descriptive pilot v2</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="prospective-descriptive-pilot-v2">Prospective descriptive pilot v2</h1>
+<p>This protocol is a new, prospective version of the existing text-versus-diagram comparison. The v1 protocol and its assignments remain unchanged on v4 content. Existing v1 participants must not be silently reassigned or analyzed as v2 participants. A new learner can receive v2 assignments only before seeing the corresponding v5 lesson.</p>
+<p>V2 uses the five v5 concepts and preselected seven-day held-out families. The two conditions share the same explanation and retrieval practice. The diagram condition adds a labeled diagram. Assignment uses a persisted local learner ID, protocol seed <code>20261017</code>, and SHA-256 ranking to alternate conditions across concepts. The first assignment for a concept is saved and reused. The protocol records a <strong>10-minute study target</strong> for both conditions, while allowing the learner to proceed at their own pace. Recording an observed duration does not prove that the exposure was equivalent or attentive.</p>
+<p>The primary observation is the first independent, deterministically graded response to the fixed unfamiliar application or transfer family between days 7 and 14 after completed exposure <strong>and only after independent content review</strong>. During the current draft preview, a candidate-key match is shown as <code>provisional</code>; it is never an <code>eligible</code> primary outcome or an independently verified correct result. This enforces the existing v2 review requirement without moving the preregistered time window. An independently reviewed incorrect first response in that window remains an observed incorrect result. A later success cannot replace the first result.</p>
+<p>The analysis separates absent responses (<code>missing</code>), assisted or previously seen families (<code>contaminated</code>), ungraded answers, early responses, and late responses. A late but otherwise independent first response is retained as a <strong>descriptive, nonprimary</strong> observation with its actual elapsed seconds and days since exposure; its key match is labeled as candidate or reviewed according to content status. It never enters the day-7-to-14 primary count. Exposure comparability is a separate axis: recorded study seconds do not verify equivalent, attentive exposure, and the current self-paced pilot labels completed exposures <code>unverified</code>. A mismatched assignment/exposure is labeled <code>exposure_incomparable</code> instead of being silently counted as an incorrect answer.</p>
+<p>The independent analysis unit is a <strong>learner</strong>. Five concept outcomes from one local learner are correlated observations and count as at most one learner in each arm. The app must show concept observations and independent learner counts separately. Its one-learner database cannot satisfy the preset descriptive threshold of 20 independent learners per arm. V2 therefore returns <code>insufficient_evidence</code>; it does not produce a method winner, a concept-level confidence interval, or a claim of improved learning. Draft answer keys and unverified exposure duration are additional limitations. A future multi-learner study with independently reviewed content and controlled exposure requires a separately versioned protocol and privacy review.</p>
+<p>The pure implementation is in <code>src/aesop_lab/experiment/descriptive_v2.py</code>. Call <code>assign_condition_v2(concept_id, learner_id)</code> only for new enrollment, persist the returned condition with protocol ID/version/seed, and pass only v2 assignments and exposures to <code>analyze_v2(..., learner_id=..., now=...)</code>. The analysis rejects foreign assignments and a condition inconsistent with the learner-specific seeded mapping. <code>ExposureV2.observed_seconds</code> is optional and descriptive; no timing field is required for recovery of an interrupted session. The v2 report keeps <code>protocol</code>, <code>status</code>, <code>reason</code>, and <code>arms</code> as the outer shape while identifying concept and learner counts explicitly.</p>
+<p><code>effect_policy_gate_v2(report, content_reviewed=..., exposure_verified=..., independent_learners_per_arm=...)</code> is a separate, pure gate for a possible <strong>manual</strong> policy-amendment review. It remains inactive for the current one-learner report, draft content, unverified exposure, synthetic evidence, or fewer than 20 verified independent learners per arm. A positive gate result would only invite independent review of a new versioned policy; it does not change scheduling or prove one teaching method better.</p>
+
+</main></body>
+</html>

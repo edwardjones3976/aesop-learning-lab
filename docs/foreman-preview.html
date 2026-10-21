@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreman local preview</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="foreman-local-preview">Foreman local preview</h1>
+<p>This branch is a separate development preview of the draft Python functions and recursion pack. It does not modify <code>master</code> or the existing web app.</p>
+<p>Start it from the repository root:</p>
+<pre><code class="language-powershell">py scripts/run_foreman.py
+</code></pre>
+<p>Open <a href="http://127.0.0.1:8775/">http://127.0.0.1:8775/</a>. The server binds only to the loopback interface and keeps learner data in <code>.local/foreman.sqlite3</code> within this worktree. It has no cloud account or public address.</p>
+<p>If that database contains v1 learner records, the preview stays on <code>m1-draft.1</code> to preserve their original content. Any database with v2 learner events likewise remains on <code>m1-draft.2</code>. An empty database now starts on v3. Each local database has separate learner records; export them separately if needed.</p>
+<p>For the new two-interval v3 draft, use a third local record and open <a href="http://127.0.0.1:8777/">http://127.0.0.1:8777/</a>:</p>
+<pre><code class="language-powershell">py scripts/run_foreman.py --port 8777 --db .local/foreman-v3.sqlite3
+</code></pre>
+<p>The pack remains <code>draft</code>, with candidate answer keys. The original <code>m1-draft.1</code> pack is frozen, and its <a href="independent-content-review.html">scoped independent review</a> requested four corrections. <code>m1-draft.2</code> addresses those findings but has <strong>no independent review receipt</strong>. <code>m1-draft.3</code> adds a distinct held-out family per concept at seven days and likewise needs independent review. Fresh local records use v3; existing v1 and v2 learner records stay on their original packs until explicitly deleted, so a restart does not reinterpret saved answers. The preview displays the active pack version. Automatic matches are development feedback only. The interface records a lesson completion when the learner presses the lesson button, saves each first answer before opening hints, persists each hint view, and links an idempotent attempt to the saved answer. Export and deletion include saved answers and hint views. Held-out checks are not mastery decisions.</p>
+<p>The path now suggests the next concept and explains why: finish a saved answer, take a due held-out check, build one unassisted candidate-key match, or read the next prerequisite-ready lesson. Learners can choose another concept in <strong>Your Path</strong>. <strong>Inspect learning evidence</strong> shows separate recognition, recall, explanation, application, and transfer attempt counts, assisted and unassisted matches, and observed one-day and one-week check status. A one-week check is offered after seven days from lesson completion and an attempted one-day check, regardless of its score. This preserves evidence about weak retention. Each interval says <code>insufficient_evidence</code> until its own check is recorded. Family familiarity remains <code>not_verified</code> because lesson and example exposure is not yet logged. Confidence counts include only independent scored attempts with confidence recorded; no confidence calibration or probabilistic mastery estimate is inferred.</p>
+<h2 id="personalization-boundary">Personalization boundary</h2>
+<p>The primary goal is better learning for each person; Python is the first subject used to build and evaluate the method. The preview now shows attempt, unassisted match, and hint-use signals alongside the scheduling reason. It offers local controls for time available, text size, a quiet view, and Light, Dark, or System appearance. System follows changes to the device's color scheme. These controls improve access and comfort but do not suppress retrieval, reveal hints before a first answer, or remove delayed checks. They are preferences, not a diagnosis of a fixed learning style. Settings live in this browser's local storage; attempt data lives in SQLite. The UI export includes both, and the UI delete action clears both.</p>
+<p>This pilot has <strong>not</strong> shown that its personalization improves outcomes. The rules are transparent hypotheses to evaluate using delayed, unassisted, unfamiliar tasks and sustainable participation.</p>
+<p>Research informing these guardrails:</p>
+<ul>
+<li><a href="https://pubmed.ncbi.nlm.nih.gov/26173288/">Dunlosky et al. (2013), review of learning techniques</a>: practice testing and distributed practice have broad support across the reviewed settings.</li>
+<li><a href="https://doi.org/10.1126/science.1152408">Karpicke and Roediger (2008), retrieval experiment</a>: retrieval practice can support later retention.</li>
+<li><a href="https://doi.org/10.1111/j.1539-6053.2009.01038.x">Pashler et al. (2008), learning-styles evidence review</a>: evidence does not justify assigning instruction by a fixed style label.</li>
+<li><a href="https://www.psychologicalscience.org/journals/perspectives/1745691615569000/">Soderstrom and Bjork (2015), learning versus performance review</a>: immediate ease or performance should not be treated as lasting learning.</li>
+</ul>
+<p>Run checks with:</p>
+<pre><code class="language-powershell">$env:PYTHONPATH='src'
+py -m unittest discover -s tests -q
+cd web
+npm test
+</code></pre>
+
+</main></body>
+</html>

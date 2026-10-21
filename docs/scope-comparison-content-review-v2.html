@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scope comparison v2 content and engineering review</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="scope-comparison-v2-content-and-engineering-review">Scope comparison v2 content and engineering review</h1>
+<p><strong>Status:</strong> Draft educational content. Nonauthor AI engineering review completed 2026-10-18; qualified human subject-matter validation has not occurred.</p>
+<p><strong>Reviewed source:</strong> <code>src/aesop_lab/api/personal_comparison.py</code>, SHA-256 <code>ac24275fbb6681151a142d9a01143ecf6dea5dd1b2b211ae34da2aadf002d351</code>. This receipt applies only while that exact source hash remains unchanged. The frozen historical v1 module has SHA-256 <code>3930248ed8cc63eb740f9145e9019094796878fc04083d93f6028f12e5516a16</code>.</p>
+<p><strong>Subsequent source revision:</strong> The current source SHA-256 is <code>259118d14eb62c3bdfc92d7764536294f1f388cc3047ebaf71c7384d258eedd8</code>. Its fixed Python snippets, diagrams, keys, and item-family identifiers are unchanged. The revision records explicit candidate-solution openings after first answers, rejects malformed unit identifiers, and withholds answer text and reasoning from the report until the reveal event is stored. The earlier source-hash receipt is historical; a nonauthor AI engineering review of commit <code>686f30d9e9e056964ff72b2096ba84b42697588f</code> checked this gate. Qualified human content validation remains outstanding.</p>
+<p><strong>Reviewer:</strong> <code>/root/repo_science_audit</code>, a read-only nonauthor AI engineering agent. It authored no candidate content or source files. This is an AI technical review, not a credentialed human curriculum review.</p>
+<p><strong>Scope:</strong> The reviewer checked all twelve fixed Python snippets and numeric keys against trusted Python execution, the four worked binding/return diagrams, common misconceptions, worked and answer steps, the two practice hint levels, normalized statement/expression structure, held-out separation, approximate within-pair operation counts, old v1 routing, and evidence classifications. Learner-submitted code was never executed.</p>
+<p><strong>Findings and dispositions:</strong></p>
+<ul>
+<li>V1 worked and practice tasks were chiefly renamings and numeric changes. V2 practice in each unit now requires additional branch or local-rebinding reasoning and has a distinct structure; old v1 content and assignments remain readable.</li>
+<li>A single generic hint did not form a ladder. V2 has two ordered hints, each persisted; either makes the later first answer assisted.</li>
+<li>The first implementation omitted the pre-exposure Open button. Browser verification exposed the blocker; the study card now offers the button before revealing content and has a frontend regression.</li>
+<li>A shared answer route initially passed v2 confidence to pinned v1. The frozen v1 handler now accepts and ignores that optional field, preserving the old response record. A route regression covers it.</li>
+<li>An override initially risked losing the chosen unit between study and practice. The saved choice now carries through practice, then reoffers the due held-out family. Regression and browser checks cover the transition.</li>
+<li>A delayed no-hint response classified contaminated or outside-study-unknown was initially described as independent retention. The dimension report now counts only eligible unfamiliar delayed responses there and keeps other recorded responses descriptive.</li>
+</ul>
+<p><strong>Remaining limits:</strong> The new practice introduces more control flow and local updates than the worked task; it is an application challenge, but empirical difficulty equivalence has not been established. Pair A/B and C/D are approximately matched structurally, not experimentally calibrated. Four units in one concept invite carryover. Technical key correctness and code-family separation do not demonstrate true learner unfamiliarity, educational validity, or a diagram effect. The report must remain <code>insufficient_evidence</code>.</p>
+
+</main></body>
+</html>

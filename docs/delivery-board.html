@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delivery board</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="delivery-board">Delivery board</h1>
+<p>Three provider lanes have equal initial budgets of 12 planning points. Points are a sizing tool; rebalance when evidence shows a different cost. Each provider owns three four-point packages. Cross-review is reciprocal and no provider approves its own work.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Provider</th>
+<th>Package (4 points each)</th>
+<th>Done when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td>Codex</td>
+<td>Domain types, repository ports, contract fixtures</td>
+<td>Records and invariants documented; fixtures validate</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>Codex</td>
+<td>SQLite adapter, migrations, export/delete</td>
+<td>Round-trip and migration checks pass</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Codex</td>
+<td>Learner-state rules, scheduler, application API</td>
+<td>Reasoned recommendation and delayed-review slice pass</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>Claude</td>
+<td>Reviewed programming concept pack and validation schema</td>
+<td>~20 linked concepts with versioned content and source review receipts</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>Claude</td>
+<td>Assessment and hint ladder</td>
+<td>Unassisted/assisted scoring and honest ungraded path pass</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>Claude</td>
+<td>Experiment manager and outcome reporting</td>
+<td>Seeded fixed comparison, exposure log, uncertainty report pass</td>
+</tr>
+<tr>
+<td>U1</td>
+<td>Cursor</td>
+<td>Session and practice UI</td>
+<td>Keyboard-usable lesson, attempt, hint, and pause flow works</td>
+</tr>
+<tr>
+<td>U2</td>
+<td>Cursor</td>
+<td>Insights and learner controls</td>
+<td>Evidence, override, correction, export, and delete flows work</td>
+</tr>
+<tr>
+<td>U3</td>
+<td>Cursor</td>
+<td>Content authoring preview and accessibility pass</td>
+<td>Preview validates versions; accessibility checklist passes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="milestones">Milestones</h2>
+<ul>
+<li>M0: Brief, contracts, ownership, initial repo and CI. Exit: all three providers accept package boundaries and contract fixtures.</li>
+<li>M1: Core vertical slice with five concepts. Exit: local end-to-end practice and delayed check, no runtime AI.</li>
+<li>M2: Twenty-concept pack and fixed comparison. Exit: all V1 acceptance tests and content review pass.</li>
+<li>M3: Pilot and evidence review. Exit: usability, data-control, and experiment-quality issues triaged; claims remain appropriately limited.</li>
+</ul>
+<h2 id="integration-and-mending-procedure">Integration and mending procedure</h2>
+<ol>
+<li>Each package uses its own branch/worktree and touches only its owned module, tests, and necessary contract proposal. Name PRs by package ID.</li>
+<li>The integrator (Codex) checks the declared contract, runs targeted tests, and builds the vertical slice on an integration branch. A different provider reviews each package: Cursor reviews Codex, Codex reviews Claude, Claude reviews Cursor.</li>
+<li>A failing merge is logged with the smallest reproducer, owner, broken contract or data fixture, severity, and rollback path. The owner repairs its module; interface disagreements go to a short recorded contract decision before edits.</li>
+<li>Rebase or merge the repair into the integration branch, run the failed check and affected contract tests, then rerun the full release gate on the exact candidate. Do not silently rewrite experiment data or change a live comparison protocol to mend a failure.</li>
+<li>Release only after the integrated candidate passes the local acceptance journey and independent review. Unresolved defects stay visible in the board and block the relevant milestone.</li>
+</ol>
+
+</main></body>
+</html>

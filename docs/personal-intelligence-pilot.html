@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal-learning pilot update</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="personal-learning-pilot-update">Personal-learning pilot update</h1>
+<p>New local learner records use the five-concept <code>m2-draft.9</code> pack and prospective <code>text-vs-labeled-diagram</code> protocol <code>v6</code>. Earlier v4/v1, v5/v2, v6/v3, v7/v4, and v8/v5 learner records stay on the content and condition they encountered, including after an interrupted lesson view or restart. Deletion explicitly clears local records and starts a fresh v9 learner; export before deletion if the learner wants a copy. No historical assignment or outcome is migrated into v6.</p>
+<p>The current content remains <strong>draft</strong> and scored keys remain <strong>candidate</strong>. A non-author engineering review can identify technical defects and record a review disposition, but does not fabricate human subject-matter validation. The interface must continue to show this limitation and must not call a single immediate answer mastery. Free-form explanations and code designs remain ungraded pending rubric self-review or a qualified human review.</p>
+<p>Protocol v6 fixes five day-seven item families, a new seed, assignment method, and a shared ten-minute study target before new enrollment. V9 replaces a weak recursive-case practice item with a distinct recursive-return trace without rewriting earlier packs or changing held-out families. The lesson offers the target to both conditions, but study remains self-paced and the app does not verify attentive exposure time. The primary observation is a first independent, unfamiliar, deterministically graded check between days seven and fourteen. Draft key matches are <strong>provisional</strong>, not eligible primary outcomes. Late independent responses retain their actual elapsed delay as descriptive observations outside the primary window. One local learner may contribute several correlated concept observations but is at most one independent learner in each arm. Thus the local report remains <code>insufficient_evidence</code>; the policy-effect gate cannot automatically change instruction. Details are in <a href="descriptive-pilot-v6.html">the prospective v6 protocol</a>; <a href="descriptive-pilot-v5.html">v5</a>, <a href="descriptive-pilot-v4.html">v4</a>, <a href="descriptive-pilot-v3.html">v3</a>, and <a href="descriptive-pilot-v2.html">v2</a> remain historical rule sets.</p>
+<p>The scheduler records why it suggests practice or a due check, the instructional aim, and the evidence still needed. A hint-assisted answer leads toward a different, unattempted prompt when available; a repeat of the helped family cannot unlock a check as fresh independent evidence. Repeated misses on an item lead to another unflagged item when available and a <em>candidate</em> content-quality flag, not a diagnosis of either learner or question. Scored candidate answers, reasoning, and misconception guidance are available only after a first answer is locked and submitted. Review timing, actual elapsed delays, saved first answers, independent and assisted attempts, missing dimensions, and overrides are visible on return. Override records preserve the displayed path recommendation's concept, action, reason, and applicable activity alongside the selected practice concept and activity, timestamp, and optional learner note. Older override records retain nulls for fields added in schema versions 9 and 10.</p>
+<p>For reproducible verification, use a separate temporary learner database and an injected clock. <code>tests/test_personal_pilot_journey.py</code> covers all five lessons, assisted versus independent outcomes, restart, override, and day-one/day-seven checks. A controlled-clock success verifies state transitions, not elapsed real days or educational effectiveness. A future real next-day/week check must use the same person's actual persisted record at the real due times and inspect the first answer, assistance, family, content version, actual delay, and outside-study annotation without manufacturing a result.</p>
+
+</main></body>
+</html>

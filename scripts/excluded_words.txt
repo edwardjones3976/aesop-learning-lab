@@ -1,0 +1,7 @@
+# List: Scrabble Official Dictionary / English wordlist (external reference)
+# Date: 2026-10-21
+# Result: 0 collisions
+fama
+homo
+nolo
+tepa

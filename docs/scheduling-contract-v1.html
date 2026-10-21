@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continued practice and delayed-check contract</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1 id="continued-practice-and-delayed-check-contract">Continued practice and delayed-check contract</h1>
+<p>The scheduler is a pure function in <code>aesop_lab.scheduler</code>. Storage supplies the
+current concept, content version, lesson completion time, reviewed activities,
+attempts, and encountered item families. The API owns that mapping; the browser
+does not choose activities or decide whether evidence counts.</p>
+<p><code>GET /api/v1/session/next</code> accepts <code>availableMinutes</code> and an optional
+<code>mode=recommended|practice</code> query parameter. <code>recommended</code> is the default.
+The response retains the <code>activity</code> and <code>recommendation</code> fields in
+<code>api-v1.html</code> and adds:</p>
+<pre><code class="language-json">{
+  &quot;mode&quot;: &quot;practice&quot;,
+  &quot;nextCheckAt&quot;: &quot;2026-01-02T12:00:00Z&quot;,
+  &quot;activity&quot;: { &quot;id&quot;: &quot;reviewed-practice-item&quot; },
+  &quot;recommendation&quot;: {
+    &quot;policyVersion&quot;: &quot;pilot-v1&quot;,
+    &quot;reason&quot;: &quot;Continue practice by choice; an independent check remains available.&quot;,
+    &quot;evidenceAttemptIds&quot;: []
+  }
+}
+</code></pre>
+<p><code>nextCheckAt</code> is nullable. Before the 24-hour interval, it is the earliest
+possible check time, provided the learner also has qualifying evidence and an
+unused held-out item. When a check is due, it remains present if the learner
+chooses practice. It is not a lockout or a promise that a check will be
+available. The UI can show a clock and the server's reason, but must not turn
+the time into a disabled practice state. When no activity is available,
+<code>activity</code> and <code>recommendation</code> are null and the response includes a <code>reason</code>.</p>
+<p>A qualifying attempt is correct, unassisted, and recorded after lesson
+completion on the current content version.
+The check is an unused, held-out application or transfer item from a family the
+learner has not encountered. Its 24-hour delay is measured from lesson
+completion. An answer made with hints or a self-review of an ungraded answer
+does not satisfy the qualifying-attempt rule. A held-out item is never routine
+practice, and an attempted held-out item is never selected again. The learner
+can request more practice at any time; this does not consume the check.</p>
+<p>The API must admit only reviewed content into <code>LearnerState</code>. It persists each
+first answer and assistance level before scheduling another item, so a refresh
+cannot reset the queue or fabricate independent evidence. Until the content
+pack has human review receipts, the API can be exercised with development
+fixtures but must not present them as released learning content.</p>
+
+</main></body>
+</html>
