@@ -94,6 +94,7 @@ class SyntheticV8CohortValidationTests(unittest.TestCase):
             current_clock = [t0]
 
             preview = Preview(db_path, now=lambda: current_clock[0])
+            preview.consent()
             self.assertEqual(preview.pack.pack_version, "m2-draft.11")
 
             # Validate that before any learner identity, status is insufficient_evidence

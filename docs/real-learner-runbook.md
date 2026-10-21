@@ -6,11 +6,11 @@ Three software gaps found while reviewing this runbook have been fixed in the ap
 
 ## Before day 0
 
-1. **Confirm consent before anything is opened.** Opening the preview already records a learner identity, an experiment assignment and a lesson exposure time, so consent comes first. The learner agrees to all of the following:
-   - Their answers, hint use, confidence, outside-study notes and timing are stored **on this computer only**.
-   - The data is not sent to any outside service, including AI models. Only a de-identified aggregate summary, written locally by the owner, may leave this computer or appear in a project report.
-   - They can stop at any time.
-   - They can ask for deletion of the database, the export and the run log (step 16).
+1. **Have the consent conversation with the learner.** The app shows a consent screen before enrollment. The owner still talks through all of the following with the learner:
+   - Their answers, hint use, confidence, outside-study notes and timing are stored **on this computer only**, and are not sent to any outside service, including AI models. Only a de-identified aggregate summary, written locally by the owner, may leave this computer or appear in a project report.
+   - Results are compared with draft answer keys, stay provisional, and are not a grade or a judgment of what they know. One person's answers give not enough evidence about which method works (`insufficient_evidence`).
+   - They can stop at any time and ask for deletion of the database, the export and the run log (step 16).
+   When the app is opened, the learner confirms with **I agree — start learning**. The app records the consent text version (`consent-v1`) and confirmation timestamp locally before enrollment; the raw record is included in export. Returning pre-gate identities receive `legacy-pre-gate` during migration, so an existing run is not interrupted.
 2. **Set the run variables.** Paste this block at the start of **every** PowerShell window used for this run, on day 0, at each return, and in any second window. Every later command depends on it.
 
    ```powershell

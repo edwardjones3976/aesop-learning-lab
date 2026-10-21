@@ -74,6 +74,7 @@ class PersonalComparisonTests(unittest.TestCase):
         self.db = Path(self.folder.name) / "comparison.sqlite3"
         self.clock = START
         self.store = SQLiteStore(self.db)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.addCleanup(lambda: self.store.close())
         self.comparison = PersonalComparison(self.store, lambda: self.clock,
                                              prior_concept_exposure=False)
@@ -98,6 +99,7 @@ class PersonalComparisonTests(unittest.TestCase):
             self.comparison.answer(first.id, "practice", first.practice_answer)
         self.store.close()
         self.store = SQLiteStore(self.db)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.comparison = PersonalComparison(self.store, lambda: self.clock,
                                              prior_concept_exposure=False)
         self.assertEqual(self.comparison.enroll()["units"][0]["condition"],
@@ -132,6 +134,7 @@ class PersonalComparisonTests(unittest.TestCase):
                          ["practiceSolutionRevealedAt"], at)
         self.store.close()
         self.store = SQLiteStore(self.db)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.comparison = PersonalComparison(self.store, lambda: self.clock,
                                              prior_concept_exposure=False)
         self.assertEqual(self.comparison.report()["units"][0]["practiceSolutionRevealedAt"], at)
@@ -153,6 +156,7 @@ class PersonalComparisonTests(unittest.TestCase):
         self.assertTrue(self.comparison.report()["question"]["hintAvailable"])
         self.store.close()
         self.store = SQLiteStore(self.db)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.comparison = PersonalComparison(self.store, lambda: self.clock,
                                              prior_concept_exposure=False)
         self.assertEqual(self.comparison.report()["question"]["hintLevel"], 1)
@@ -207,6 +211,7 @@ class PersonalComparisonTests(unittest.TestCase):
                 ("aesop_lab.api.personal_comparison_v1", LegacyPersonalComparison)):
             with self.subTest(protocol=comparison_type.__module__):
                 self.store.delete_all()
+                self.store.confirm_consent(START)
                 self.clock = START
                 comparison = comparison_type(self.store, lambda: self.clock,
                                              prior_concept_exposure=False)
@@ -277,6 +282,7 @@ class PersonalComparisonTests(unittest.TestCase):
         legacy.complete_exposure(UNITS[0].id, "none")
         legacy.open_question(UNITS[0].id, "practice")
         preview = Preview(self.db, now=lambda: self.clock)
+        preview.consent()
         try:
             self.assertIsInstance(preview.personal_comparison(), LegacyPersonalComparison)
             with self.assertRaisesRegex(ApiError, "historical protocol version"):
@@ -292,6 +298,7 @@ class PersonalComparisonTests(unittest.TestCase):
             self.comparison.enroll()
         self.store.close()
         self.store = SQLiteStore(self.db)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         restored = LegacyPersonalComparison(self.store, lambda: self.clock,
                                             prior_concept_exposure=False)
         self.assertTrue(restored.report()["units"][0]["practiceCandidateMatch"])
@@ -359,6 +366,7 @@ class PersonalComparisonTests(unittest.TestCase):
         assigned = self.store.export_all()["personalAssignments"]
         self.store.close()
         self.store = SQLiteStore(self.db)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.comparison = PersonalComparison(self.store, lambda: self.clock,
                                              prior_concept_exposure=False)
         self.assertEqual(self.comparison.report()["next"],

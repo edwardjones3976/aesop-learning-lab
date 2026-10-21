@@ -26,6 +26,10 @@ def make_app(service: LearningService):
                 raise ApiError("forbidden_request", "Use the local API host.", 403)
             if (origin or method in ("POST", "DELETE")) and origin not in ALLOWED_UI_ORIGINS:
                 raise ApiError("forbidden_request", "Origin is not allowed.", 403)
+            if ((method == "GET" and path == "/api/v1/session/next") or
+                    (method == "POST" and path in ("/api/v1/attempts",
+                     "/api/v1/self-reviews", "/api/v1/answer-revisions"))):
+                service.store.require_active_learner()
             if method == "OPTIONS" and path.startswith("/api/v1/"):
                 status, payload = "204 No Content", {}
                 cors += [("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"),

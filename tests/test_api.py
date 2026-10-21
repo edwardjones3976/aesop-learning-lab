@@ -32,6 +32,7 @@ class ApiTests(unittest.TestCase):
         self.path = Path(self.temp.name) / "learner.sqlite3"
         self.clock = [START]
         self.store = SQLiteStore(self.path)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.service = self.open_service()
         self.service.complete_lesson()
 
@@ -62,6 +63,7 @@ class ApiTests(unittest.TestCase):
         self.store.close()
         self.clock[0] += timedelta(hours=2)
         self.store = SQLiteStore(self.path)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.service = self.open_service()
         self.assertEqual(self.service.complete_lesson(), START)
         next_one = self.service.next_session(20)
@@ -119,6 +121,7 @@ class ApiTests(unittest.TestCase):
         connection.execute("PRAGMA user_version = 1")
         connection.close()
         self.store = SQLiteStore(self.path)
+        self.store.confirm_consent(datetime.now(timezone.utc))
         self.service = self.open_service()
         self.assertIsNone(self.store.lesson_completed_at(CONCEPT.id, CONCEPT.content_version))
         self.service.complete_lesson()

@@ -34,6 +34,7 @@ class PersonalPilotJourneyTests(unittest.TestCase):
                 return activity, result
 
             preview = Preview(path, now=lambda: clock[0])
+            preview.consent()
             concepts = preview.pack.learning_order()
             self.assertEqual(len(concepts), 5)
             self.assertEqual(preview.pack.pack_version, "m2-draft.11")
@@ -70,6 +71,7 @@ class PersonalPilotJourneyTests(unittest.TestCase):
             preview.store.close()
 
             preview = Preview(path, now=lambda: clock[0])
+            preview.consent()
             try:
                 self.assertEqual(preview.store.export_all()["attempts"], attempts_before)
                 self.assertEqual(preview.overview()["concepts"][0]["signals"]["hintAssisted"], 1)

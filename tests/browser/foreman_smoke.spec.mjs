@@ -47,6 +47,9 @@ function initSeededDb(dbPath, learnerId) {
       'db_file = sys.argv[1]',
       'uid = sys.argv[2]',
       'store = SQLiteStore(db_file)',
+      'store.connection.execute("PRAGMA user_version = 15")',
+      'store.connection.execute("DROP TABLE learner_consent")',
+      'store.connection.commit()',
       'store.close()',
       'conn = sqlite3.connect(db_file)',
       'conn.execute("INSERT INTO learner_identity VALUES (1, ?)", (uid,))',
@@ -74,7 +77,7 @@ async function startServerForLearner(learnerId) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aesop-smoke-'));
   const tempDbPath = path.join(tempDir, 'test.db');
 
-  await initSeededDb(tempDbPath, learnerId);
+  if (learnerId) await initSeededDb(tempDbPath, learnerId);
 
   const serverBaseUrl = `http://127.0.0.1:${port}`;
   const pythonScript = path.join(repoRoot, 'scripts', 'run_foreman.py');
@@ -255,6 +258,8 @@ test('deletion survives reload until explicit restart and keeps minutes preferen
     const data = await page.request.get(server.serverBaseUrl + '/api/v2/export');
     expect((await data.json()).learnerIdentity).toEqual([]);
     await page.locator('#start-again').click();
+    await expect(page.locator('#confirm-consent')).toBeVisible();
+    await page.locator('#confirm-consent').click();
     await expect(page.locator('#start-again')).toHaveCount(0);
     await expect.poll(async () => {
       const response = await page.request.get(server.serverBaseUrl + '/api/v2/export');
@@ -263,4 +268,33 @@ test('deletion survives reload until explicit restart and keeps minutes preferen
   } finally {
     await server.cleanup();
   }
+});
+
+
+test('fresh consent gate prevents enrollment until confirmation', async ({ page }) => {
+  const server = await startServerForLearner(null);
+  try {
+    await page.goto(server.serverBaseUrl, { waitUntil: 'networkidle' });
+    await expect(page.locator('#confirm-consent')).toBeVisible();
+    await expect(page.locator('.sidebar')).toBeHidden();
+    await expect(page.locator('.top-actions')).toBeHidden();
+    await expect(page.locator('#complete')).toHaveCount(0);
+    const overview = await (await page.request.get(server.serverBaseUrl + '/api/v2/overview')).json();
+    const rejected = await page.request.post(server.serverBaseUrl + '/api/v2/lesson', {
+      headers: {Origin: server.serverBaseUrl}, data: {conceptId: overview.concepts[0].id}
+    });
+    expect(rejected.status()).toBe(409);
+    expect((await rejected.json()).code).toBe('consent_required');
+    const before = await (await page.request.get(server.serverBaseUrl + '/api/v2/export')).json();
+    for (const key of ['learnerIdentity', 'learnerConsent', 'experimentAssignments', 'experimentExposures', 'practiceDrafts', 'attempts']) expect(before[key]).toEqual([]);
+    await page.reload();
+    await expect(page.locator('#confirm-consent')).toBeVisible();
+    await page.locator('#confirm-consent').click();
+    await expect(page.locator('#complete')).toBeVisible();
+    await expect(page.locator('#confirm-consent')).toHaveCount(0);
+    const after = await (await page.request.get(server.serverBaseUrl + '/api/v2/export')).json();
+    expect(after.learnerIdentity).toHaveLength(1);
+    expect(after.learnerConsent[0].text_version).toBe('consent-v1');
+    expect(after.experimentExposures).toHaveLength(1);
+  } finally { await server.cleanup(); }
 });

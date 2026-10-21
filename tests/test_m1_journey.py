@@ -15,6 +15,7 @@ class FiveConceptJourney(unittest.TestCase):
             db = Path(directory) / "learner.sqlite3"
             clock = [datetime(2026, 1, 1, 12, tzinfo=timezone.utc)]
             preview = Preview(db, now=lambda: clock[0])
+            preview.consent()
             try:
                 concepts = preview.pack.learning_order()
                 self.assertEqual(len(concepts), 5)
@@ -67,6 +68,7 @@ class FiveConceptJourney(unittest.TestCase):
                                  set(first_ids))
                 preview.store.close()
                 preview = Preview(db, now=lambda: clock[0])
+                preview.consent()
                 self.assertEqual(len(preview.store.export_all()["attempts"]), sum(expected_counts.values()))
                 for concept in concepts:
                     signals = next(row["signals"] for row in preview.overview()["concepts"]
