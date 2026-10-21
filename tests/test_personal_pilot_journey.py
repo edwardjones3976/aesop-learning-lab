@@ -10,7 +10,7 @@ from aesop_lab.foreman import Preview
 
 
 class PersonalPilotJourneyTests(unittest.TestCase):
-    def test_new_v10_learner_returns_for_two_distinct_delayed_checks(self):
+    def test_new_v11_learner_returns_for_two_distinct_delayed_checks(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "synthetic-learner.db"
             clock = [datetime(2026, 1, 1, 12, tzinfo=timezone.utc)]
@@ -36,14 +36,14 @@ class PersonalPilotJourneyTests(unittest.TestCase):
             preview = Preview(path, now=lambda: clock[0])
             concepts = preview.pack.learning_order()
             self.assertEqual(len(concepts), 5)
-            self.assertEqual(preview.pack.pack_version, "m2-draft.10")
+            self.assertEqual(preview.pack.pack_version, "m2-draft.11")
             for cid in concepts:
                 lesson = preview.lesson(cid)
                 self.assertGreater(len(lesson["body"]), 1400)
                 self.assertIn("## How it works", lesson["body"])
                 self.assertIn("## Common mistakes", lesson["body"])
                 self.assertIn("```python", lesson["body"])
-                self.assertEqual(lesson["method"]["protocolVersion"], "v7")
+                self.assertEqual(lesson["method"]["protocolVersion"], "v8")
                 preview.complete_lesson(cid)
                 exposure = next(row for row in preview.store.list_exposures()
                                 if row["concept_id"] == cid)
@@ -96,7 +96,7 @@ class PersonalPilotJourneyTests(unittest.TestCase):
                 self.assertTrue(all(row["actualDelayDays"] >= row["checkDelayDays"]
                                     for row in evidence["delayedChecks"]))
                 finding = preview.overview()["experiment"]
-                self.assertEqual(finding["protocol"]["version"], "v7")
+                self.assertEqual(finding["protocol"]["version"], "v8")
                 self.assertEqual(finding["status"], "insufficient_evidence")
                 self.assertLessEqual(finding["independentLearnersTotal"], 1)
                 self.assertEqual(sum(arm["eligible"] for arm in finding["arms"].values()), 0)

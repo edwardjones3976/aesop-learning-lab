@@ -1,6 +1,6 @@
 # First real learner run: runbook
 
-This runbook covers one real person using the Foreman preview on content `m2-draft.10` (protocol v7, the default for a fresh database) over at least 14 days. It records first answers and actual delays faithfully. It does not test whether the method works: one learner gives dependent, descriptive observations, and the answer keys are still candidates until independent human review.
+This runbook covers one real person using the Foreman preview on content `m2-draft.11` (protocol v8, the default for a fresh database) over at least 14 days. It records first answers and actual delays faithfully. It does not test whether the method works: one learner gives dependent, descriptive observations, and the answer keys are still candidates until independent human review.
 
 Three software gaps found while reviewing this runbook have been fixed in the app; they are listed at the end.
 
@@ -46,7 +46,7 @@ Three software gaps found while reviewing this runbook have been fixed in the ap
    if (-not (Test-Path $db)) { throw "$db is missing" }
    py scripts/run_foreman.py --port 8780 --db $db
    ```
-5. **Record the setup in a run log** kept in `$runDir`: the learner code, the approved SHA, the worktree path, the **exact database path** (`$wt\$db`), the start date and time zone, the content version shown in the notice (`m2-draft.10`), and the browser. If the notice shows any other version, stop: the setup is not the approved one.
+5. **Record the setup in a run log** kept in `$runDir`: the learner code, the approved SHA, the worktree path, the **exact database path** (`$wt\$db`), the start date and time zone, the content version shown in the notice (`m2-draft.11`), and the browser. If the notice shows any other version, stop: the setup is not the approved one.
 6. **Brief the learner, and say nothing more:**
    - Answer first, before opening any hint.
    - Confidence is optional.
@@ -75,7 +75,7 @@ If the prerequisites are not met, the app offers practice or the still-unused ea
 10. **Day 1 of each concept:** return at least 24 hours after that concept's lesson, without reviewing its answer first.
     - If a day-1 check is scheduled, the review box reads **Delayed review due** on the first day after the due time, and **Delayed review overdue** after that. The learner takes the offered check unaided first.
     - If not, record "no qualifying day-0 answer, no day-1 check offered", and let the learner continue with what the app suggests.
-11. **Days 7 to 14 of each concept:** this is the primary window (protocol v7 keeps v6's windows). Plan a return inside it for every started concept.
+11. **Days 7 to 14 of each concept:** this is the primary window (protocol v8 keeps v6's windows). Plan a return inside it for every started concept.
     - If the week check's prerequisites are met, it is offered. A check taken before day 7 shows as **early**, and one after day 14 as **late**. Both are kept but excluded from the primary observation.
     - If they are not met yet, let the learner take whatever is offered (practice, or the unused day-1 check), then press **Continue** and look again. Answering the day-1 check completes that interval, so the week check may be offered straight away. If it is offered within that concept's days 7 to 14, it is a valid in-window observation: take it.
     - A concept's outcome is **missing** only if its week check is still unanswered when **that concept's** window closes. The overview may show `missing` earlier, before the window has even opened; ignore that until the window closes. Note which prerequisite was missing.

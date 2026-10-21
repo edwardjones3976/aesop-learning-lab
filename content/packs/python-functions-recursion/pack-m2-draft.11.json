@@ -1,0 +1,1716 @@
+{
+  "schema_version": "content-pack/1",
+  "pack_id": "python-functions-recursion",
+  "pack_version": "m2-draft.11",
+  "topic": "Python functions and recursion",
+  "status": "draft",
+  "author": "Claude (prospective plain-language rewrite of learner-facing prose over the v9 author draft)",
+  "review": {
+    "note": "Prospective v10 candidate rewords learner-facing prose in plain English for beginners. Code, answers, choices, item and family IDs, held-out status, hint levels, delays, rubric criteria, and sources are unchanged from v9. Historical packs remain separate. Keys remain candidates; no independent or human approval receipt is claimed.",
+    "receipts": []
+  },
+  "sources": [
+    {
+      "id": "py-tutorial-defining-functions",
+      "title": "The Python Tutorial, 4.8 Defining Functions",
+      "url": "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+    },
+    {
+      "id": "py-tutorial-more-on-functions",
+      "title": "The Python Tutorial, 4.9 More on Defining Functions",
+      "url": "https://docs.python.org/3.12/tutorial/controlflow.html#more-on-defining-functions"
+    },
+    {
+      "id": "py-tutorial-keyword-arguments",
+      "title": "The Python Tutorial, 4.9.2 Keyword Arguments",
+      "url": "https://docs.python.org/3.12/tutorial/controlflow.html#keyword-arguments"
+    },
+    {
+      "id": "py-ref-calls",
+      "title": "The Python Language Reference, 6.3.3 Calls",
+      "url": "https://docs.python.org/3.12/reference/expressions.html#calls"
+    },
+    {
+      "id": "py-ref-naming-binding",
+      "title": "The Python Language Reference, 4.2 Naming and binding",
+      "url": "https://docs.python.org/3.12/reference/executionmodel.html#naming-and-binding"
+    },
+    {
+      "id": "py-faq-local-global",
+      "title": "Python FAQ, What are the rules for local and global variables in Python?",
+      "url": "https://docs.python.org/3.12/faq/programming.html#what-are-the-rules-for-local-and-global-variables-in-python"
+    },
+    {
+      "id": "py-lib-recursionerror",
+      "title": "The Python Standard Library, RecursionError",
+      "url": "https://docs.python.org/3.12/library/exceptions.html#RecursionError"
+    },
+    {
+      "id": "py-lib-getrecursionlimit",
+      "title": "The Python Standard Library, sys.getrecursionlimit()",
+      "url": "https://docs.python.org/3.12/library/sys.html#sys.getrecursionlimit"
+    },
+    {
+      "id": "py-std-sequence-operations",
+      "title": "Python Standard Library, Common Sequence Operations",
+      "url": "https://docs.python.org/3.12/library/stdtypes.html#common-sequence-operations"
+    },
+    {
+      "id": "py-std-numeric-operations",
+      "title": "Python Standard Library, Numeric Types",
+      "url": "https://docs.python.org/3.12/library/stdtypes.html#numeric-types-int-float-complex"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "function-definition-and-return",
+      "title": "Defining a function and returning a value",
+      "content_version": "v11",
+      "prerequisite_ids": []
+    },
+    {
+      "id": "parameters-and-local-scope",
+      "title": "Parameters, arguments, and local names",
+      "content_version": "v11",
+      "prerequisite_ids": [
+        "function-definition-and-return"
+      ]
+    },
+    {
+      "id": "recursion-as-self-call",
+      "title": "A function that calls itself",
+      "content_version": "v11",
+      "prerequisite_ids": [
+        "function-definition-and-return",
+        "parameters-and-local-scope"
+      ]
+    },
+    {
+      "id": "base-case",
+      "title": "The base case stops the recursion",
+      "content_version": "v11",
+      "prerequisite_ids": [
+        "recursion-as-self-call"
+      ]
+    },
+    {
+      "id": "recursive-case-and-trace",
+      "title": "The recursive case and tracing calls",
+      "content_version": "v11",
+      "prerequisite_ids": [
+        "base-case"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-function-definition-and-return-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "title": "Defining a function and returning a value",
+      "body": "## Learning objectives\nYou will write a function, call it with an input, and see the difference between a value a function returns and text it prints. You will also predict what a function gives back when it ends without `return`.\n\n## Before you begin\nAn expression is a piece of code that works out a value, like `2 + 3`. A variable is a name that points to a value. A function is a named set of steps. You can run the same steps again with different inputs.\n\n## How it works\n`def` creates a function and gives it a name. The indented lines under it are the function's body. The body does not run when you define the function. It runs only when you call the function. When you call a function, Python first works out the values you pass in. These values are called arguments. Then Python runs the body. `return` sends a value back to the code that made the call. That code is called the caller. The call then stands for the returned value. `return` also ends the call right away. If the body reaches its end without a `return`, Python gives back `None`, a special value that means \"no value\".\n\n```python\ndef price_with_tax(price):\n    tax = price * 0.10\n    return price + tax\n\ntotal = price_with_tax(20)  # 22.0\n```\n\nFollow the call step by step: `price` gets 20. `tax` becomes 2.0. `return` sends 22.0 back to the caller. Only then does `total` point to 22.0. This is useful when, for example, a shopping cart needs the total for more math later.\n\n## Common mistakes and why they fail\n```python\ndef show_total(price):\n    print(price + 2)\n\nshown = show_total(5)  # displays 7, but shown is None\n```\n`print` shows text on the screen. This is called a side effect: you can see something happen, but no value is sent back. So `shown` gets `None`, not 7. If you want to use a result in more code, return it. A common mistake is to think the text on the screen is the value of the call. Another mistake is to put code after `return` and expect it to run. It will not run, because the call has already ended.\n\n## Practice path\nFirst, spot a return statement. Next, predict the result of a small call on your own. Then explain the difference in your own words. Finally, use it on a calculation you have not seen before. You can ask for hints after your first answer. Your first answer is still kept on its own, as a record of what you could do without help.",
+      "source_ids": [
+        "py-tutorial-defining-functions"
+      ],
+      "diagram": "Call and return (labels show data flow):\n[caller: total = price_with_tax(20)]\n            | argument 20\n            v\n[function: price=20; tax=2.0]\n            | return 22.0\n            v\n[caller: total refers to 22.0]\nThe diagram labels the same steps that the text explains.",
+      "encountered_family_ids": [
+        "lesson-price-with-tax-v4",
+        "def-return-recall-v4"
+      ]
+    },
+    {
+      "id": "lesson-parameters-and-local-scope-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "title": "Parameters, arguments, and local names",
+      "body": "## Learning objectives\nYou will tell parameters and arguments apart, follow the values that names get inside a function, and explain when a keyword argument replaces a default. You will also tell a local name apart from a global name that is spelled the same way.\n\n## Before you begin\nA function call can pass values into the function. A name points to a value. Each name belongs to a scope. A scope is the part of a program where that name can be used. You should already know that `return` sends a value back to the caller.\n\n## How it works\nA parameter is a name written in the function definition, inside the parentheses. An argument is the value that a call passes in. Each call gets its own fresh parameter names. These are local names: they belong only to that call. A name set outside any function is a global name. When you assign to a name inside a function, you usually change only the local name. You do not change a global name with the same spelling. A keyword argument names the parameter in the call, like `rate=0.10`. A default is the value written in the definition, like `rate=0.05`. Python uses the default only when the call leaves that argument out.\n\n```python\nrate = 99\n\ndef total(price, rate=0.05):\n    cost = price * (1 + rate)\n    return cost\n\nreceipt = total(40, rate=0.10)  # 44.0\n```\n\nFollow it step by step: `price` gets 40. The keyword argument sets the local `rate` to 0.10, not the default 0.05. `cost` becomes 44.0. `receipt` gets that returned value. The global `rate` stays 99. This matters when you set up a helper function and do not want to change other parts of your program by accident.\n\n## Common mistakes\nTwo names that are spelled the same are not always the same variable. The `rate` inside `total` is local to that call. A default is not an extra step that always runs. If the call gives a keyword value, that value replaces the default. Also, assigning to a name inside a function does not change the global name, unless the function declares that name `global`. Before you do the math, check which scope each name belongs to.\n\n## Practice path\nSpot a parameter and an argument. Recall what a local name means. Then work out the returned value, and check that the global name did not change. Explain your reasoning before you try new keyword-argument questions.",
+      "source_ids": [
+        "py-tutorial-more-on-functions",
+        "py-tutorial-keyword-arguments",
+        "py-ref-naming-binding",
+        "py-faq-local-global"
+      ],
+      "diagram": "Names and scopes (labels):\n[global scope: rate -> 99]\n          |\n[call total(40, rate=0.10)]\n          v\n[local call: price -> 40; rate -> 0.10; cost -> 44.0]\n          | return 44.0\n          v\n[global receipt -> 44.0; global rate -> 99]\nThe arrows show which value each name points to. The global rate does not change.",
+      "encountered_family_ids": [
+        "lesson-keyword-default-global-v4"
+      ]
+    },
+    {
+      "id": "lesson-recursion-as-self-call-v9",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "title": "A function that calls itself",
+      "body": "## Learning objectives\nYou will spot a function that calls itself, see that each call gets its own local values, and describe the order of the calls and returns. You will also explain why the calls need a stopping point that they can actually reach.\n\n## Before you begin\nWhen one function calls another, the caller pauses. It waits while the called function runs. Each call has its own local parameters. Each call can return a value to its caller.\n\n## How it works\nA recursive function is a function that calls itself. This is called recursion. Each new call is a separate call with its own local names. A useful recursive function makes the input smaller each time. It keeps going until the input meets a stopping condition. Then the function returns without calling itself again. After that last call returns, the earlier calls finish one by one, in reverse order.\n\n```python\ndef countdown(n):\n    if n == 0:\n        return \"go\"\n    return str(n) + \", \" + countdown(n - 1)\n\nmessage = countdown(2)  # \"2, 1, go\"\n```\n\nFollow it step by step: `countdown(2)` needs `countdown(1)`. `countdown(1)` needs `countdown(0)`. The zero call returns `\"go\"`. The one call adds `\"1, \"` in front. The two call adds `\"2, \"` in front. The outer calls waited. They did not share one `n` that kept changing. Each call had its own `n`. This pattern fits problems where a task can be described using a smaller version of the same task, like folders inside folders.\n\n## Common mistakes\nRecursion is not just repeating something. In recursion, the function really calls itself. If a function calls itself with the same input, it may never reach a stopping point. Text that `print` shows during a call is not the value the call returns. Follow the calls as they go down, and the returned values as they come back up. Do not read the lines as if each one runs only once.\n\n## Practice path\nSpot a safe self-call. Recall the order of the calls. Explain why a stopping point is needed. Then trace a new recursive example. The later check questions use different examples, and this lesson does not teach them.",
+      "source_ids": [
+        "py-ref-calls",
+        "py-tutorial-defining-functions"
+      ],
+      "diagram": "Call stack and return path (labels):\n[countdown(2), n=2] waits for\n    [countdown(1), n=1] waits for\n        [countdown(0), n=0] returns \"go\"\n    returns \"1, go\"\nreturns \"2, 1, go\"\nEach indented box is a separate call with its own n.",
+      "encountered_family_ids": [
+        "lesson-countdown-prepend-v4"
+      ]
+    },
+    {
+      "id": "lesson-base-case-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "title": "The base case stops the recursion",
+      "body": "## Learning objectives\nYou will find the base case, explain why it stops new calls, and check whether an input can reach it. You will also describe what happens when recursion keeps going and never reaches a stopping branch.\n\n## Before you begin\nEach recursive call starts another function call that is still running. A returned value goes back to the caller that is waiting for it. You should be able to spot the self-call before you study the branch that stops it. Here is some Python used in later practice: `items[1:]` gives you a sequence without its first item (for example, `[8, 9][1:]` is `[9]`). For whole numbers of zero or more, `17 // 4` is `4`, because `//` divides and rounds down to a whole number. You need these facts first, but knowing them does not show that you understand recursion.\n\n## How it works\nThe base case is a branch that returns without making another recursive call. A branch is one path through an `if` statement. The inputs you plan to use must be able to reach the base case. For example, if you start with a whole number of zero or more and subtract one each time, you will reach zero.\n\n```python\ndef steps_to_zero(n):\n    if n == 0:\n        return 0\n    return 1 + steps_to_zero(n - 1)\n\nsteps = steps_to_zero(3)  # 3\n```\n\nFollow the steps: 3 calls 2, 2 calls 1, and 1 calls 0. The zero call returns 0 without making another call. Then the calls for 1, 2, and 3 return, in that order. This function assumes `n` is zero or more. If `n = -1`, subtracting one moves away from zero, so the base case can never be reached. A real helper function should check this rule about its input first, or use a stopping rule that fits.\n\n## Common mistakes and why they fail\nJust writing an `if` statement does not make sure the calls will stop. A base case that no allowed input can reach cannot stop the chain. If calls keep nesting, Python stops with a `RecursionError`. This happens when too many calls are waiting at once and Python's recursion depth limit is passed. That error is not a correct result. This matters when you use recursion on lists or trees. There, the empty list or empty tree is often the natural base case.\n\n## Practice path\nFind the stopping branch. Explain why it can be reached. Trace a small input. Then try a different example in a later check question that this lesson does not teach.",
+      "source_ids": [
+        "py-lib-recursionerror",
+        "py-lib-getrecursionlimit",
+        "py-std-sequence-operations",
+        "py-std-numeric-operations"
+      ],
+      "diagram": "Reachable base case (labels):\n[n=3] -- n-1 --> [n=2] -- n-1 --> [n=1]\n                                      |\n                                    n-1\n                                      v\n                               [n=0: return 0]\nReturns then travel back through n=1, n=2, n=3.",
+      "encountered_family_ids": [
+        "lesson-decrement-to-zero-v4"
+      ]
+    },
+    {
+      "id": "lesson-recursive-case-and-trace-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "title": "The recursive case and tracing calls",
+      "body": "## Learning objectives\nYou will describe how a recursive case makes a problem smaller, follow the values as they return, and see how each call combines a smaller result with its own work. You will also check that each step moves closer to the base case.\n\n## Before you begin\nYou need a self-call and a base case that can be reached. Each call waits for the value returned by its smaller call. Only then can it finish its own work.\n\n## How it works\nThe recursive case is the branch that calls the function again. It finds the current answer by using the answer for a smaller input. It must make the problem smaller. It must also combine the smaller answer correctly.\n\n```python\ndef sum_first(n):\n    if n == 0:\n        return 0\n    smaller = sum_first(n - 1)\n    return n + smaller\n\nresult = sum_first(3)  # 6\n```\n\nThe calls go down through 3, 2, 1, 0. The zero call returns 0. On the way back up, the one call returns 1, the two call returns 3, and the three call returns 6. Write each returned value next to its call. Do not try to work out all the levels at once. This way of thinking, \"split the problem, then combine the answers\", can handle a list one item at a time or add up the parts of a tree.\n\n## Common mistakes\nIf the recursive call gets the same `n` again, it does not make progress. If a branch calls the smaller function but forgets to use or return its result, the outer call cannot build the right answer. `sum_first(n - 1)` is a call that produces a value. It does not replace the current `n`. Check two things: the input gets smaller, and the results are combined correctly.\n\n## Practice path\nFind the recursive branch. Recall the order of the returned values. Explain the combine step. Then trace examples and write your own solutions. The later check questions use new examples and are not part of this lesson.",
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "diagram": "Trace two directions (labels):\nCalls:   sum_first(3) -> sum_first(2) -> sum_first(1) -> sum_first(0)\nReturns:      6      <-      3       <-      1       <-      0\nAt each level above zero: add the current n to the value the smaller call returned.",
+      "encountered_family_ids": [
+        "recursive-case-trace-a"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "def-return-choice-01-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "family_id": "def-return-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "Which statement sends a value back to the caller of a function?",
+      "body": "",
+      "choices": [
+        "print(total)",
+        "return total",
+        "total = total + 1"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "return total"
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Look for the keyword that ends a function call and sends back a value."
+        },
+        {
+          "level": "targeted",
+          "text": "print shows a value on the screen. It does not send the value back."
+        },
+        {
+          "level": "worked_solution",
+          "text": "return total sends total back to the caller."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-defining-functions"
+      ],
+      "learning_objective": "Spot a return statement and tell it apart from printing or assigning a value.",
+      "difficulty": "introductory",
+      "explanation": "return total sends total back to the caller.",
+      "common_mistakes": [
+        "print(total) only shows a value on the screen. It does not return it to the caller.",
+        "total = total + 1 changes a local name. It does not set the result of the call."
+      ]
+    },
+    {
+      "id": "def-return-trace-01-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "family_id": "def-return-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def double(x):\n    return x * 2\nresult = double(7) + 1",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "15"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Work out double(7) first."
+        },
+        {
+          "level": "targeted",
+          "text": "double(7) returns 7 * 2."
+        },
+        {
+          "level": "worked_solution",
+          "text": "double(7) is 14, so result is 14 + 1, which is 15."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-defining-functions",
+        "py-ref-calls"
+      ],
+      "learning_objective": "Use a returned value in the caller's code and predict the result.",
+      "difficulty": "intermediate",
+      "explanation": "double(7) is 14, so result is 14 + 1, which is 15.",
+      "common_mistakes": [
+        "Adding 1 before doubling gets the order wrong. double(7) must return 14 first."
+      ]
+    },
+    {
+      "id": "def-return-transfer-01-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "family_id": "def-return-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def area(width, height):\n    return width * height\nresult = area(3, 4) - 2",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "10"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Work out area(3, 4) first."
+        },
+        {
+          "level": "targeted",
+          "text": "area(3, 4) returns 3 * 4, which is 12."
+        },
+        {
+          "level": "worked_solution",
+          "text": "area(3, 4) returns 3 * 4 = 12. Then the caller subtracts 2, so result is 10."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "check_delay_days": 1,
+      "learning_objective": "Use call-and-return thinking on an example you have not seen before.",
+      "difficulty": "advanced",
+      "explanation": "area(3, 4) returns 3 * 4 = 12. Then the caller subtracts 2, so result is 10.",
+      "common_mistakes": [
+        "The function multiplies width by height first. Then the caller subtracts 2. Adding 3 and 4, or skipping the subtraction, gives the wrong result."
+      ]
+    },
+    {
+      "id": "scope-local-trace-01-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "family_id": "scope-local-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "total = 10\ndef add_five(total):\n    total = total + 5\n    return total\nresult = add_five(1)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "6"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "The parameter total is a new local name. It exists only inside the function."
+        },
+        {
+          "level": "targeted",
+          "text": "add_five(1) works out 1 + 5 inside its own call."
+        },
+        {
+          "level": "worked_solution",
+          "text": "Inside the call, the local total starts at 1. The function adds 5 and returns 6. The global total of 10 is not used to work out result."
+        }
+      ],
+      "source_ids": [
+        "py-ref-naming-binding",
+        "py-faq-local-global"
+      ],
+      "learning_objective": "Follow a parameter that gets a new value inside the function, and find the value returned to the caller.",
+      "difficulty": "intermediate",
+      "explanation": "Inside the call, the local total starts at 1. The function adds 5 and returns 6. The global total of 10 is not used to work out result.",
+      "common_mistakes": [
+        "The parameter total starts at the argument 1. It does not start at the separate global total of 10."
+      ]
+    },
+    {
+      "id": "scope-global-choice-01-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "family_id": "scope-local-trace-a",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of the global name total?",
+      "body": "total = 10\ndef add_five(total):\n    total = total + 5\n    return total\nadd_five(1)",
+      "choices": [
+        "1",
+        "6",
+        "10"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "10"
+        ]
+      },
+      "check_expression": "total",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Assigning to total inside add_five does not change the global total."
+        },
+        {
+          "level": "targeted",
+          "text": "The total inside the function is local. The global total was set to 10 before the call."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The call makes a separate local total, set to 1, and returns 6. Nothing uses that returned value. No line changes the global total, so it stays 10."
+        }
+      ],
+      "source_ids": [
+        "py-ref-naming-binding",
+        "py-faq-local-global"
+      ],
+      "learning_objective": "Recall how a local name is different from a global name with the same spelling.",
+      "difficulty": "introductory",
+      "explanation": "The call makes a separate local total, set to 1, and returns 6. Nothing uses that returned value. No line changes the global total, so it stays 10.",
+      "common_mistakes": [
+        "6 is the value the call returned, not the global total. 1 is the argument, not the global total."
+      ]
+    },
+    {
+      "id": "scope-keyword-transfer-01-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "family_id": "scope-keyword-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def greet(name, punctuation=\"!\"):\n    return \"Hi \" + name + punctuation\nresult = greet(\"Ana\", punctuation=\"?\")",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "Hi Ana?",
+          "'Hi Ana?'",
+          "\"Hi Ana?\""
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "The keyword argument punctuation=\"?\" replaces the default \"!\"."
+        },
+        {
+          "level": "targeted",
+          "text": "greet joins \"Hi \" + name + punctuation."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The call gives punctuation=\"?\", which replaces the default \"!\". The function joins \"Hi \" + \"Ana\" + \"?\", so result is \"Hi Ana?\"."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-more-on-functions",
+        "py-tutorial-keyword-arguments"
+      ],
+      "check_delay_days": 1,
+      "learning_objective": "Use a keyword argument to replace a default value in a new call that builds a string.",
+      "difficulty": "advanced",
+      "explanation": "The call gives punctuation=\"?\", which replaces the default \"!\". The function joins \"Hi \" + \"Ana\" + \"?\", so result is \"Hi Ana?\".",
+      "common_mistakes": [
+        "The call gives punctuation=\"?\", so this call uses \"?\" instead of the default \"!\"."
+      ]
+    },
+    {
+      "id": "recursion-recognize-choice-01-v9",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "family_id": "recursion-recognize-a",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "Which definition calls itself and stops for nonnegative n?",
+      "body": "",
+      "choices": [
+        "def a(n): return n + 1",
+        "def b(n): return 0 if n <= 0 else b(n - 1) + 1",
+        "def c(n): print(n)"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "def b(n): return 0 if n <= 0 else b(n - 1) + 1"
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Which definition uses its own name inside its body?"
+        },
+        {
+          "level": "targeted",
+          "text": "Look for a function that calls itself with a smaller n and has a case where it stops."
+        },
+        {
+          "level": "worked_solution",
+          "text": "b(n) returns 0 when n <= 0. Otherwise it calls b(n - 1). When n starts at zero or more, this moves n closer to that stopping branch. a(n) and c(n) do not call themselves."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Spot a function that calls itself and has a stopping condition it can reach.",
+      "difficulty": "introductory",
+      "explanation": "b(n) returns 0 when n <= 0. Otherwise it calls b(n - 1). When n starts at zero or more, this moves n closer to that stopping branch. a(n) and c(n) do not call themselves.",
+      "common_mistakes": [
+        "a(n) and c(n) never call themselves. A recursive function must call itself and must have a stopping branch it can reach."
+      ]
+    },
+    {
+      "id": "recursion-explain-01-v9",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "family_id": "recursion-explain-a",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "In your own words, what makes a function recursive, how should each call move toward a stopping condition, and what stops the calls?",
+      "body": "",
+      "choices": [],
+      "rubric": {
+        "id": "recursion-explain-rubric-v9",
+        "annotated_example": "A recursive function calls itself. In a useful recursion that finishes, each new call gets a smaller or simpler problem. This moves it toward a stopping condition that it can actually reach. At that condition, the function returns without calling itself again, so the earlier calls can finish.",
+        "common_mistakes": [
+          "Saying only that the function repeats does not show that it calls itself.",
+          "Saying that it calls itself, without saying how each call moves toward a stopping condition it can reach, does not explain why the calls finish.",
+          "On the stopping path, the function must return without calling itself again."
+        ],
+        "criteria": [
+          {
+            "id": "self-call",
+            "description": "Identifies that the function calls itself."
+          },
+          {
+            "id": "progress",
+            "description": "Explains that each recursive call receives an input that moves toward the reachable stopping condition."
+          },
+          {
+            "id": "stopping",
+            "description": "Explains that a base or stopping condition returns without another self-call."
+          }
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Think about what each call does with a smaller input."
+        },
+        {
+          "level": "targeted",
+          "text": "Say what makes the function call itself, and what makes it stop."
+        },
+        {
+          "level": "worked_solution",
+          "text": "A recursive function calls itself on a simpler version of the problem. A stopping condition must end the calls."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls",
+        "py-tutorial-defining-functions"
+      ],
+      "learning_objective": "Explain how a function's calls to itself make progress and then stop.",
+      "difficulty": "intermediate",
+      "explanation": "A recursive function calls itself on a simpler version of the problem. A stopping condition must end the calls."
+    },
+    {
+      "id": "recursion-halving-transfer-01-v9",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "family_id": "recursion-halving-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def leaf_count(level):\n    if level == 0:\n        return 1\n    return 2 * leaf_count(level - 1)\nresult = leaf_count(4)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "16"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Start with leaf_count(0)."
+        },
+        {
+          "level": "targeted",
+          "text": "Each level doubles the value returned by the level below it."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The values from level 0 through 4 are 1, 2, 4, 8, and 16."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "check_delay_days": 1,
+      "learning_objective": "Keep track of waiting calls in a new recursive example.",
+      "difficulty": "advanced",
+      "explanation": "The values from level 0 through 4 are 1, 2, 4, 8, and 16.",
+      "common_mistakes": [
+        "The base level returns 1, not 0. Each of the four levels above it doubles that value."
+      ]
+    },
+    {
+      "id": "base-case-trace-01-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "What value does this function return for n = 3?",
+      "body": "def f(n):\n    if n == 0: return 1\n    return n * f(n - 1)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "6"
+        ]
+      },
+      "check_expression": "f(3)",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Find the stopping condition."
+        },
+        {
+          "level": "targeted",
+          "text": "Work out f(0), then f(1)."
+        },
+        {
+          "level": "worked_solution",
+          "text": "f(0)=1, f(1)=1, f(2)=2, f(3)=6."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls",
+        "py-lib-recursionerror"
+      ],
+      "learning_objective": "Trace whether a recursive function reaches its base case, and what it returns.",
+      "difficulty": "intermediate",
+      "explanation": "f(0)=1, f(1)=1, f(2)=2, f(3)=6.",
+      "common_mistakes": [
+        "f(0) returns 1, not 0. If you start the way back up with 0, every later product will be wrong."
+      ]
+    },
+    {
+      "id": "base-case-choice-01-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "In a recursive function, which part stops the repeated calls?",
+      "body": "",
+      "choices": [
+        "the recursive call",
+        "the base case",
+        "the function name"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "the base case"
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Think about what happens when the calls need to stop."
+        },
+        {
+          "level": "targeted",
+          "text": "The recursive call keeps the calls going. Something else must stop them."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The base case returns without calling the function again. The recursive call keeps the chain going. The function name only tells you which function it is."
+        }
+      ],
+      "source_ids": [
+        "py-lib-recursionerror"
+      ],
+      "learning_objective": "Recall what a base case does.",
+      "difficulty": "introductory",
+      "explanation": "The base case returns without calling the function again. The recursive call keeps the chain going. The function name only tells you which function it is.",
+      "common_mistakes": [
+        "A recursive call keeps the chain going. The function name alone cannot stop it."
+      ]
+    },
+    {
+      "id": "base-case-explain-01-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-explain-a",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "Explain what goes wrong if a recursive function has no base case.",
+      "body": "",
+      "choices": [],
+      "rubric": {
+        "id": "base-case-explain-rubric-v9",
+        "annotated_example": "Without a base case, each call makes another call and none of them returns to stop the chain. Python finally raises RecursionError when the recursion depth limit is reached. That limit is the largest number of calls Python lets wait at once.",
+        "common_mistakes": [
+          "A missing base case does not simply return None.",
+          "RecursionError means Python hit a limit while the program was running. It is not a correct way for the function to stop."
+        ],
+        "criteria": [
+          {
+            "id": "unbounded",
+            "description": "States that without a base case the calls never reach a stopping point."
+          },
+          {
+            "id": "error",
+            "description": "Mentions that Python raises RecursionError once the recursion depth limit is exceeded."
+          }
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Ask what happens to each new call if no call ever returns without calling again."
+        },
+        {
+          "level": "targeted",
+          "text": "Mention the stopping point. Also say what Python does when too many calls are waiting at once (the recursion depth limit)."
+        },
+        {
+          "level": "worked_solution",
+          "text": "Without a base case, the calls never reach a stopping point. The stack of waiting calls keeps growing until Python raises RecursionError."
+        }
+      ],
+      "source_ids": [
+        "py-lib-recursionerror",
+        "py-lib-getrecursionlimit"
+      ],
+      "learning_objective": "Explain what happens when the stopping branch is missing or cannot be reached.",
+      "difficulty": "intermediate",
+      "explanation": "Without a base case, the calls never reach a stopping point. The stack of waiting calls keeps growing until Python raises RecursionError."
+    },
+    {
+      "id": "base-case-transfer-01-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-grow-threshold-day-v6",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def reach_target(n):\n    if n >= 20:\n        return n\n    return reach_target(n + 7)\nresult = reach_target(3)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "24"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Which call is the first one where n >= 20 is true?"
+        },
+        {
+          "level": "targeted",
+          "text": "The inputs are 3, 10, 17, and 24. Only 24 meets the stopping condition."
+        },
+        {
+          "level": "worked_solution",
+          "text": "reach_target(24) meets n >= 20 and returns 24. The calls at 17, 10, and 3 pass that value back without changing it, so result is 24."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls",
+        "py-lib-recursionerror"
+      ],
+      "check_delay_days": 1,
+      "learning_objective": "Use base-case thinking on an input that grows, and trace the returned value.",
+      "difficulty": "advanced",
+      "explanation": "reach_target(24) meets n >= 20 and returns 24. The calls at 17, 10, and 3 pass that value back without changing it, so result is 24.",
+      "common_mistakes": [
+        "17 is still below 20, so that call does not stop. The next call gets 24 and returns it, and the earlier calls pass it back unchanged."
+      ]
+    },
+    {
+      "id": "recursive-case-application-02-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-savings-growth-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def savings(month):\n    if month == 0:\n        return 5\n    previous = savings(month - 1)\n    return previous * 2 + month\nresult = savings(3)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "51"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Start at the month == 0 return. Each caller waits for the value from its smaller call. Then it works out its own return value."
+        },
+        {
+          "level": "targeted",
+          "text": "savings(0) returns 5, and savings(1) returns 5 * 2 + 1 = 11. Use the same rule for months 2 and 3."
+        },
+        {
+          "level": "worked_solution",
+          "text": "savings(0) returns 5. savings(1) returns 11. savings(2) returns 11 * 2 + 2 = 24. savings(3) returns 24 * 2 + 3 = 51. So result is 51."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls",
+        "py-std-numeric-operations"
+      ],
+      "learning_objective": "Trace how each recursive return combines the value from the smaller call with the current input.",
+      "difficulty": "intermediate",
+      "explanation": "The call for month 3 waits for month 2. Month 2 waits for month 1. Month 1 waits for month 0. The base call returns 5. As the calls finish, month 1 returns 11, month 2 returns 24, and month 3 returns 51. Each call has its own month and its own previous value.",
+      "common_mistakes": [
+        "Returning only the base value 5 skips the math that each earlier call does when it finishes.",
+        "Doubling or adding the month numbers you can see, without using the value each smaller call returns, breaks the link between the calls.",
+        "Each call has its own previous value: 5, then 11, then 24."
+      ]
+    },
+    {
+      "id": "recursive-case-trace-01-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-trace-a",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def total_to(n):\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)\nresult = total_to(4)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "10"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Each call adds n and calls itself with n - 1."
+        },
+        {
+          "level": "targeted",
+          "text": "Work from the inside out: total_to(0), then total_to(1), then total_to(2)."
+        },
+        {
+          "level": "worked_solution",
+          "text": "total_to(0)=0, total_to(1)=1, total_to(2)=3, total_to(3)=6, total_to(4)=10."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Trace or write a recursive step for a familiar task.",
+      "difficulty": "intermediate",
+      "explanation": "total_to(0)=0, total_to(1)=1, total_to(2)=3, total_to(3)=6, total_to(4)=10.",
+      "common_mistakes": [
+        "Stopping at total_to(0) gives only the base value. Each waiting call must still add its own n."
+      ]
+    },
+    {
+      "id": "recursive-case-choice-01-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-choice-a",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "In a recursive case, what must be true so that the calls eventually reach the base case?",
+      "body": "",
+      "choices": [
+        "the input moves closer to the base case",
+        "the function prints its input",
+        "the base case is removed"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "the input moves closer to the base case"
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Think about what must happen for the calls to stop."
+        },
+        {
+          "level": "targeted",
+          "text": "The base case is reached only if each recursive call makes progress toward it."
+        },
+        {
+          "level": "worked_solution",
+          "text": "Each recursive call must change its input so it gets closer to a base case it can reach. Printing the input, or removing the base case, would not make the calls stop and return."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Recall why recursive calls must move closer to a base case.",
+      "difficulty": "introductory",
+      "explanation": "Each recursive call must change its input so it gets closer to a base case it can reach. Printing the input, or removing the base case, would not make the calls stop and return.",
+      "common_mistakes": [
+        "Printing an input does not move it closer to the base case. Removing the base case means the calls cannot stop in the normal way."
+      ]
+    },
+    {
+      "id": "recursive-case-design-01-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-design-a",
+      "activity_type": "code_design",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "Write a recursive function sum_list(items) that returns the sum of a list of numbers. Do not use a loop.",
+      "body": "",
+      "choices": [],
+      "rubric": {
+        "id": "recursive-design-rubric-v9",
+        "annotated_example": "def sum_list(items):\n    if not items:\n        return 0\n    return items[0] + sum_list(items[1:])\nThe empty list adds zero. Every other call returns its first number plus the sum returned for a shorter list. A recursive helper that tracks a position number in the list (an index-based recursive helper) is also correct, if it stops at the end and returns the same totals. No loop is needed.",
+        "common_mistakes": [
+          "A base case that returns a number other than 0 gives the wrong sum for an empty list.",
+          "Calling again with the same list or the same index does not move toward the base case.",
+          "A branch that does not return a sum cannot give a value to its caller.",
+          "A loop can work out the sum, but this task asks for a recursive function."
+        ],
+        "criteria": [
+          {
+            "id": "empty-zero",
+            "description": "Returns 0 for an empty list, directly or through a recursive helper base case."
+          },
+          {
+            "id": "correct-sum",
+            "description": "Returns the sum for nonempty lists, including one-element lists; each current value is combined with the smaller returned sum."
+          },
+          {
+            "id": "progress",
+            "description": "Each recursive call advances toward its reachable base case, by shortening the list or increasing an index."
+          },
+          {
+            "id": "no-loop",
+            "description": "Uses recursion without a for or while loop, as requested."
+          }
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Start with the base case: an empty list."
+        },
+        {
+          "level": "targeted",
+          "text": "The recursive case can add the first item to the sum of the rest of the list."
+        },
+        {
+          "level": "worked_solution",
+          "text": "For [], return 0. Otherwise, return items[0] + sum_list(items[1:])."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls",
+        "py-tutorial-defining-functions"
+      ],
+      "learning_objective": "Trace or write a recursive step for a familiar task.",
+      "difficulty": "intermediate",
+      "explanation": "For [], return 0. Otherwise, return items[0] + sum_list(items[1:])."
+    },
+    {
+      "id": "recursive-case-transfer-01-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-transfer-a",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def reverse(text):\n    if len(text) <= 1:\n        return text\n    return reverse(text[1:]) + text[0]\nresult = reverse(\"abc\")",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "cba",
+          "'cba'",
+          "\"cba\""
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "What does reverse(\"c\") return?"
+        },
+        {
+          "level": "targeted",
+          "text": "reverse(\"bc\") is reverse(\"c\") + \"b\"."
+        },
+        {
+          "level": "worked_solution",
+          "text": "reverse(\"c\") returns \"c\", because it is the base case. reverse(\"bc\") returns \"c\" + \"b\" = \"cb\". reverse(\"abc\") returns \"cb\" + \"a\" = \"cba\"."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "check_delay_days": 1,
+      "learning_objective": "Trace recursive calls in a new task.",
+      "difficulty": "advanced",
+      "explanation": "reverse(\"c\") returns \"c\", because it is the base case. reverse(\"bc\") returns \"c\" + \"b\" = \"cb\". reverse(\"abc\") returns \"cb\" + \"a\" = \"cba\".",
+      "common_mistakes": [
+        "If each recursive case used return text[0] + reverse(text[1:]), the letters would keep their original order. That gives \"abc\" for \"abc\", not \"cba\"."
+      ]
+    },
+    {
+      "id": "def-return-week-01-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "family_id": "def-return-shipping-week-v4",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": true,
+      "check_delay_days": 7,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def shipping(weight):\n    if weight <= 2:\n        return 5\n    return 5 + (weight - 2) * 3\nresult = shipping(4) + shipping(1)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "16"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Find the value returned by each shipping call on its own."
+        },
+        {
+          "level": "targeted",
+          "text": "The call with weight 4 takes the second branch. The call with weight 1 takes the first branch."
+        },
+        {
+          "level": "worked_solution",
+          "text": "shipping(4) returns 11 and shipping(1) returns 5, so result is 16."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-defining-functions"
+      ],
+      "learning_objective": "Use call-and-return thinking on an example you have not seen before.",
+      "difficulty": "advanced",
+      "explanation": "shipping(4) returns 11 and shipping(1) returns 5, so result is 16.",
+      "common_mistakes": [
+        "shipping(4) and shipping(1) take different branches. Using one branch for both calls gives the wrong total."
+      ]
+    },
+    {
+      "id": "scope-week-01-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "family_id": "scope-caller-local-default-week-v5",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": true,
+      "check_delay_days": 7,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def mark(word, suffix='!'):\n    word = '[' + word + ']'\n    return word + suffix\nnote = 'map'\nresult = mark(note) + ':' + note",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "[map]!:map",
+          "'[map]!:map'",
+          "\"[map]!:map\""
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Keep the caller's note separate from the function's local word. Check whether the call gives a suffix."
+        },
+        {
+          "level": "targeted",
+          "text": "mark(note) uses the default suffix '!'. Inside the call, only the local word changes, to '[map]'."
+        },
+        {
+          "level": "worked_solution",
+          "text": "mark(note) gives the local word the value 'map'. It returns '[map]!' using the default suffix. The caller's note is still 'map', so result is '[map]!:map'."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-more-on-functions",
+        "py-ref-naming-binding"
+      ],
+      "learning_objective": "Trace a call that leaves out an argument (so its default is used) and gives a parameter a new value, without changing the caller's name.",
+      "difficulty": "advanced",
+      "explanation": "mark(note) gives the local word the value 'map'. It returns '[map]!' using the default suffix. The caller's note is still 'map', so result is '[map]!:map'.",
+      "common_mistakes": [
+        "Changing the local word does not change the caller's note. The call leaves out suffix, so it uses the default \"!\"."
+      ]
+    },
+    {
+      "id": "recursion-week-01-v11",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "family_id": "recursion-converge-week-v8",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "check_delay_days": 7,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def meet(low, high):\n    if low >= high:\n        return low\n    return meet(low + 2, high - 1)\nresult = meet(1, 10)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "7"
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Keep track of both arguments in each call. Check the stopping condition before making another call."
+        },
+        {
+          "level": "targeted",
+          "text": "Each new call adds 2 to low and subtracts 1 from high. When low >= high, return low and pass that value back unchanged."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The calls use (1, 10), (3, 9), (5, 8), and (7, 7). At (7, 7), low >= high is true, so the call returns low, which is 7. Each waiting call passes that value back unchanged, so result is 7."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Keep track of waiting calls in a new recursive example.",
+      "difficulty": "advanced",
+      "explanation": "The calls use (1, 10), (3, 9), (5, 8), and (7, 7). At (7, 7), low >= high is true, so the call returns low, which is 7. Each waiting call passes that value back unchanged, so result is 7. At (5, 8), the stopping condition is still false. The base case returns low, not high, and both arguments change in each self-call.",
+      "common_mistakes": [
+        "Stopping at low = 5 is one call too early: 5 is still below 8.",
+        "The base case returns low, not high. They happen to be equal in the final call here, but use the return expression as written.",
+        "Change both arguments in every self-call: add 2 to low and subtract 1 from high. Moving only one argument follows different calls."
+      ]
+    },
+    {
+      "id": "base-case-week-01-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-threshold-halving-week-v4",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "check_delay_days": 7,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def label_depth(n):\n    if n < 4:\n        return 'small'\n    return label_depth(n // 2) + '!'\nresult = label_depth(20)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "small!!!",
+          "'small!!!'",
+          "\"small!!!\""
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Find the first input that is below 4."
+        },
+        {
+          "level": "targeted",
+          "text": "Halving with // gives 20, 10, 5, 2. The call at 2 returns the starting label."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The call at 2 returns 'small'. The waiting calls at 5, 10, and 20 each add one !, so result is 'small!!!'."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Use a stopping cutoff with recursive whole-number halving, and trace the returned values.",
+      "difficulty": "advanced",
+      "explanation": "The call at 2 returns 'small'. The waiting calls at 5, 10, and 20 each add one !, so result is 'small!!!'.",
+      "common_mistakes": [
+        "Whole-number halving reaches n = 2 before it returns small. After that, the calls at 5, 10, and 20 add their marks."
+      ]
+    },
+    {
+      "id": "recursive-case-week-01-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-lamp-toggle-week-v6",
+      "activity_type": "trace",
+      "evidence_kind": "transfer",
+      "held_out": true,
+      "check_delay_days": 7,
+      "prompt": "After this code runs, what is the value of result?",
+      "body": "def lamp_state(presses):\n    if presses == 0:\n        return \"off\"\n    previous = lamp_state(presses - 1)\n    if previous == \"off\":\n        return \"on\"\n    return \"off\"\nresult = lamp_state(5)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "on",
+          "'on'",
+          "\"on\""
+        ]
+      },
+      "check_expression": "result",
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Start with the state returned when presses is zero."
+        },
+        {
+          "level": "targeted",
+          "text": "Each waiting call flips the state from the smaller call. List the states for 0, 1, 2, and so on."
+        },
+        {
+          "level": "worked_solution",
+          "text": "lamp_state(0) is off. The states for 1 to 5 presses are on, off, on, off, on. So result is on."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls",
+        "py-tutorial-defining-functions"
+      ],
+      "learning_objective": "Trace a recursive step that flips the smaller call's state between on and off, in a new example.",
+      "difficulty": "advanced",
+      "explanation": "lamp_state(0) is off. The states for 1 to 5 presses are on, off, on, off, on. So result is on.",
+      "common_mistakes": [
+        "The calls above zero do not all return on. Each call flips the state returned by the smaller call."
+      ]
+    },
+    {
+      "id": "def-return-recall-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "family_id": "def-return-recall-v4",
+      "activity_type": "trace",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "What value does `status` refer to after the call?",
+      "body": "def notify():\n    print('ready')\nstatus = notify()",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "None"
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Check whether notify has a return statement."
+        },
+        {
+          "level": "targeted",
+          "text": "Printing ready is a side effect: it shows text but sends nothing back. A call with no return gives back None."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The function shows ready on the screen, but it reaches its end without return. So status refers to None."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-defining-functions"
+      ],
+      "check_expression": "status",
+      "learning_objective": "Recall what value the caller gets when a function has no return statement.",
+      "difficulty": "introductory",
+      "explanation": "The function shows ready on the screen, but it reaches its end without return. So status refers to None.",
+      "common_mistakes": [
+        "Printing ready does not return that text. With no return statement, the call gives back None."
+      ]
+    },
+    {
+      "id": "def-return-explain-v9",
+      "concept_id": "function-definition-and-return",
+      "content_version": "v11",
+      "family_id": "def-return-explain-v4",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "Explain why `print(value)` and `return value` have different effects on a caller.",
+      "body": "",
+      "choices": [],
+      "answer_key": null,
+      "rubric": {
+        "id": "def-return-explain-rubric-v9",
+        "annotated_example": "`print(value)` shows text on the screen, but the call does not give that text back. `return value` ends the call and gives value back to its caller.",
+        "criteria": [
+          {
+            "id": "display",
+            "description": "Distinguishes printed output from a returned value."
+          },
+          {
+            "id": "caller",
+            "description": "Explains that a caller can use a returned value in an expression or assignment."
+          }
+        ],
+        "common_mistakes": [
+          "Saying that both send a value to the caller mixes up showing a value with returning it."
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Which one shows something on the screen?"
+        },
+        {
+          "level": "targeted",
+          "text": "Which one gives the caller a value to use in more code?"
+        },
+        {
+          "level": "worked_solution",
+          "text": "A complete answer separates what print shows on the screen from the value given back to the caller. Compare your answer with the rubric (the guide to a good answer). It is not scored automatically."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-defining-functions"
+      ],
+      "learning_objective": "Explain the difference between printed output and a returned value.",
+      "difficulty": "intermediate",
+      "explanation": "A complete answer separates what print shows on the screen from the value given back to the caller. Compare your answer with the rubric (the guide to a good answer). It is not scored automatically."
+    },
+    {
+      "id": "scope-parameter-choice-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "family_id": "scope-parameter-choice-v4",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "In `def adjust(amount):`, which name is the parameter?",
+      "body": "",
+      "choices": [
+        "adjust",
+        "amount",
+        "def"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "amount"
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Look inside the parentheses of the definition."
+        },
+        {
+          "level": "targeted",
+          "text": "When the function is called, the input goes to the name inside the parentheses."
+        },
+        {
+          "level": "worked_solution",
+          "text": "`amount` is the parameter name in the definition. A call passes in an argument for it."
+        }
+      ],
+      "source_ids": [
+        "py-tutorial-more-on-functions"
+      ],
+      "learning_objective": "Spot the parameter name in a function definition.",
+      "difficulty": "introductory",
+      "explanation": "`amount` is the parameter name in the definition. A call passes in an argument for it.",
+      "common_mistakes": [
+        "adjust is the name of the function, and def starts the definition. amount is the parameter."
+      ]
+    },
+    {
+      "id": "scope-local-explain-v9",
+      "concept_id": "parameters-and-local-scope",
+      "content_version": "v11",
+      "family_id": "scope-local-explain-v4",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "Why does assigning to a local parameter named `count` not change an unrelated global `count`?",
+      "body": "",
+      "choices": [],
+      "answer_key": null,
+      "rubric": {
+        "id": "scope-local-explain-rubric-v9",
+        "annotated_example": "Each call has its own local name for its parameter count. Assigning to count inside that call changes only the local name. It does not change the separate global count.",
+        "criteria": [
+          {
+            "id": "local",
+            "description": "Identifies the parameter as a local binding for the call."
+          },
+          {
+            "id": "separate",
+            "description": "Explains that the global binding is separate and remains unchanged."
+          }
+        ],
+        "common_mistakes": [
+          "Two names that are spelled the same are not, for that reason, one variable."
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Think of the function call and the main program as separate scopes."
+        },
+        {
+          "level": "targeted",
+          "text": "When the call starts, which name gets the argument?"
+        },
+        {
+          "level": "worked_solution",
+          "text": "The parameter belongs to this call's local scope. A global name with the same spelling is a separate name. Use the rubric to check your wording."
+        }
+      ],
+      "source_ids": [
+        "py-ref-naming-binding",
+        "py-faq-local-global"
+      ],
+      "learning_objective": "Explain why giving a local parameter a new value does not change a global name.",
+      "difficulty": "intermediate",
+      "explanation": "The parameter belongs to this call's local scope. A global name with the same spelling is a separate name. Use the rubric to check your wording."
+    },
+    {
+      "id": "recursion-call-order-v9",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "family_id": "recursion-call-order-v4",
+      "activity_type": "choice",
+      "evidence_kind": "recall",
+      "held_out": false,
+      "prompt": "What is the order of values of `n` on entry when `down(2)` runs?",
+      "body": "def down(n):\n    if n == 0:\n        return 0\n    return down(n - 1)\ndown(2)",
+      "choices": [
+        "2, 1, 0",
+        "0, 1, 2",
+        "2, 0, 1"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "2, 1, 0"
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Start with the argument in down(2)."
+        },
+        {
+          "level": "targeted",
+          "text": "Each call where n is not zero passes n - 1 to the next call."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The first call gets 2. Then it calls down(1), which calls down(0)."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Recall the order in which recursive calls start.",
+      "difficulty": "introductory",
+      "explanation": "The first call gets 2. Then it calls down(1), which calls down(0).",
+      "common_mistakes": [
+        "0, 1, 2 is the order in which the calls return, not the order in which they start."
+      ]
+    },
+    {
+      "id": "recursion-application-v9",
+      "concept_id": "recursion-as-self-call",
+      "content_version": "v11",
+      "family_id": "recursion-application-v4",
+      "activity_type": "trace",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "After this code runs, what is `result`?",
+      "body": "def repeat_mark(n):\n    if n == 0:\n        return ''\n    return '*' + repeat_mark(n - 1)\nresult = repeat_mark(3)",
+      "choices": [],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "***",
+          "'***'",
+          "\"***\""
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Begin at repeat_mark(0)."
+        },
+        {
+          "level": "targeted",
+          "text": "Build the return values for n=1, then n=2, then n=3."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The zero call returns an empty string. Each of the three waiting calls adds one `*`, so result is `***`."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "check_expression": "result",
+      "learning_objective": "Trace the values returned by a function that calls itself.",
+      "difficulty": "intermediate",
+      "explanation": "The zero call returns an empty string. Each of the three waiting calls adds one `*`, so result is `***`.",
+      "common_mistakes": [
+        "The zero call returns an empty string. If you return only that base value, you miss the three waiting calls that each add a star."
+      ]
+    },
+    {
+      "id": "base-case-recognize-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-recognize-v4",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "Which branch is the base case in this function?",
+      "body": "def pulse(n):\n    if n <= 0:\n        return 'done'\n    return pulse(n - 1)",
+      "choices": [
+        "if n <= 0: return 'done'",
+        "return pulse(n - 1)",
+        "def pulse(n):"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "if n <= 0: return 'done'"
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Find the branch that does not call the function again."
+        },
+        {
+          "level": "targeted",
+          "text": "When n is zero or less, this branch returns 'done' without calling pulse again."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The branch for n of zero or less returns without calling pulse again, so it is the base case."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Spot the branch that returns without calling the function again.",
+      "difficulty": "introductory",
+      "explanation": "The branch for n of zero or less returns without calling pulse again, so it is the base case.",
+      "common_mistakes": [
+        "The line return pulse(n - 1) makes another call, so it cannot be the stopping branch."
+      ]
+    },
+    {
+      "id": "base-case-reachability-v9",
+      "concept_id": "base-case",
+      "content_version": "v11",
+      "family_id": "base-case-reachability-v4",
+      "activity_type": "choice",
+      "evidence_kind": "application",
+      "held_out": false,
+      "prompt": "For which input does this function reach its base case?",
+      "body": "def steps(n):\n    if n == 0:\n        return 0\n    return 1 + steps(n - 2)",
+      "choices": [
+        "n = 4",
+        "n = 3",
+        "n = -2"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "n = 4"
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Write down the first few n values for each choice."
+        },
+        {
+          "level": "targeted",
+          "text": "Subtracting two keeps an even number even and an odd number odd. So only an even number of zero or more reaches zero here."
+        },
+        {
+          "level": "worked_solution",
+          "text": "Starting at 4 gives 4, 2, 0. Starting at 3 skips over zero. Starting at -2 moves further below zero."
+        }
+      ],
+      "source_ids": [
+        "py-lib-recursionerror",
+        "py-ref-calls"
+      ],
+      "learning_objective": "Find which input reaches a recursive base case of zero.",
+      "difficulty": "intermediate",
+      "explanation": "Starting at 4 gives 4, 2, 0. Starting at 3 skips over zero. Starting at -2 moves further below zero.",
+      "common_mistakes": [
+        "Subtracting 2 from an odd positive number skips over zero. A negative number moves further away from zero."
+      ]
+    },
+    {
+      "id": "recursive-case-recognize-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-recognize-v4",
+      "activity_type": "choice",
+      "evidence_kind": "recognition",
+      "held_out": false,
+      "prompt": "Which line both makes progress and combines the smaller answer?",
+      "body": "def count_to(n):\n    if n == 0:\n        return 0\n    return 1 + count_to(n - 1)",
+      "choices": [
+        "if n == 0:",
+        "return 0",
+        "return 1 + count_to(n - 1)"
+      ],
+      "answer_key": {
+        "status": "candidate",
+        "accepted": [
+          "return 1 + count_to(n - 1)"
+        ]
+      },
+      "rubric": null,
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "Look for the line where the function calls itself."
+        },
+        {
+          "level": "targeted",
+          "text": "The call must get a smaller input, and the value it returns must be combined with something."
+        },
+        {
+          "level": "worked_solution",
+          "text": "The last line calls the smaller problem, n - 1, and adds one to the value it returns."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Spot a recursive step that makes the input smaller and combines the smaller result.",
+      "difficulty": "introductory",
+      "explanation": "The last line calls the smaller problem, n - 1, and adds one to the value it returns.",
+      "common_mistakes": [
+        "The zero branch stops the calls. Only the return with count_to(n - 1) both makes the input smaller and combines the smaller result."
+      ]
+    },
+    {
+      "id": "recursive-case-explain-v9",
+      "concept_id": "recursive-case-and-trace",
+      "content_version": "v11",
+      "family_id": "recursive-case-explain-v4",
+      "activity_type": "explanation",
+      "evidence_kind": "explanation",
+      "held_out": false,
+      "prompt": "Explain why `return n + sum_first(n - 1)` needs both `n - 1` and `n +`.",
+      "body": "",
+      "choices": [],
+      "answer_key": null,
+      "rubric": {
+        "id": "recursive-case-explain-rubric-v9",
+        "annotated_example": "Passing n - 1 makes the next call closer to the base case of zero. Adding n combines the current value with the sum of the smaller values that the call returned.",
+        "criteria": [
+          {
+            "id": "progress",
+            "description": "Explains how n - 1 moves toward the base case."
+          },
+          {
+            "id": "combine",
+            "description": "Explains how n + uses the smaller returned result."
+          }
+        ],
+        "common_mistakes": [
+          "Calling again with the same n does not move toward the base case.",
+          "Throwing away the value the smaller call returns loses the running total."
+        ]
+      },
+      "hints": [
+        {
+          "level": "nudge",
+          "text": "What does the next call get?"
+        },
+        {
+          "level": "targeted",
+          "text": "What result does the outer call need from the inner call?"
+        },
+        {
+          "level": "worked_solution",
+          "text": "A complete answer names both parts: moving toward zero, and combining the smaller answer. Check your answer with the rubric."
+        }
+      ],
+      "source_ids": [
+        "py-ref-calls"
+      ],
+      "learning_objective": "Explain both parts of a recursive expression: making progress and combining.",
+      "difficulty": "intermediate",
+      "explanation": "A complete answer names both parts: moving toward zero, and combining the smaller answer. Check your answer with the rubric."
+    }
+  ]
+}
