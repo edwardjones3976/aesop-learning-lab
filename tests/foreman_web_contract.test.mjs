@@ -417,7 +417,7 @@ test('review timing markup renders overdue status and returns empty string for n
   };
   const overdueMarkup = reviewTimingMarkup(overdueSchedule, null, fixedNow);
   assert.match(overdueMarkup, /<section class="review-timing"/);
-  assert.doesNotMatch(overdueMarkup, /<section[^>]*\bhidden\b/i, 'Section must not have a hidden attribute');
+  assert.doesNotMatch(overdueMarkup, /<[a-z][^>]*\shidden\b/i, 'No element in the review timing markup may have a hidden attribute');
   assert.match(overdueMarkup, /Review window passed\./);
   const overdueLabel = overdueMarkup.match(/<strong[^>]*>(.*?)<\/strong>/)?.[1];
   assert.equal(overdueLabel, 'Delayed review overdue');
@@ -433,7 +433,7 @@ test('review timing markup renders overdue status and returns empty string for n
   };
   const dueMarkup = reviewTimingMarkup(dueSchedule, null, fixedNow);
   assert.match(dueMarkup, /<section class="review-timing"/);
-  assert.doesNotMatch(dueMarkup, /<section[^>]*\bhidden\b/i, 'Section must not have a hidden attribute');
+  assert.doesNotMatch(dueMarkup, /<[a-z][^>]*\shidden\b/i, 'No element in the review timing markup may have a hidden attribute');
   assert.match(dueMarkup, /Review window open\./);
   const dueLabel = dueMarkup.match(/<strong[^>]*>(.*?)<\/strong>/)?.[1];
   assert.equal(dueLabel, 'Delayed review due');
