@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Prospective v8 recursive-case practice candidate</h1>
+<h1 id="prospective-v8-recursive-case-practice-candidate">Prospective v8 recursive-case practice candidate</h1>
 <p><strong>Status:</strong> Draft author correction. No independent approval receipt or qualified human subject-matter validation is claimed. <code>m2-draft.8</code> is a candidate pack. The separately versioned descriptive protocol v5 now routes new local preview learners to it; existing learners remain pinned to their original versions.</p>
 <p>The v7 recursive-case lesson studies <code>sum_first(3)</code>. Its routine trace <code>total_to(4)</code> repeats the same summation pattern and correctly shares the lesson's <code>recursive-case-trace-a</code> family. A correct answer there is familiar practice, not a fresh independent application observation. Historical v7 pack bytes, learner references, assignments, and attempts remain unchanged.</p>
 <p>V8 copies the five v7 lessons and their text/diagram pairs, gives the prospective lessons and items v8 IDs and content versions, and adds exactly one routine scored item: <code>recursive-case-application-02-v8</code>, family <code>recursive-case-count-passes-a</code>. Its code recursively counts scores at or above 60 in <code>[55, 72, 68]</code>. The empty list returns 0; the calls for <code>[68]</code> and <code>[72, 68]</code> return 1 and 2; the outer call leaves 2 unchanged because 55 is below 60. The candidate key is <code>2</code>. This requires a conditional combination of a smaller result and uses a shorter-list self-call, rather than another sum from 1 through <em>n</em>.</p>

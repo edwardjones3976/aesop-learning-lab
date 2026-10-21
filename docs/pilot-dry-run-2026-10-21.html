@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Pilot-readiness dry run — 2026-10-21</h1>
+<h1 id="pilot-readiness-dry-run--2026-10-21">Pilot-readiness dry run — 2026-10-21</h1>
 <p>Result: <strong>7 PASS, 2 FAIL, 7 OWNER-ONLY</strong> across the 16 numbered steps in
 <code>docs/real-learner-runbook.html</code>. This is software validation with synthetic inputs,
 not learner evidence or authorization to recruit. No real person participated.</p>
@@ -30,7 +30,7 @@ seed <code>20261021</code>. The ratified plan was read from the existing owner p
 directory, <code>C:/Users/edwar/aesop-declutter-plan/next12r2-final.md</code>; it is not in
 this worktree. Four worktrees existed at task start; none was added to the
 project. No push, PR, comment, approval or merge was performed.</p>
-<h2>Method and step results</h2>
+<h2 id="method-and-step-results">Method and step results</h2>
 <p><code>scripts/pilot_readiness_dry_run.py</code> drives the actual <code>Preview</code> API against a
 fresh temporary SQLite database and reopens it to simulate a restart. Its clock
 starts at 2026-10-21 12:00 UTC. Four lessons finish at day 0; the fifth finishes
@@ -135,7 +135,7 @@ not imply a 14-day browser session.</p>
 </tr>
 </tbody>
 </table>
-<h2>Export classifications</h2>
+<h2 id="export-classifications">Export classifications</h2>
 <p>The final controlled-clock download payload (<code>Preview.export</code>, the same backend
 used by <code>/api/v2/export</code>) contained these observations in <code>derived.overview.experiment</code>:</p>
 <table>
@@ -189,7 +189,7 @@ timestamp was edited. Existing boundary tests also cover early/late classificati
 observations omit it there. Raw records still contain the required timestamps,
 so the owner can calculate their delays without imputation (G4). No response
 means no actual response delay for <code>missing</code>.</p>
-<h2>Gaps</h2>
+<h2 id="gaps">Gaps</h2>
 <ol>
 <li><strong>BLOCKER — Consent is procedural only (G1).</strong> Browser boot opens a lesson,
 creating identity, assignment and exposure before any in-app confirmation.
@@ -221,7 +221,7 @@ an in-memory v8 fixture rather than an impossible normal-path session.
 <strong>No ratified fix required.</strong> Browser clearing, consent, comprehensive privacy
 assurance and owner reporting remain outside automated software validation.</li>
 </ol>
-<h2>Commands and verification</h2>
+<h2 id="commands-and-verification">Commands and verification</h2>
 <p>Commands ran in this worktree (PowerShell); supporting reads used <code>Get-Content</code>
 and <code>rg</code> against the runbook, plan, server, scheduler, classifier, UI and tests:</p>
 <pre><code class="language-powershell">git status --short

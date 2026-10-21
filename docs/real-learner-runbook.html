@@ -20,10 +20,10 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>First real learner run: runbook</h1>
+<h1 id="first-real-learner-run-runbook">First real learner run: runbook</h1>
 <p>This runbook covers one real person using the Foreman preview on content <code>m2-draft.11</code> (protocol v8, the default for a fresh database) over at least 14 days. It records first answers and actual delays faithfully. It does not test whether the method works: one learner gives dependent, descriptive observations, and the answer keys are still candidates until independent human review.</p>
 <p>Three software gaps found while reviewing this runbook have been fixed in the app; they are listed at the end.</p>
-<h2>Before day 0</h2>
+<h2 id="before-day-0">Before day 0</h2>
 <ol>
 <li>
 <p><strong>Have the consent conversation with the learner.</strong> The app shows a consent screen before enrollment. The owner still talks through all of the following with the learner:</p>
@@ -95,7 +95,7 @@ $runDir = &quot;$HOME\aesop-runs\$code&quot;             # run data, outside eve
 </ul>
 </li>
 </ol>
-<h2>Day 0: study and first practice</h2>
+<h2 id="day-0-study-and-first-practice">Day 0: study and first practice</h2>
 <ol start="7">
 <li>For each concept the learner chooses to start, they read the worked answer, press <strong>I've studied the worked answer</strong>, and answer the next question <strong>before</strong> opening any hint. Record the date each concept's lesson is completed: that concept's delayed checks are timed from it.</li>
 <li>Do not help, explain answers or show the key. If they are stuck, they may use the in-app hints; the hints are recorded as assistance.</li>
@@ -107,7 +107,7 @@ $runDir = &quot;$HOME\aesop-runs\$code&quot;             # run data, outside eve
 </ul>
 </li>
 </ol>
-<h2>Return checks</h2>
+<h2 id="return-checks">Return checks</h2>
 <p><strong>Every interval is counted per concept, from that concept's own lesson completion, not from the first day of the run.</strong> Concepts started on different days have different windows. Keep a small table in the run log with one row per concept: lesson date, day 1 date, and the day 7 to day 14 window.</p>
 <p>Delayed checks are offered only when their prerequisites are met:</p>
 <ul>
@@ -132,7 +132,7 @@ $runDir = &quot;$HOME\aesop-runs\$code&quot;             # run data, outside eve
 <li><strong>At each return, log:</strong> the date and time, the result of the step 4 checks, which activity was offered and why (the <strong>Why this activity?</strong> text), whether a hint was opened, and <strong>any outside study</strong> of each concept since the last visit.</li>
 <li><strong>If the learner returns after a concept's day 14</strong> and its week-check prerequisites are met, the unused week check is still offered. Let them take it <strong>once</strong>. The app records that first response as <strong>late</strong>. Never change a timestamp or re-run an answered check. Missing outcomes are reported, not imputed.</li>
 </ol>
-<h2>After the run</h2>
+<h2 id="after-the-run">After the run</h2>
 <p>The run ends only when the window of <strong>every</strong> started concept has closed.</p>
 <ol start="14">
 <li><strong>Capture the data locally,</strong> while the server is still running. The server keeps its own window busy, so:
@@ -172,7 +172,7 @@ curl.exe -s http://127.0.0.1:8780/api/v2/overview -o &quot;$runDir\overview-$cod
 </ol>
 </li>
 </ol>
-<h2>Report rules</h2>
+<h2 id="report-rules">Report rules</h2>
 <ul>
 <li>Report each classification as its own category; never fold them together. That includes independent (unassisted), assisted, early, late, missing and ungraded, plus <strong>provisional</strong>, <strong>contaminated</strong> and <strong>invalid</strong>. With draft keys, otherwise eligible on-time answers are classified <strong>provisional</strong>, not eligible.</li>
 <li><strong>Outside study:</strong> from protocol v5 the app classifies a delayed check given after outside study reported in the app as <strong>contaminated</strong>. If the learner told the owner about outside study but it was <strong>not</strong> entered in the app, exclude that concept's later outcomes by hand, labeled &quot;outside study (reported to owner)&quot;.</li>
@@ -182,7 +182,7 @@ curl.exe -s http://127.0.0.1:8780/api/v2/overview -o &quot;$runDir\overview-$cod
 <li>List interruptions, lost-before-save answers, missing prerequisites and any software problems found.</li>
 <li>No names or personal details in the repository or in PRs.</li>
 </ul>
-<h2>Roles</h2>
+<h2 id="roles">Roles</h2>
 <table>
 <thead>
 <tr>
@@ -213,7 +213,7 @@ curl.exe -s http://127.0.0.1:8780/api/v2/overview -o &quot;$runDir\overview-$cod
 </tr>
 </tbody>
 </table>
-<h2>Software gaps found in review, now fixed</h2>
+<h2 id="software-gaps-found-in-review-now-fixed">Software gaps found in review, now fixed</h2>
 <p>These were found during review of this runbook. Each has been fixed in the app, so the earlier workarounds are no longer needed:</p>
 <ol>
 <li><strong>Delete data re-enrolled the learner immediately</strong> (fixed in #42). After deleting, the app shows &quot;Your data was deleted&quot;, and the server refuses every enrollment (409 <code>learner_deleted</code>), even after a page reload or a settings change, until <strong>Start again</strong> is pressed.</li>

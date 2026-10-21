@@ -20,9 +20,9 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Adaptive intelligence mission: decision and baseline</h1>
+<h1 id="adaptive-intelligence-mission-decision-and-baseline">Adaptive intelligence mission: decision and baseline</h1>
 <p><strong>Scope:</strong> <code>codex/foreman-v1</code> only. Baseline HEAD <code>90cf32a8bbd9ff461a94036ae1ee32163523261c</code> was clean. Director-Orchestrator was read for coordination policy only; its worktree was not changed.</p>
-<h2>Observed baseline</h2>
+<h2 id="observed-baseline">Observed baseline</h2>
 <p><code>PYTHONPATH=src; py -m unittest discover -s tests -q</code> passed 103 tests. <code>npm test</code> in <code>web</code> passed 16 tests. The local preview has five draft concepts, five lessons, 17 items, first-answer and hint persistence, deterministic candidate-key feedback, one 24-hour held-out check per concept, local export/delete, and presentation controls. The main API refuses to load reviewed content because receipt verification is not integrated. Experiment assignments have a storage record, but no integrated protocol, exposure log, or outcome analysis. The preview does not execute learner code or call a model.</p>
 <table>
 <thead>
@@ -85,7 +85,7 @@
 </tr>
 </tbody>
 </table>
-<h2>Principal objective selected before implementation</h2>
+<h2 id="principal-objective-selected-before-implementation">Principal objective selected before implementation</h2>
 <p>Deliver <strong>transparent, evidence-based path selection and delayed outcome inspection</strong> in the existing five-concept local preview. The service will derive per-kind scored counts, independent versus assisted results, and a specifically labeled delayed held-out outcome from immutable attempts. It will recommend a due check first, then an unfinished lesson, then practice, with a visible reason and learner override through the existing concept controls. Empty evidence will remain <code>insufficient_evidence</code>; no mastery or causal claim will be made. An isolated clock-controlled journey will verify the path from lesson through delayed outcome and export/delete.</p>
 <p>Candidate scoring uses the directive's 30/25/20/15/10 weights, with ordinal 1–5 ratings; weighted values are prioritization aids, not predicted outcomes.</p>
 <table>
@@ -144,16 +144,16 @@
 </tr>
 </tbody>
 </table>
-<h2>Research decision</h2>
+<h2 id="research-decision">Research decision</h2>
 <p>Researchers MCP is present, but both Perplexity and Firecrawl contacts report no configured credentials and calls disabled. Public primary sources were inspected through web search. <a href="https://github.com/CAHLR/pyBKT">pyBKT</a> (MIT) offers model variants, and <a href="https://github.com/nd-ball/py-irt">py-irt</a> (MIT) fits IRT models, but neither can turn 17 draft items and one local learner into calibrated inference. <a href="https://github.com/open-spaced-repetition/fsrs4anki">FSRS4Anki</a> (MIT) and <a href="https://github.com/open-spaced-repetition/py-fsrs">py-fsrs</a> (MIT) inform future retention scheduling; their grade/history assumptions need mapping and validation before reuse. <a href="https://github.com/VowpalWabbit/coba">Coba</a> (BSD-3-Clause) is useful for offline bandit benchmarking, not a basis for live intervention selection without outcome and consent design. No external code or dependency is imported.</p>
-<h2>Work and cost controls</h2>
+<h2 id="work-and-cost-controls">Work and cost controls</h2>
 <p>One bounded Codex implementation package owns <code>src/aesop_lab/foreman.py</code>, a new pure evidence module, preview UI, and focused tests. No concurrent file writers. Claude and Cursor advisory MCP contacts are available, but their adapters explicitly grant no implementation or production-review authority; provider CLI expenses cannot currently be conservatively bounded. No paid worker dispatch or metered research call is authorized until pricing and usage can be bounded. Thus the 33/33/33 target cannot truthfully be credited on this package. Reserve $0 against the $60 ceiling for external paid calls; local subscription/tool costs remain unknown rather than reported as zero. A separate eligible non-author review is still required before promotion or merge.</p>
 <p>The implementation stays on the isolated branch and local loopback address. The pack remains draft. CI, security, author/reviewer separation, exact-candidate verification, and protected-branch controls remain in force.</p>
-<h2>Implemented and evaluated</h2>
+<h2 id="implemented-and-evaluated">Implemented and evaluated</h2>
 <p>The new pure evidence summarizer reads versioned activities and immutable attempts. It returns per-kind observed counts, assisted versus independent candidate-key matches, delayed held-out observations, and a missing-evidence state. It marks familiarity <code>not_verified</code> until exposure logging exists. The preview API uses those summaries to select a transparent concept path, and the browser displays both the reason and the evidence while retaining manual concept choice. The service clock is injectable for tests; real learner times are never rewritten.</p>
 <p>The isolated journey test covers lesson completion, a saved first answer, a viewed hint, an assisted match that does <strong>not</strong> unlock a check, an independent match, a due check after a simulated day, outcome inspection, export, and deletion. This verifies software behavior only. The study has no human outcome data, no released keys, and no evidence of improved retention or transfer.</p>
 <p>Verification on the changed candidate: <code>PYTHONPATH=src; py -m unittest discover -s tests -q</code> passed 104 tests; <code>npm test</code> in <code>web</code> passed 16; <code>node --check foreman_web/app.js</code> and <code>git diff --check</code> passed. A live loopback API returned five concepts, a lesson recommendation, and <code>insufficient_evidence</code>; headless Edge at desktop and mobile widths rendered the recommendation and evidence without console errors or horizontal overflow. The local address is <code>http://127.0.0.1:8775/</code>. Exact commit identity and any external review status are reported in the delivery handoff rather than asserted here before commit.</p>
-<h2>Financial and provider ledger</h2>
+<h2 id="financial-and-provider-ledger">Financial and provider ledger</h2>
 <table>
 <thead>
 <tr>
@@ -196,7 +196,7 @@
 </tbody>
 </table>
 <p>No paid provider task reservation was launched. Aggregate measured external provider charges are $0; this is <strong>not</strong> a claim that the Codex session or web tools have zero underlying cost. The $50 target is a ceiling-guided planning target, not a spending obligation. The $60 hard ceiling has not been approached by any dispatched paid work.</p>
-<h2>Next three objectives</h2>
+<h2 id="next-three-objectives">Next three objectives</h2>
 <ol>
 <li>Repair the four content-review findings, complete the roughly 20-concept pack, and obtain independent review and receipt verification before release.</li>
 <li>Add a second one-week held-out family, exposure/familiarity logging, and a time-progression acceptance test without changing historical attempts.</li>

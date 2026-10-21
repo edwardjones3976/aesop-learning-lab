@@ -20,11 +20,11 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>v6 content author audit</h1>
+<h1 id="v6-content-author-audit">v6 content author audit</h1>
 <p><strong>Candidate:</strong> <code>python-functions-recursion</code>, <code>m2-draft.6</code> (<code>v6</code> content). This is an author audit, not independent or human approval. The pack remains <code>draft</code>, all 26 scored keys remain <code>candidate</code>, and there are no approval receipts.</p>
 <p>The v6 pack preserves the five v5 lessons, their common text and labeled diagrams, 32 activities, cited Python sources, and the one-day/seven-day review structure in a separate content version. Lesson and activity IDs end in <code>-v6</code>. Each scored item now has a specific <code>common_mistakes</code> list for post-submission feedback in addition to its candidate key and worked <code>explanation</code>. The six explanation/code-design items remain ungraded and retain rubrics. The API/UI must not expose keys, worked explanations, or mistake rationales before answer submission.</p>
 <p><strong>Historical provenance correction:</strong> v5 was edited in commit <code>ec1f0ba</code> after its initial commit <code>a513641</code>, changing a scope week item and a rubric prompt. V6 was also edited in commit <code>bd27e34</code> after its initial commit <code>9fcd925</code>, correcting a recursive-case misconception. Therefore an unconditional claim that these version IDs were immutable from first publication would be inaccurate. Their current files are preserved by later prospective versions, but whether any real learner saw an earlier blob is unknown. No historical attempts are rewritten by this note.</p>
-<h2>Corrected evidence-family boundaries</h2>
+<h2 id="corrected-evidence-family-boundaries">Corrected evidence-family boundaries</h2>
 <table>
 <thead>
 <tr>
@@ -52,7 +52,7 @@
 </tbody>
 </table>
 <p>The other seven-day family IDs remain <code>def-return-shipping-week-v4</code>, <code>scope-caller-local-default-week-v5</code>, <code>recursion-nested-wrap-week-v5</code>, and <code>base-case-threshold-halving-week-v4</code>. A prospective protocol must explicitly pin the v6 pack and new recursive-case family; v1/v2 outcomes remain tied to their original materials.</p>
-<h2>Verification and limits</h2>
+<h2 id="verification-and-limits">Verification and limits</h2>
 <p>The content regression test parses both versions; confirms new IDs, five lessons, 32 activities, 26 candidate scored keys, complete hint ladders, and separation between held-out families, worked examples, and routine practice; and executes only the repository-authored trace snippets to compare actual results with candidate keys. It does not execute learner-submitted code. The family check is a finite content audit, not proof that every human learner will find a problem unfamiliar. A non-author subject-matter reviewer must check the new item wording, pedagogical fit, candidate keys, hints, misconceptions, and family judgments before any reviewed-content claim or scoring receipt.</p>
 
 </main></body>

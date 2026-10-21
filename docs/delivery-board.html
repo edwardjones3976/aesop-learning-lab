@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Delivery board</h1>
+<h1 id="delivery-board">Delivery board</h1>
 <p>Three provider lanes have equal initial budgets of 12 planning points. Points are a sizing tool; rebalance when evidence shows a different cost. Each provider owns three four-point packages. Cross-review is reciprocal and no provider approves its own work.</p>
 <table>
 <thead>
@@ -88,14 +88,14 @@
 </tr>
 </tbody>
 </table>
-<h2>Milestones</h2>
+<h2 id="milestones">Milestones</h2>
 <ul>
 <li>M0: Brief, contracts, ownership, initial repo and CI. Exit: all three providers accept package boundaries and contract fixtures.</li>
 <li>M1: Core vertical slice with five concepts. Exit: local end-to-end practice and delayed check, no runtime AI.</li>
 <li>M2: Twenty-concept pack and fixed comparison. Exit: all V1 acceptance tests and content review pass.</li>
 <li>M3: Pilot and evidence review. Exit: usability, data-control, and experiment-quality issues triaged; claims remain appropriately limited.</li>
 </ul>
-<h2>Integration and mending procedure</h2>
+<h2 id="integration-and-mending-procedure">Integration and mending procedure</h2>
 <ol>
 <li>Each package uses its own branch/worktree and touches only its owned module, tests, and necessary contract proposal. Name PRs by package ID.</li>
 <li>The integrator (Codex) checks the declared contract, runs targeted tests, and builds the vertical slice on an integration branch. A different provider reviews each package: Cursor reviews Codex, Codex reviews Claude, Claude reviews Cursor.</li>

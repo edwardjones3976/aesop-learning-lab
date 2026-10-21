@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Held-out family delta audit: m2-draft.11</h1>
+<h1 id="held-out-family-delta-audit-m2-draft11">Held-out family delta audit: m2-draft.11</h1>
 <p>This is a bounded delta against <a href="held-out-family-audit-m2-draft-10.html">the v10 audit</a>, not independent human approval. The owner's step-7 review rejected the unfamiliar-family claim for <code>recursion-week-01-v9</code> (<code>recursion-nested-wrap-week-v5</code>): <code>repeat_mark</code> practice already teaches essentially the same decrement-to-zero string construction.</p>
 <p>V11 replaces it with <code>recursion-week-01-v11</code>, family <code>recursion-converge-week-v8</code>, concept <code>recursion-as-self-call</code>, a held-out day-seven trace with candidate key <code>6</code>. Calls are <code>(0,8) -&gt; (2,7) -&gt; (4,6) -&gt; (6,5)</code>. The last call returns low, 6; earlier calls pass it back unchanged. Each common mistake gives a different answer: returning high gives 5, stopping one call early gives 4, and moving only low gives 8. Integration changed the call from Codex's <code>meet(1, 10)</code>, where the final call was <code>(7,7)</code> and returning high also gave the key. Both arguments must change at each self-call.</p>
 <p>Compared all five lesson bodies and diagrams and all 33 item bodies, choices, hints, explanations, mistakes and rubrics against v10. No other learner-visible example uses two converging arguments. The removed <code>nest</code> occurs only in the historical v10 pack. No lesson encountered-family list or other v11 metadata references its removed family, so no such list required editing.</p>
@@ -39,10 +39,10 @@
 <p>The remaining nonrecursive material covers definition/return, printing versus None, arithmetic return/caller arithmetic, local/global binding, keyword/default arguments, area, shipping and string marking. The two-parameter examples such as tax, area, greeting and marking do not self-call or update two boundaries. Their prose and diagrams supply no converging-call trace. This comparison includes every other held-out item conservatively, regardless of check order. The target's own hints and reveal are assistance, not prior independent exposure.</p>
 <p>All other nine held-outs are unchanged apart from <code>content_version</code>: <code>def-return-transfer-01-v9</code>, <code>scope-keyword-transfer-01-v9</code>, <code>recursion-halving-transfer-01-v9</code>, <code>base-case-transfer-01-v9</code>, <code>recursive-case-transfer-01-v9</code>, <code>def-return-week-01-v9</code>, <code>scope-week-01-v9</code>, <code>base-case-week-01-v9</code>, and <code>recursive-case-week-01-v9</code>. All other 23 items and all lessons are also unchanged apart from version fields. The new regression test compares the complete pack after removing the one replacement and version fields, and compares serialized bytes of every retained item.</p>
 <p>Protocol v8 selects the new primary family prospectively. Historical v10/v7 material remains frozen. Scoring, normalization, UI and storage are unchanged. Static separation is not proof of unfamiliarity for a real learner; prior exposure and independent content/key review remain required. The earlier audit's unrelated concerns remain unresolved by this bounded replacement.</p>
-<h2>Verification and integration handoff</h2>
+<h2 id="verification-and-integration-handoff">Verification and integration handoff</h2>
 <p>Python: <code>PYTHONPATH=src python -m unittest discover -s tests -q</code>, Node contracts and the browser smoke test: see the PR for the integrated counts. The browser smoke test now takes the learner's assignment from the protocol instead of assuming one.</p>
 <p>Mutation proof: changing only the new candidate key to <code>5</code> makes <code>test_new_key_executes_to_six</code> fail; the content tests pass with the key restored.</p>
-<h2>Intentionally retained historical references</h2>
+<h2 id="intentionally-retained-historical-references">Intentionally retained historical references</h2>
 <p>Every retained literal <code>m2-draft.10</code> or standalone <code>v7</code> is confined to these locations (including baseline comparisons in this audit):</p>
 <ul>
 <li>Frozen packs <code>pack-m2-draft.7.json</code>, <code>pack-m2-draft.8.json</code>, <code>pack-m2-draft.10.json</code>: historical identities or prerequisites; untouched.</li>
@@ -54,7 +54,7 @@
 <li><code>test_m2_content_v11.py</code>: v10 baseline file reads for exact comparison.</li>
 <li><code>descriptive-pilot-v8.html</code> and this audit: explicit baseline, replacement rationale and historical-pinning documentation.</li>
 </ul>
-<h2>Complete pack diff excluding version fields</h2>
+<h2 id="complete-pack-diff-excluding-version-fields">Complete pack diff excluding version fields</h2>
 <pre><code class="language-diff">--- v10 (version fields omitted)
 +++ v11 (version fields omitted)
 @@ -1075,37 +1075,35 @@

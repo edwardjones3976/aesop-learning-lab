@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Module contracts and ownership</h1>
+<h1 id="module-contracts-and-ownership">Module contracts and ownership</h1>
 <p>The dependency direction is <code>web -&gt; api -&gt; domain ports &lt;- adapters</code>. The domain types and ports have no UI or database imports. Content, assessment, scheduling, and experiments communicate through versioned records. SQLite is an adapter, not the source of policy.</p>
 <table>
 <thead>
@@ -94,7 +94,7 @@
 </tr>
 </tbody>
 </table>
-<h2>Contract rules</h2>
+<h2 id="contract-rules">Contract rules</h2>
 <ul>
 <li>IDs and content versions are immutable once attempts reference them. Corrections create a new content version.</li>
 <li>Every recorded attempt includes activity ID, content version, timestamp, first answer, assistance level, method, and selection reason. Optional confidence, response time, and outside-study notes remain explicitly optional.</li>
@@ -105,7 +105,7 @@
 <li>Add contract fixtures before modules depend on each other. Breaking changes require a version bump and all affected owner reviews.</li>
 <li>The browser boundary is specified in <a href="api-v1.html">API v1</a>. Cursor owns the UI adapter and fixtures; Codex owns the service and local transport that satisfy it.</li>
 </ul>
-<h2>V1 decisions for independent implementation</h2>
+<h2 id="v1-decisions-for-independent-implementation">V1 decisions for independent implementation</h2>
 <ul>
 <li>The content pack topic is <strong>Python functions and recursion</strong>. L1 owns a directed acyclic prerequisite graph and stable IDs. Every lesson, item, answer key, and source reference has a content version and a human review receipt with reviewer, date, and outcome.</li>
 <li>Activity types are <code>choice</code>, <code>trace</code>, <code>explanation</code>, and <code>code_design</code>. L1 tags each item with one evidence kind: <code>recognition</code>, <code>recall</code>, <code>explanation</code>, <code>application</code>, or <code>transfer</code>. Choice and trace can be deterministically scored against reviewed keys. Explanation and code design return <code>ungraded</code> pending rubric-based self or human review. No learner code is executed in V1.</li>
@@ -115,7 +115,7 @@
 <li>The first experiment compares a text explanation plus retrieval practice with the same explanation plus a labeled diagram and the same retrieval practice. L3 freezes versioned materials, time budget, assignment seed, matched concept pairs, primary outcome, and analysis rule before enrollment. Primary outcome is correctness on held-out, unassisted application items approximately seven days later. Report descriptive results and uncertainty; with too little data, report <code>insufficient_evidence</code> rather than a causal win.</li>
 <li>Within a comparison run, prompt for confidence before revealing the answer and prompt for outside study (<code>none</code>, <code>some</code>, <code>unknown</code>, plus optional detail). Outside comparison runs these fields remain optional. An unanswered prompt is recorded as missing, never silently interpreted as zero or none.</li>
 </ul>
-<h2>Integration sequence</h2>
+<h2 id="integration-sequence">Integration sequence</h2>
 <ol>
 <li>Codex lands domain records, ports, API examples, and a minimal SQLite migration.</li>
 <li>Claude and Cursor build against the examples in isolated branches/worktrees; no shared-file edits during parallel work.</li>

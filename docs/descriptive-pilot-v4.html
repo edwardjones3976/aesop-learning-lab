@@ -20,7 +20,7 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Prospective descriptive pilot v4</h1>
+<h1 id="prospective-descriptive-pilot-v4">Prospective descriptive pilot v4</h1>
 <p>V4 is for <strong>new v7 learners only</strong>. It has the same conditions, self-paced 10-minute study target, first-response rule, held-out families, and 7–14 day primary window as v3, with a new fixed seed (<code>20261020</code>) and the corrected v7 pack. Learners already on v1/v4, v2/v5, or v3/v6 remain pinned to their content, assignments, and exposure records, including after a restart or an interrupted session; mixed-version histories are still rejected.</p>
 <p>Import <code>DESCRIPTIVE_V4</code>, <code>ExposureV4</code>, <code>assign_condition_v4</code>, and <code>analyze_v4</code> from <code>aesop_lab.experiment.descriptive_v4</code>. The local application routes v7 to protocol v4; every analyzer rejects another protocol's assignment and exposure records, and no earlier data is migrated. Draft candidate-key matches remain provisional, a single local learner cannot satisfy the 20-learner-per-arm minimum, and v4 reports <code>insufficient_evidence</code> with no teaching-method winner.</p>
 

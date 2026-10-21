@@ -20,9 +20,9 @@
 </head>
 <body><main>
 <nav><a href="index.html">← All docs</a></nav>
-<h1>Simulated learner run, 2026-10-21</h1>
+<h1 id="simulated-learner-run-2026-10-21">Simulated learner run, 2026-10-21</h1>
 <p><strong>Simulation only.</strong> The learner was Antigravity, an AI model that already knows Python. Nothing here is evidence of human learning, retention or a method effect. The owner decided there is no real learner. Antigravity is the learner, Grok reviews and Cursor oversees.</p>
-<h2>Setup</h2>
+<h2 id="setup">Setup</h2>
 <ul>
 <li><strong>Harness:</strong> <code>scripts/simulated_learner_run.py</code> drives the real <code>Preview</code> on a fresh database with a simulated clock. The software is master <code>d027498</code>: content <code>m2-draft.11</code>, protocol v8, consent gate v16.</li>
 <li><strong>What the learner saw:</strong> each round showed only what a learner would see, a lesson or one question with its choices. Antigravity answered through the agent bridge from an empty folder, with no repository access, so it could not read answer keys.</li>
@@ -30,7 +30,7 @@
 <li><strong>Visits:</strong> days 0, 1, 2, 4, 7, 8 and 10, with 50 rounds in total. Consent was recorded through the app (<code>consent-v1</code>), and outside study was answered &quot;none&quot; every time.</li>
 <li><strong>Data:</strong> run data is kept outside the repository, in <code>C:\Users\edwar\aesop-sim-run-2026-10-21</code>: the transcript, prompts, export and findings.</li>
 </ul>
-<h2>Results</h2>
+<h2 id="results">Results</h2>
 <table>
 <thead>
 <tr>
@@ -70,13 +70,13 @@
 </tbody>
 </table>
 <p>The quoted answers (<code>'cba'</code>, <code>'[map]!:map'</code>) were accepted as stored quote variants. The lesson takeaways were accurate one-line summaries of each lesson.</p>
-<h2>What this shows</h2>
+<h2 id="what-this-shows">What this shows</h2>
 <ol>
 <li><strong>The software works end to end with an independent answering agent.</strong> It covered consent, lessons, the method assignment, practice gating, both delayed checks at the right times, classification and export.</li>
 <li><strong>The AI learner is at ceiling.</strong> It matched every key under both methods. An AI learner that already knows the material cannot show any difference between methods, so this run cannot test the owner's goal of ranking methods per user.</li>
 <li><strong>Ranking needs a different test.</strong> It must be validated with synthetic learners whose accuracy depends on the method, with a known best method. That recovery study is part of the method-ranking design work (owner goal, 2026-10-21).</li>
 </ol>
-<h2>Limits</h2>
+<h2 id="limits">Limits</h2>
 <ul>
 <li>The learner is an AI with prior knowledge; it never asked for hints and reported no outside study.</li>
 <li>The same model answered every round, and its notebook was the only memory between rounds.</li>
