@@ -39,9 +39,10 @@ class M2ContentV11Tests(unittest.TestCase):
         new = without_versions(self.raw)
         old['items'] = [i for i in old['items'] if i['id'] != OLD_ID]
         new['items'] = [i for i in new['items'] if i['id'] != NEW_ID]
-        # The review note is the one pack-level field that must describe the v11 change.
-        note = new.pop('review')['note']
-        old.pop('review')
+        # The review note is the one pack-level field that must describe the v11 change;
+        # every other review field (such as receipts) must still match v10.
+        note = new['review'].pop('note')
+        old['review'].pop('note')
         self.assertIn(OLD_ID, note)
         self.assertIn(NEW_ID, note)
         self.assertNotIn('unchanged from v9', note)
