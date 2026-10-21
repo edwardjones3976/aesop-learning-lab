@@ -143,6 +143,36 @@ in sorted method order (spread 0.1694, limit 0.8). Easy-block counts were 1201/1
 and hard-block counts 1207/1198/1195 (spreads 31 and 12, limit 160).
 Both order-diversity and per-block warm-up assertions passed. Deliberate mutation
 checks detected <strong>20/20 breaks</strong> through assertion failures, including v17 migration and optional block parsing. One intermediate full run encountered a Windows connection-abort error in an existing HTTP journey; the full suite was rerun. No push, PR or merge was performed.</p>
+<h2 id="contrast-mode">Frozen contrast mode (schema v19)</h2>
+<p>This implements <a href="contrast-protocol-v1.html">contrast protocol v1</a>.
+<code>MicroUnitEngine(pack, store, now, contrast=ContrastSpec(...))</code> replaces Thompson
+allocation for that pack with the protocol's fixed two-arm policy. <code>ORDER_V1</code> names
+<code>worked_then_retrieve</code> and <code>predict_first</code>. The shuffled per-learner unit
+order is unchanged. Position <i>n</i> belongs to block <i>n</i> // 4. Each block's SHA-256 seed
+and its four slot assignments (unit ID or <code>null</code>, method ID) are written to
+<code>contrast_blocks</code> in the same <code>BEGIN IMMEDIATE</code> transaction as the
+block's first exposure. Later units read the stored row, so a restart replays it. Exposures
+record <code>policy_branch</code> <code>contrast-block</code>, <code>policy_version</code>
+<code>contrast-order-v1-policy-1</code>, and <code>assignment_seed</code>
+<code>&lt;block seed&gt;:&lt;block&gt;:&lt;slot&gt;</code>.</p>
+<p><code>contrast_status()</code> judges each scheduled cutoff (days 14, 21 and 28 after the
+first contrast exposure) that has passed. It uses only completions, answers and re-exposures
+recorded at or before that cutoff, so a late evaluation reproduces the on-time snapshot. The
+pure estimator in <code>aesop_lab.contrast.protocol</code> integrates independent Beta(1,1)
+posteriors numerically, with composite Simpson and a continued-fraction incomplete beta, to an
+error of at most 1e-6. If a probability lies within that error of a threshold, it raises an
+error rather than deciding. It applies the frozen precedence and the minimum of 8 per arm.
+After a terminal outcome, new units are routed to the future default (the winner, otherwise
+the baseline) as <code>post-decision</code>, and never change the frozen finding.
+<code>export_all</code> includes <code>contrastBlocks</code>; <code>delete_all</code> removes
+them.</p>
+<p>Not yet stored (step 2b): per-look snapshot rows, stated preference, and learner overrides.
+Until then, the look results are recomputed deterministically from the event timestamps.
+<code>tests/test_contrast_protocol.py</code> covers the closed-form and Monte Carlo agreement,
+both superiority directions, the minimum count, variant-only "promising", block balance and
+storage before exposure, late evaluation, and null and ±10-point streams under the frozen
+gate model. Five deliberate mutations, for unbalanced blocks, no minimum, two-sided
+"promising", late answers leaking into a look, and an unstored block, all fail those tests.</p>
 <h2>Step C decisions</h2>
 <p>HTTP routes and payload contracts, UI integration, learner timezone selection,
 pack enrollment/switching, explicit assistance capture, and wording for pending,

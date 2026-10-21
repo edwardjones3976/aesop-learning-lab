@@ -19,7 +19,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 CONSENT_VERSION = "consent-v1"
 
 
@@ -353,6 +353,19 @@ class SQLiteStore:
                             self.connection.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
                 self.connection.execute("PRAGMA user_version = 18")
 
+        if current < 19:
+            with self.connection:
+                # One row per frozen allocation block, written before any unit in it is exposed.
+                self.connection.execute("""
+                    CREATE TABLE IF NOT EXISTS contrast_blocks (
+                        pack_id TEXT NOT NULL, contrast_id TEXT NOT NULL,
+                        block_index INTEGER NOT NULL CHECK(block_index >= 0),
+                        block_seed TEXT NOT NULL, allocation TEXT NOT NULL,
+                        policy_version TEXT NOT NULL, created_at TEXT NOT NULL,
+                        PRIMARY KEY (pack_id, contrast_id, block_index)
+                    )""")
+                self.connection.execute("PRAGMA user_version = 19")
+
     def micro_exposures(self, pack_id: str) -> list[dict]:
         return [dict(r) for r in self.connection.execute(
             "SELECT * FROM micro_exposures WHERE pack_id = ? ORDER BY assigned_at, unit_id", (pack_id,))]
@@ -360,6 +373,20 @@ class SQLiteStore:
     def micro_checks(self, pack_id: str) -> list[dict]:
         return [dict(r) for r in self.connection.execute(
             "SELECT * FROM micro_check_attempts WHERE pack_id = ? ORDER BY occurred_at, unit_id", (pack_id,))]
+
+    def contrast_blocks(self, pack_id: str, contrast_id: str) -> list[dict]:
+        return [dict(r) for r in self.connection.execute(
+            "SELECT * FROM contrast_blocks WHERE pack_id = ? AND contrast_id = ? ORDER BY block_index",
+            (pack_id, contrast_id))]
+
+    def store_contrast_block(self, pack_id, contrast_id, block_index, block_seed, allocation, policy_version, at):
+        """Insert a block once; an existing block is returned unchanged, never rewritten."""
+        self.require_active_learner()
+        with (nullcontext() if self.connection.in_transaction else self.connection):
+            self.connection.execute(
+                "INSERT OR IGNORE INTO contrast_blocks VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (pack_id, contrast_id, block_index, block_seed, json.dumps(allocation), policy_version, at.isoformat()))
+        return next(r for r in self.contrast_blocks(pack_id, contrast_id) if r["block_index"] == block_index)
 
     def assign_micro_unit(self, pack_id, unit_id, method_id, at, *, provenance=None):
         self.require_active_learner()
@@ -767,6 +794,7 @@ class SQLiteStore:
             "schemaVersion": SCHEMA_VERSION,
             "microExposures": [dict(r) for r in self.connection.execute("SELECT * FROM micro_exposures ORDER BY pack_id, unit_id")],
             "microCheckAttempts": [dict(r) for r in self.connection.execute("SELECT * FROM micro_check_attempts ORDER BY pack_id, unit_id")],
+            "contrastBlocks": [dict(r) for r in self.connection.execute("SELECT * FROM contrast_blocks ORDER BY pack_id, contrast_id, block_index")],
             "attempts": [dict(row) for row in attempts],
             "selfReviews": [dict(row) for row in reviews],
             "answerRevisions": [dict(row) for row in revisions],
@@ -822,6 +850,7 @@ class SQLiteStore:
             # Commit the consent marker atomically with removing learner rows.
             if mark_deleted:
                 self.connection.execute("INSERT OR IGNORE INTO learner_deletion VALUES (1)")
+            self.connection.execute("DELETE FROM contrast_blocks")
             self.connection.execute("DELETE FROM micro_check_attempts")
             self.connection.execute("DELETE FROM micro_exposures")
             self.connection.execute("DELETE FROM personal_solution_reveals")

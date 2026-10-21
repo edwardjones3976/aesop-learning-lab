@@ -192,7 +192,7 @@ class MicroEngineTests(unittest.TestCase):
         self.at += timedelta(days=7)
         self.engine.answer_check(self.pack.units[0], "river")
         export = self.store.export_all()
-        self.assertEqual(export["schemaVersion"], 18)
+        self.assertEqual(export["schemaVersion"], 19)
         self.assertEqual(len(export["microExposures"]), 1)
         self.assertEqual(len(export["microCheckAttempts"]), 1)
         self.store.delete_all()
@@ -209,7 +209,7 @@ class MicroEngineTests(unittest.TestCase):
         connection.close()
         migrated = SQLiteStore(path)
         self.addCleanup(migrated.close)
-        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 18)
+        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 19)
         for table, rows in before.items():
             self.assertEqual([tuple(r) for r in migrated.connection.execute(f'SELECT * FROM "{table}"')], rows)
         self.assertTrue(migrated.has_consent())
@@ -299,7 +299,7 @@ class MicroEngineTests(unittest.TestCase):
         db.close()
         migrated = SQLiteStore(path)
         self.addCleanup(migrated.close)
-        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 18)
+        self.assertEqual(migrated.connection.execute("PRAGMA user_version").fetchone()[0], 19)
         for table, rows in before.items():
             actual = migrated.connection.execute(f"SELECT * FROM {table}").fetchall()
             self.assertEqual([tuple(r)[:len(rows[0])] for r in actual], rows)
