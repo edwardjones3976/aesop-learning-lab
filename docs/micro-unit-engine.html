@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Micro-unit engine (A2)</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">← All docs</a></nav>
+<h1>Micro-unit engine (A2)</h1>
+<p><code>aesop_lab.micro.engine.MicroUnitEngine(pack, store, now, daily_limit=3)</code>
+uses a validated <code>MicroUnitPack</code>, a <code>SQLiteStore</code>, and a callable clock returning
+an aware datetime. This is an engine/storage API; existing Python content,
+Preview, protocols and UI continue on their existing paths.</p>
+<h2>API</h2>
+<ul>
+<li><code>next_activity()</code> returns a dictionary (<code>kind=&quot;check&quot;</code> or <code>kind=&quot;unit&quot;</code>),
+or <code>None</code>. Checks include the prompt and check ID, without the key. A new
+unit suggestion includes its ID; call <code>start_unit</code> to receive its lesson.
+A suggestion does not reserve or expose content. Unfinished units can resume.</li>
+<li><code>choose_method(unit)</code> returns a method ID. Existing assignments are stable.
+Before assignment, this is a deterministic proposal given the current history;
+feedback or assignments arriving before <code>start_unit</code> can change the proposal.</li>
+<li><code>start_unit(unit)</code> persists assignment and exposure and returns only the
+assigned variant in <code>lesson</code>, plus the method and unit IDs. Repeated calls
+preserve the method and original timestamps. New assignments count toward the
+daily cap; existing units can resume after that cap. The assignment transaction
+serializes competing connections, including warm-up and cap decisions.</li>
+<li><code>complete_unit(unit)</code> records completion once. The unit must have started.</li>
+<li><code>answer_check(unit, answer, assisted=False)</code> scores using the existing <code>normalize_answer</code> (whitespace normalized) and then <strong>ignores case</strong> on both sides, so <code>RIVER</code> matches <code>river</code>; punctuation must still match. It compares against the candidate accepted strings. It returns the persisted first response,
+score and classification. Repeats cannot replace the first response, including
+an early, assisted or incorrect response. Completion is required; direct early
+or late submissions are retained for reporting.</li>
+<li><code>outcomes_by_method()</code> returns all methods mapped to <code>(matched_key, 1.0)</code>
+observations under <code>outcomes</code>, and unit IDs under <code>excluded</code> for <code>early</code>,
+<code>late</code>, <code>assisted</code>, <code>pending</code> and <code>missing</code>. A completed unit with no response is <code>pending</code> while its day-14 window is open (elapsed time 14 days or less), and <code>missing</code> only after the window closes. Uncompleted units add no evidence.
+Assisted takes precedence over timing in these mutually exclusive buckets.</li>
+<li><code>ranking()</code> returns ordered <code>methods</code> with <code>method</code>, <code>posterior_mean</code>,
+<code>probability_best</code>, <code>effective_checks</code>, <code>alpha</code>, <code>beta</code>; plus <code>confidence</code>,
+<code>show_ranking</code>, and exclusions. It delegates to #60's <code>rank_methods</code> unchanged.</li>
+</ul>
+<p>Dictionary outputs and each ranking method carry
+<code>provisional=&quot;provisional (draft keys)&quot;</code>. Draft keys never block estimating or
+returning an ordering. <code>show_ranking</code> retains #60's evidence availability rule.
+Method IDs returned by <code>choose_method</code> are identifiers, not learner wording.
+Units can be passed as IDs or pack unit objects; the canonical pack object is used.</p>
+<h2>Schedule and eligibility</h2>
+<p>Unanswered checks are offered first, oldest completion first, once elapsed time
+since completion reaches seven full days. Overdue checks remain answerable and
+are classified late. Checks never consume the new-unit allowance. Then unfinished
+units resume, then the first unseen pack unit is suggested if the daily allowance
+permits it. Assignment dates use calendar days in the timezone supplied by <code>now</code>;
+step C must consistently supply the learner's chosen timezone. The default cap
+is three new units per calendar day per pack.</p>
+<p>The descriptive protocol's exact inclusive window applies: before seven elapsed
+days is early; exactly seven through exactly fourteen days is in-window; after
+fourteen days is late. Only received, first, unassisted, in-window responses feed
+assignment posteriors and ranking, once per exposure at weight one. No imputation
+for missing checks, practice scoring, or repeated-check evidence is added.</p>
+<h2>Storage and #60 mapping</h2>
+<p>Schema <strong>v17</strong> adds <code>micro_exposures</code> and <code>micro_check_attempts</code>. Both use
+<code>(pack_id, unit_id)</code> as primary key: one exposure and one decisive check per unit
+in a learner's local database. Exposure rows hold method and assignment, exposure
+and completion timestamps. Check rows hold check ID, first answer, correct/incorrect
+score status, timestamp, and assisted flag; a composite foreign key references
+the exposure. Every new storage write calls <code>require_active_learner</code>.
+<code>export_all</code> includes <code>microExposures</code> and <code>microCheckAttempts</code>; <code>delete_all</code>
+removes checks before exposures, retaining the existing secure deletion behavior.
+The additive v16 migration does not rewrite existing tables or learner history.
+The real compressed v16 fixture and its provenance are in <code>tests/fixtures/micro-v16.md</code>.</p>
+<p>Assignment uses a SHA-256 seed from learner ID, pack ID and unit ID, with a local
+RNG and sorted method IDs. Warm-up picks among methods with the fewest assignments
+until each has two, including pending checks. Thereafter a 20% uniform draw and
+80% independent Beta Thompson draw use only received eligible outcomes. Priors
+are Beta(1,1), success/failure increments are one. This implements #60's policy
+and independent-unit rule without changing its estimator or confidence thresholds.
+A learner ID is created only behind consent. Ranking Monte Carlo is separately
+seeded from learner/pack and the string <code>ranking</code>.</p>
+<h2>Validation and deliberate breaks</h2>
+<p><code>tests/test_micro_unit_engine.py</code> uses a controlled aware clock and the sample
+pack, expanded into distinct synthetic units where needed. The 60-day seeded
+learner studies three units daily (180 exposures) and receives 159 day-7 checks.
+Recall probabilities are 0.9, 0.5 and 0.2 in sorted method order; outcome RNG seed
+is 20261021, identity is <code>synthetic-42</code>. The true best (<code>cued_retrieval</code>) ranks first.
+Posterior means are 0.9262, 0.5556 and 0.3125, with 120, 25 and 14 eligible
+checks respectively. The confidence label is <code>likely</code>; <code>show_ranking</code> is true.
+This single synthetic history verifies integration, not human effectiveness or
+ensemble calibration. Real content needs many more independently authored units
+than the four-unit sample provides.</p>
+<p>Run <code>PYTHONPATH=src python scripts/micro_unit_engine_break_checks.py</code> to repeat
+one deliberate mutation per key test, in memory. Each must cause an assertion
+failure, not merely a runtime/import error. Mutations remove the cap, offer checks
+a day early, overwrite exposure timestamps, replace first responses, remove
+warm-up, change the exploration boundary to 80%, admit excluded outcomes, remove
+consent checks, retain check rows on deletion, leave migration version at 16,
+and reverse scores in the synthetic learner. All <strong>11/11</strong> breaks produced
+assertion failures in their corresponding tests. The source was unchanged by
+these runs.</p>
+<p>Final validation on this worktree:</p>
+<ul>
+<li><code>PYTHONPATH=src python -m unittest discover -s tests -q</code>: <strong>336 passed</strong>
+(including 12 engine tests, after Claude's integration added the vocabulary case test).</li>
+<li><code>node --test tests/foreman_web_contract.test.mjs tests/personal_comparison_web.test.mjs</code>:
+<strong>51 passed</strong>.</li>
+<li>Deliberate breaks: <strong>11/11 detected</strong>; focused compile checks and
+<code>git diff --check</code> passed.</li>
+</ul>
+<p>The first full run exposed migration tests that reset <code>user_version</code> on an
+already current schema. Making the additive table creation idempotent preserved
+those legacy tests; the final full run above passed. The genuine v16 fixture
+separately verifies the actual upgrade and preservation of every original row.</p>
+<h2>Step C decisions</h2>
+<p>HTTP routes and payload contracts, UI integration, learner timezone selection,
+pack enrollment/switching, explicit assistance capture, and wording for pending,
+missed, late and close results remain for step C. The engine supplies exclusion
+IDs and model confidence; the UI must explain draft-key uncertainty and must not
+imply the leader's confidence certifies the entire ordering. Pack IDs must be
+stable and packs immutable during a run; versioning or replacing enrolled content
+needs a separate policy. No push, PR, approval or merge is part of A2.</p>
+
+</main></body>
+</html>
