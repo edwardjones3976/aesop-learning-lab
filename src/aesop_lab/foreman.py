@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from importlib import import_module
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
@@ -20,22 +22,90 @@ from aesop_lab.evidence import summarize_evidence
 from aesop_lab.storage.sqlite import SQLiteStore
 
 ROOT = Path(__file__).resolve().parents[2]
-PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack.json"
-REVISED_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.2.json"
-WEEK_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m1-draft.3.json"
-ADAPTIVE_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.4.json"
-V5_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.5.json"
-V6_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.6.json"
-V7_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.7.json"
-V8_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.8.json"
-V9_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.9.json"
-V10_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.10.json"
-CURRENT_PACK_PATH = ROOT / "content/packs/python-functions-recursion/pack-m2-draft.11.json"
-PACK_BY_VERSION = {"v1": PACK_PATH, "v2": REVISED_PACK_PATH, "v3": WEEK_PACK_PATH,
-                   "v4": ADAPTIVE_PACK_PATH, "v5": V5_PACK_PATH,
-                   "v6": V6_PACK_PATH, "v7": V7_PACK_PATH,
-                   "v8": V8_PACK_PATH, "v9": V9_PACK_PATH,
-                   "v10": V10_PACK_PATH, "v11": CURRENT_PACK_PATH}
+
+
+@dataclass(frozen=True)
+class ComparisonSpec:
+    module: str
+    protocol_name: str
+    assign_name: str
+    exposure_name: str
+    analyze_name: str
+
+    def load(self):
+        """Resolve protocol symbols only when a comparison is requested."""
+        module = import_module(self.module)
+        return tuple(getattr(module, name) for name in (
+            self.protocol_name, self.assign_name, self.exposure_name, self.analyze_name))
+
+
+@dataclass(frozen=True)
+class ContentVersion:
+    content_version: str
+    pack_path: Path
+    comparison: ComparisonSpec | None
+    assignment_protocol_version: str | None
+    policy_version: str
+    plain_language: bool
+    report_study_target: bool
+    descriptive_analysis: bool
+
+
+_PACK_DIR = ROOT / "content/packs/python-functions-recursion"
+# Ordered oldest to newest. All version-dependent preview behavior lives here.
+VERSION_REGISTRY = (
+    ContentVersion("v1", _PACK_DIR / "pack.json",
+                   None,
+                   None, "pilot-v1", False, False, False),
+    ContentVersion("v2", _PACK_DIR / "pack-m1-draft.2.json",
+                   None,
+                   None, "pilot-v1", False, False, False),
+    ContentVersion("v3", _PACK_DIR / "pack-m1-draft.3.json",
+                   None,
+                   None, "pilot-v2", False, False, False),
+    ContentVersion("v4", _PACK_DIR / "pack-m2-draft.4.json",
+                   ComparisonSpec("aesop_lab.experiment", "PROTOCOL", "assign_condition", "Exposure", "analyze"),
+                   "v1", "pilot-v2", False, False, False),
+    ContentVersion("v5", _PACK_DIR / "pack-m2-draft.5.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v2", "DESCRIPTIVE_V2", "assign_condition_v2", "ExposureV2", "analyze_v2"),
+                   "v2", "pilot-v4", False, True, True),
+    ContentVersion("v6", _PACK_DIR / "pack-m2-draft.6.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v3", "DESCRIPTIVE_V3", "assign_condition_v3", "ExposureV3", "analyze_v3"),
+                   "v3", "pilot-v4", False, True, True),
+    ContentVersion("v7", _PACK_DIR / "pack-m2-draft.7.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v4", "DESCRIPTIVE_V4", "assign_condition_v4", "ExposureV4", "analyze_v4"),
+                   "v4", "pilot-v4", False, True, True),
+    ContentVersion("v8", _PACK_DIR / "pack-m2-draft.8.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v5", "DESCRIPTIVE_V5", "assign_condition_v5", "ExposureV5", "analyze_v5"),
+                   "v5", "pilot-v4", False, True, True),
+    ContentVersion("v9", _PACK_DIR / "pack-m2-draft.9.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v6", "DESCRIPTIVE_V6", "assign_condition_v6", "ExposureV6", "analyze_v6"),
+                   "v6", "pilot-v4", False, True, True),
+    ContentVersion("v10", _PACK_DIR / "pack-m2-draft.10.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v7", "DESCRIPTIVE_V7", "assign_condition_v7", "ExposureV7", "analyze_v7"),
+                   "v7", "pilot-v5", True, True, True),
+    ContentVersion("v11", _PACK_DIR / "pack-m2-draft.11.json",
+                   ComparisonSpec("aesop_lab.experiment.descriptive_v8", "DESCRIPTIVE_V8", "assign_condition_v8", "ExposureV8", "analyze_v8"),
+                   "v8", "pilot-v5", True, True, True),
+)
+VERSION_BY_CONTENT = {row.content_version: row for row in VERSION_REGISTRY}
+PACK_BY_VERSION = {row.content_version: row.pack_path for row in VERSION_REGISTRY}
+CONTENT_BY_ASSIGNMENT_PROTOCOL = {
+    row.assignment_protocol_version: row.content_version for row in VERSION_REGISTRY
+    if row.assignment_protocol_version is not None
+}
+CURRENT_PACK_PATH = VERSION_REGISTRY[-1].pack_path
+# Compatibility aliases for existing preview callers and historical fixtures.
+PACK_PATH = PACK_BY_VERSION["v1"]
+REVISED_PACK_PATH = PACK_BY_VERSION["v2"]
+WEEK_PACK_PATH = PACK_BY_VERSION["v3"]
+ADAPTIVE_PACK_PATH = PACK_BY_VERSION["v4"]
+V5_PACK_PATH = PACK_BY_VERSION["v5"]
+V6_PACK_PATH = PACK_BY_VERSION["v6"]
+V7_PACK_PATH = PACK_BY_VERSION["v7"]
+V8_PACK_PATH = PACK_BY_VERSION["v8"]
+V9_PACK_PATH = PACK_BY_VERSION["v9"]
+V10_PACK_PATH = PACK_BY_VERSION["v10"]
 WEB = ROOT / "foreman_web"
 DB = ROOT / ".local/foreman.sqlite3"
 HOST = "127.0.0.1"
@@ -71,9 +141,7 @@ class Preview:
         # A process can stop between saving a fixed assignment and its first
         # exposure. Even that partial enrollment must keep its original pack.
         for assignment in self.store.list_assignments("text-vs-labeled-diagram"):
-            assigned_version = {"v1": "v4", "v2": "v5", "v3": "v6", "v4": "v7",
-                                "v5": "v8", "v6": "v9",
-                                "v7": "v10", "v8": "v11"}.get(assignment.protocol_version)
+            assigned_version = CONTENT_BY_ASSIGNMENT_PROTOCOL.get(assignment.protocol_version)
             if assigned_version is None:
                 versions.add("unknown")
             else:
@@ -114,6 +182,7 @@ class Preview:
 
     def _activate_pack(self, path: Path) -> None:
         self.pack = load_pack(path)
+        self.version = VERSION_BY_CONTENT[self.pack.concepts[0].content_version]
         if self.pack.status != "draft" or any(
             item.answer_key and item.answer_key.status != "candidate" for item in self.pack.items
         ):
@@ -127,9 +196,7 @@ class Preview:
                     lesson.encountered_family_ids for lesson in self.pack.lessons
                     if lesson.concept_id == concept.id)),
                 now=self.now,
-                policy_version=("pilot-v5" if concept.content_version in ("v10", "v11") else
-                                "pilot-v4" if concept.content_version in ("v5", "v6", "v7", "v8", "v9") else
-                                "pilot-v2" if concept.content_version in ("v3", "v4") else "pilot-v1"),
+                policy_version=VERSION_BY_CONTENT[concept.content_version].policy_version,
             ) for concept in self.pack.concepts
         }
 
@@ -192,7 +259,7 @@ class Preview:
                 "reviewSchedule": {"dueAt": next_check, "status": review_status,
                                    "reason": (("A new question is scheduled from the time you finished this lesson."
                                                if due else "No new later question is scheduled.")
-                                              if self.pack.pack_version in ("m2-draft.10", "m2-draft.11") else
+                                              if self.version.plain_language else
                                               (f"Held-out independent review for {cid} "
                                                "is scheduled from the recorded lesson completion."
                                                if due else "No eligible unused delayed check is scheduled."))},
@@ -252,7 +319,7 @@ class Preview:
                 return {"conceptId": concept["id"], "action": "practice",
                         "reason": ("Try a new question without help before moving on. "
                                    "A match with a draft answer key is only practice feedback."
-                                   if self.pack.pack_version in ("m2-draft.10", "m2-draft.11") else
+                                   if self.version.plain_language else
                                    "Build one unassisted candidate-key match on a new item family before moving on.")}
         for concept in concepts:
             if not concept["lessonComplete"] and all(
@@ -261,13 +328,13 @@ class Preview:
                 for parent in self.pack.prerequisites_of(concept["id"])):
                 return {"conceptId": concept["id"], "action": "lesson",
                         "reason": ("Read the next lesson. It builds on what you studied before."
-                                   if self.pack.pack_version in ("m2-draft.10", "m2-draft.11") else
+                                   if self.version.plain_language else
                                    "Read the next lesson in prerequisite order.")}
         for concept in concepts:
             if concept["lessonComplete"]:
                 return {"conceptId": concept["id"], "action": "practice",
                         "reason": ("Keep practicing while you wait for a later question without help."
-                                   if self.pack.pack_version in ("m2-draft.10", "m2-draft.11") else
+                                   if self.version.plain_language else
                                    "Continue practice while waiting for an independent delayed check.")}
         return {"conceptId": concepts[0]["id"], "action": "lesson",
                 "reason": "Begin with the first lesson."}
@@ -308,24 +375,10 @@ class Preview:
     def _method_for(self, cid: str) -> dict | None:
         self.store.require_active_learner()
         version = self.pack.concept(cid).content_version
-        if version not in ("v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11"):
+        spec = VERSION_BY_CONTENT[version]
+        if spec.comparison is None:
             return None
-        if version == "v4":
-            from aesop_lab.experiment import PROTOCOL as protocol, assign_condition as assign
-        elif version == "v5":
-            from aesop_lab.experiment.descriptive_v2 import DESCRIPTIVE_V2 as protocol, assign_condition_v2 as assign
-        elif version == "v6":
-            from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, assign_condition_v3 as assign
-        elif version == "v7":
-            from aesop_lab.experiment.descriptive_v4 import DESCRIPTIVE_V4 as protocol, assign_condition_v4 as assign
-        elif version == "v8":
-            from aesop_lab.experiment.descriptive_v5 import DESCRIPTIVE_V5 as protocol, assign_condition_v5 as assign
-        elif version == "v9":
-            from aesop_lab.experiment.descriptive_v6 import DESCRIPTIVE_V6 as protocol, assign_condition_v6 as assign
-        elif version == "v10":
-            from aesop_lab.experiment.descriptive_v7 import DESCRIPTIVE_V7 as protocol, assign_condition_v7 as assign
-        else:
-            from aesop_lab.experiment.descriptive_v8 import DESCRIPTIVE_V8 as protocol, assign_condition_v8 as assign
+        protocol, assign, _, _ = spec.comparison.load()
         assignment = next((a for a in self.store.list_assignments(protocol.id)
                            if a.concept_id == cid and a.protocol_version == protocol.version), None)
         if assignment is None:
@@ -334,30 +387,16 @@ class Preview:
             self.store.save_assignment(assignment)
         method = {"conditionId": assignment.condition_id, "protocolId": protocol.id,
                   "protocolVersion": protocol.version}
-        if version in ("v5", "v6", "v7", "v8", "v9", "v10", "v11"):
+        if spec.report_study_target:
             method["studyTargetMinutes"] = protocol.target_exposure_minutes
         return method
 
     def experiment_findings(self) -> dict:
         version = self.pack.concepts[0].content_version
-        if version not in ("v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11"):
+        spec = VERSION_BY_CONTENT[version]
+        if spec.comparison is None:
             return {"status": "insufficient_evidence", "reason": "This content version predates the fixed comparison."}
-        if version == "v4":
-            from aesop_lab.experiment import PROTOCOL as protocol, Exposure, analyze
-        elif version == "v5":
-            from aesop_lab.experiment.descriptive_v2 import DESCRIPTIVE_V2 as protocol, ExposureV2 as Exposure, analyze_v2 as analyze
-        elif version == "v6":
-            from aesop_lab.experiment.descriptive_v3 import DESCRIPTIVE_V3 as protocol, ExposureV3 as Exposure, analyze_v3 as analyze
-        elif version == "v7":
-            from aesop_lab.experiment.descriptive_v4 import DESCRIPTIVE_V4 as protocol, ExposureV4 as Exposure, analyze_v4 as analyze
-        elif version == "v8":
-            from aesop_lab.experiment.descriptive_v5 import DESCRIPTIVE_V5 as protocol, ExposureV5 as Exposure, analyze_v5 as analyze
-        elif version == "v9":
-            from aesop_lab.experiment.descriptive_v6 import DESCRIPTIVE_V6 as protocol, ExposureV6 as Exposure, analyze_v6 as analyze
-        elif version == "v10":
-            from aesop_lab.experiment.descriptive_v7 import DESCRIPTIVE_V7 as protocol, ExposureV7 as Exposure, analyze_v7 as analyze
-        else:
-            from aesop_lab.experiment.descriptive_v8 import DESCRIPTIVE_V8 as protocol, ExposureV8 as Exposure, analyze_v8 as analyze
+        protocol, _, Exposure, analyze = spec.comparison.load()
         exposures = tuple(Exposure(
             row["concept_id"], row["content_version"], row["condition_id"],
             datetime.fromisoformat(row["exposed_at"]),
@@ -371,7 +410,7 @@ class Preview:
         activities = {item.activity.id: item.activity for item in self.pack.items}
         assignments = tuple(a for a in self.store.list_assignments(protocol.id)
                             if a.protocol_version == protocol.version)
-        if version in ("v5", "v6", "v7", "v8", "v9", "v10", "v11"):
+        if spec.descriptive_analysis:
             # Without an identity there cannot be assignments to validate.
             return analyze(assignments, exposures, attempts, activities,
                            learner_id=self.store.existing_learner_id() or "unassigned", now=self.now())
