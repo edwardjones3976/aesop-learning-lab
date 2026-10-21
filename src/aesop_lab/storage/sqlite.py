@@ -6,6 +6,7 @@ be exported or deleted without removing the reviewed content pack.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import datetime
 import json
 from pathlib import Path
@@ -18,7 +19,7 @@ from aesop_lab.domain.models import (
 )
 
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 CONSENT_VERSION = "consent-v1"
 
 
@@ -311,6 +312,66 @@ class SQLiteStore:
                     WHERE {history}
                 """)
                 self.connection.execute("PRAGMA user_version = 16")
+
+        if current < 17:
+            with self.connection:
+                self.connection.executescript("""
+                    BEGIN IMMEDIATE;
+                    CREATE TABLE IF NOT EXISTS micro_exposures (
+                        pack_id TEXT NOT NULL, unit_id TEXT NOT NULL,
+                        method_id TEXT NOT NULL, assigned_at TEXT NOT NULL,
+                        exposed_at TEXT, completed_at TEXT,
+                        PRIMARY KEY (pack_id, unit_id)
+                    );
+                    CREATE TABLE IF NOT EXISTS micro_check_attempts (
+                        pack_id TEXT NOT NULL, unit_id TEXT NOT NULL,
+                        check_id TEXT NOT NULL, first_answer TEXT NOT NULL,
+                        score_status TEXT NOT NULL CHECK(score_status IN ('correct', 'incorrect')),
+                        occurred_at TEXT NOT NULL,
+                        assisted INTEGER NOT NULL CHECK(assisted IN (0, 1)),
+                        PRIMARY KEY (pack_id, unit_id),
+                        FOREIGN KEY (pack_id, unit_id) REFERENCES micro_exposures(pack_id, unit_id)
+                    );
+                    PRAGMA user_version = 17;
+                    COMMIT;
+                """)
+
+    def micro_exposures(self, pack_id: str) -> list[dict]:
+        return [dict(r) for r in self.connection.execute(
+            "SELECT * FROM micro_exposures WHERE pack_id = ? ORDER BY assigned_at, unit_id", (pack_id,))]
+
+    def micro_checks(self, pack_id: str) -> list[dict]:
+        return [dict(r) for r in self.connection.execute(
+            "SELECT * FROM micro_check_attempts WHERE pack_id = ? ORDER BY occurred_at, unit_id", (pack_id,))]
+
+    def assign_micro_unit(self, pack_id, unit_id, method_id, at):
+        self.require_active_learner()
+        with (nullcontext() if self.connection.in_transaction else self.connection):
+            self.connection.execute("INSERT OR IGNORE INTO micro_exposures VALUES (?, ?, ?, ?, NULL, NULL)",
+                                    (pack_id, unit_id, method_id, at.isoformat()))
+        return next(r for r in self.micro_exposures(pack_id) if r['unit_id'] == unit_id)
+
+    def mark_micro_unit(self, pack_id, unit_id, at, *, complete=False):
+        self.require_active_learner()
+        column = "completed_at" if complete else "exposed_at"
+        with (nullcontext() if self.connection.in_transaction else self.connection):
+            cursor = self.connection.execute(
+                f"UPDATE micro_exposures SET {column} = COALESCE({column}, ?) "
+                "WHERE pack_id = ? AND unit_id = ?" + (" AND exposed_at IS NOT NULL" if complete else ""),
+                (at.isoformat(), pack_id, unit_id))
+            if not cursor.rowcount:
+                raise ValueError("unit must be assigned and started before completion")
+
+    def record_micro_check(self, pack_id, unit_id, check_id, answer, score_status, at, assisted=False):
+        self.require_active_learner()
+        with (nullcontext() if self.connection.in_transaction else self.connection):
+            if not self.connection.execute(
+                    "SELECT 1 FROM micro_exposures WHERE pack_id=? AND unit_id=? AND completed_at IS NOT NULL",
+                    (pack_id, unit_id)).fetchone():
+                raise ValueError("complete the unit before answering its check")
+            self.connection.execute("INSERT OR IGNORE INTO micro_check_attempts VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                    (pack_id, unit_id, check_id, answer, score_status, at.isoformat(), int(assisted)))
+        return next(r for r in self.micro_checks(pack_id) if r['unit_id'] == unit_id)
 
     def has_consent(self) -> bool:
         return self.connection.execute("SELECT 1 FROM learner_consent").fetchone() is not None
@@ -677,6 +738,8 @@ class SQLiteStore:
         revisions = by_instant("SELECT * FROM answer_revisions", "occurred_at", "id")
         return {
             "schemaVersion": SCHEMA_VERSION,
+            "microExposures": [dict(r) for r in self.connection.execute("SELECT * FROM micro_exposures ORDER BY pack_id, unit_id")],
+            "microCheckAttempts": [dict(r) for r in self.connection.execute("SELECT * FROM micro_check_attempts ORDER BY pack_id, unit_id")],
             "attempts": [dict(row) for row in attempts],
             "selfReviews": [dict(row) for row in reviews],
             "answerRevisions": [dict(row) for row in revisions],
@@ -732,6 +795,8 @@ class SQLiteStore:
             # Commit the consent marker atomically with removing learner rows.
             if mark_deleted:
                 self.connection.execute("INSERT OR IGNORE INTO learner_deletion VALUES (1)")
+            self.connection.execute("DELETE FROM micro_check_attempts")
+            self.connection.execute("DELETE FROM micro_exposures")
             self.connection.execute("DELETE FROM personal_solution_reveals")
             self.connection.execute("DELETE FROM personal_hint_events")
             self.connection.execute("DELETE FROM personal_recommendation_overrides")
