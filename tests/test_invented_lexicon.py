@@ -204,7 +204,9 @@ class TestInventedLexicon(unittest.TestCase):
         with open(authoring_path, "r", encoding="utf-8") as f:
             authoring = json.load(f)
 
-        figurative_markers = ["interest", "deadline", "deadlines", "hopes", "heart", "career", "plans"]
+        figurative_markers = ["interest", "deadline", "deadlines", "hopes", "heart", "career", "plans",
+                              "spreadsheet", "conscience", "regulations", "momentum", "information",
+                              "panic", "aroma", "scent", "employees", "growth"]
 
         for gloss, auth in authoring.items():
             sense = auth.get("sense", "")
@@ -214,7 +216,8 @@ class TestInventedLexicon(unittest.TestCase):
             )
 
             if gloss.startswith("to "):
-                for ex in auth.get("example_sentences", []):
+                # Every delivered sentence for a verb: mnemonic, examples and drills.
+                for ex in [auth.get("mnemonic_sentence", ""), *auth.get("example_sentences", []), *auth.get("rule_drills", [])]:
                     for marker in figurative_markers:
                         self.assertFalse(
                             bool(re.search(r"\b" + re.escape(marker) + r"\b", ex, re.IGNORECASE)),
