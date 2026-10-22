@@ -33,7 +33,7 @@ def engine_judge(trajectory, units_per_day: int) -> dict:
     """Study and answer in time order on the real engine, then read contrast_status at day 28 + 1 h."""
     if not trajectory.units:
         return dict(outcome=None, winner=None, decision_day=None, looks=[])
-    pack = learner.neutral_pack(units_per_day * learner.STUDY_SPAN_DAYS)
+    pack = learner.neutral_pack(units_per_day * learner.STUDY_SPAN_DAYS)  # replay is for v1 designs only
     clock = [learner.START]
     store = memory_store()
     try:

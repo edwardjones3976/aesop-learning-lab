@@ -20,7 +20,12 @@ from aesop_lab.contrast.protocol import BASELINE, VARIANT, ORDER_V1
 
 START = datetime(2026, 11, 2, 9, 0, tzinfo=timezone.utc)
 PACK_ID = "simulation-order-v1"
-STUDY_SPAN_DAYS = 22  # nothing studied after day zero + 21 can be checked by the day-28 cutoff
+STUDY_SPAN_DAYS = 22  # protocol v1: nothing studied after day zero + 21 can be checked by the day-28 cutoff
+
+
+def study_span(design: dict) -> int:
+    """Days of study that can still reach the final look: last look - 7 + 1."""
+    return design["looks"][-1] - CHECK_DAY + 1
 CHECK_DAY = 7
 
 
@@ -40,6 +45,7 @@ class Answer:
     at: datetime
     correct: bool
     outside_study: str  # "none" or "some", as the learner declares it
+    disputed: bool = False  # the learner flags the marking as wrong (the product can observe this)
 
 
 @dataclass
@@ -164,12 +170,13 @@ def simulate(scenario: dict, seed: int, index: int) -> Trajectory:
     behaviour, per_day = scenario["behaviour"], scenario["design"]["units_per_day"]
     identity = f"sim-{scenario['id']}-{seed}-{index}"
     model = RecallModel(scenario["model"], rng)
-    total = per_day * STUDY_SPAN_DAYS
+    span = study_span(scenario["design"])
+    total = per_day * span
     order, roles = engine_order(identity, total), engine_roles(identity, total)
     trajectory = Trajectory(scenario["id"], seed, index, identity)
 
     # Long enough that even a late first active day keeps its full study span and check window.
-    horizon = 4 * STUDY_SPAN_DAYS + 30
+    horizon = 4 * span + 30
     active = [rng.random() >= behaviour["missed_day_rate"] for _ in range(horizon)]
     first = active.index(True) if True in active else horizon
     recent: list[bool] = []
@@ -195,12 +202,19 @@ def simulate(scenario: dict, seed: int, index: int) -> Trajectory:
             delay = (at - unit.studied_at).total_seconds() / 86400
             p = model.recall(unit.role, delay, unit_items[unit.unit_id], unit.position, boost)
             correct = rng.random() < p
+            rejected = False
             if correct and rng.random() < behaviour["false_negative_rate"][unit.role]:
-                correct = False
+                correct, rejected = False, True
             declared = "some" if boost and rng.random() < behaviour["outside_declared_share"] else "none"
-            trajectory.answers.append(Answer(unit.unit_id, at, correct, declared))
+            # Disputes draw only when enabled, so existing scenarios replay unchanged.
+            disputed = False
+            if rejected and behaviour["dispute_rate"]:
+                disputed = rng.random() < behaviour["dispute_rate"]
+            elif not correct and not rejected and behaviour["dispute_false_rate"]:
+                disputed = rng.random() < behaviour["dispute_false_rate"]
+            trajectory.answers.append(Answer(unit.unit_id, at, correct, declared, disputed))
             recent.append(correct)
-        if day > first + STUDY_SPAN_DAYS - 1 or studied >= total:
+        if day > first + span - 1 or studied >= total:
             continue
         for slot in range(per_day):
             if studied >= total:

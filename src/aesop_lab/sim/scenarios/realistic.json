@@ -1,0 +1,82 @@
+{
+  "schema": "sim-scenario/1",
+  "id": "realistic",
+  "description": "Realistic gaps between two good methods (research digest section 2: about 0-10 points), on the round-2 learner with mild everyday noise: 10% missed days and a little skipping when a fail is expected. The method effect is in logits; the realised percentage-point gaps are reported per row (about 0, 3, 5, 8 and 10 points; minus rows are calibrated to -5 and -9.5 points, because the same logit shift moves recall more downward near the ceiling). These rows measure how often a design gives a usable, correct answer.",
+  "model": {
+    "kind": "half-life",
+    "intercept_logit": 1.4,
+    "ability_sd": 0.8,
+    "difficulty_sd": 0.8,
+    "concept_size": 4,
+    "concept_sd": 0.3,
+    "half_life_days": [
+      7,
+      21
+    ],
+    "method_logit_mean": 0.0,
+    "method_logit_sd": 0.3
+  },
+  "behaviour": {
+    "missed_day_rate": 0.1,
+    "mnar_slope": 0.1
+  },
+  "learners": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "per_seed": 50
+  },
+  "rows": [
+    {
+      "id": "gap0",
+      "model": {
+        "method_logit_mean": 0.0
+      }
+    },
+    {
+      "id": "gap3",
+      "model": {
+        "method_logit_mean": 0.35
+      }
+    },
+    {
+      "id": "gap5",
+      "model": {
+        "method_logit_mean": 0.6
+      }
+    },
+    {
+      "id": "gap8",
+      "model": {
+        "method_logit_mean": 1.0
+      }
+    },
+    {
+      "id": "gap10",
+      "model": {
+        "method_logit_mean": 1.3
+      }
+    },
+    {
+      "id": "minus5",
+      "model": {
+        "method_logit_mean": -0.48
+      }
+    },
+    {
+      "id": "minus10",
+      "model": {
+        "method_logit_mean": -0.87
+      }
+    }
+  ]
+}

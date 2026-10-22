@@ -4,6 +4,7 @@ SIMULATION ONLY: synthetic learners from a model independent of the estimator.
 
     py scripts/sim.py run round1-gate hard-learner --out DIR [--workers 4] [--parity 50]
     py scripts/sim.py parity hard-learner --learners 100
+    py scripts/sim.py sweep round2-sweep adversarial realistic --out DIR [--workers 6]
     py scripts/sim.py list
 """
 from __future__ import annotations
@@ -19,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aesop_lab.contrast import protocol  # noqa: E402
-from aesop_lab.sim import run as sim_run, scenario as scenarios  # noqa: E402
+from aesop_lab.sim import run as sim_run, scenario as scenarios, sweep as sim_sweep  # noqa: E402
 
 
 def pct(x) -> str:
@@ -57,6 +58,68 @@ table {{ border-collapse:collapse; display:block; overflow-x:auto; margin:14px 0
 """
 
 
+def sweep_html(ranked: list[dict], meta: dict) -> str:
+    gaps = sorted({g for d in ranked for g in d["usable"]}, key=lambda g: (g.startswith("minus"), int(g.strip("gapminus") or 0)))
+    rows = "".join(
+        f"<tr><th scope=row>{html.escape(d['design'])}</th>"
+        f"<td class={'ok' if d['safe'] else 'bad'}>{'safe' if d['safe'] else 'UNSAFE'}<div class=muted>worst {html.escape(d['worst_row'])}: {pct(d['worst_wrong_upper'])}</div></td>"
+        + "".join(f"<td>{pct(d['usable'].get(g))}</td>" for g in gaps)
+        + f"<td>{d['median_decision_day'] or '–'}</td>"
+        f"<td>{', '.join(f'±{g}: {pct(v)}' for g, v in d['symmetry_gap'].items()) or '–'}</td><td>{d['abstained']}</td></tr>"
+        for d in ranked)
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Sweep</title>
+<style>
+:root {{ --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --ok:#1f7a4d; --bad:#b3261e; }}
+@media (prefers-color-scheme: dark) {{ :root {{ --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --ok:#7fd1a3; --bad:#ff8a80; }} }}
+body {{ background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; margin:0; padding:24px 16px; }}
+main {{ max-width:1100px; margin:0 auto; }} .muted {{ color:var(--muted); font-size:.85em; }}
+table {{ border-collapse:collapse; display:block; overflow-x:auto; margin:14px 0; }} th, td {{ border:1px solid var(--rule); padding:5px 8px; text-align:left; vertical-align:top; }}
+.ok {{ color:var(--ok); }} .bad {{ color:var(--bad); font-weight:700; }}
+</style></head><body><main>
+<h1>Design sweep: {html.escape(meta['designs'])}</h1>
+<p class="muted">Simulation only. Each design runs every row of {html.escape(', '.join(meta['scenarios']))}. "Safe" means the one-sided 95% Wilson upper bound for wrong calls (judged against each learner's own gap) is below 5% on every row. Gap columns show the share of learners who got a <b>correct, usable</b> answer (repeated benefit, promising or no-difference, right for them). Ranked safe first, then most usable answers, then earliest median decision day. Git {html.escape(meta['git'])}; {meta['learners']} learners in {meta['seconds']:.0f} s.</p>
+<table><thead><tr><th>Design</th><th>Safety</th>{''.join(f'<th>{html.escape(g)}</th>' for g in gaps)}<th>Median decision day</th><th>Asymmetry (+g vs −g)</th><th>Abstentions</th></tr></thead><tbody>{rows}</tbody></table>
+</main></body></html>
+"""
+
+
+def run_sweep(args, parser) -> int:
+    designs = sim_sweep.load_designs(args.designs)
+    base_rows = [s for name in args.scenarios for s in scenarios.load(name)]
+    if (args.out / "sweep.json").exists():
+        parser.error(f"{args.out} already holds a sweep: use a fresh folder")
+    started = time.monotonic()
+    pool = sim_run.make_pool(args.workers)
+    results = []
+    for candidate in designs["designs"]:
+        summaries = []
+        for row in base_rows:
+            scenario = sim_sweep.apply_design(row, candidate["id"], candidate["design"])
+            summary, _ = sim_run.run_scenario(scenario, pool, args.parity)
+            if not summary["parity_ok"]:
+                print(f"PARITY FAILURE in {scenario['id']}: {summary['parity']['mismatches'][:2]}")
+                return 2
+            summaries.append(summary)
+        result = sim_sweep.summarize(candidate["id"], summaries)
+        result["rows"] = summaries
+        results.append(result)
+        print(f"{candidate['id']}: {'safe' if result['safe'] else 'UNSAFE'} (worst {result['worst_row']} "
+              f"{result['worst_wrong_upper']:.1%}), usable {result['mean_usable_nonzero']:.1%}, "
+              f"median day {result['median_decision_day']}, {time.monotonic() - started:.0f} s", flush=True)
+    if pool:
+        pool.shutdown()
+    ranked = sim_sweep.rank(results)
+    meta = dict(git=sim_run.git_sha(), designs=designs["id"], scenarios=args.scenarios,
+                learners=sum(r["learners"] for r in results), seconds=time.monotonic() - started)
+    args.out.mkdir(parents=True, exist_ok=True)
+    (args.out / "sweep.json").write_text(json.dumps(dict(meta=meta, ranked=ranked), indent=1, default=str), encoding="utf-8")
+    (args.out / "sweep.html").write_text(sweep_html(ranked, meta), encoding="utf-8")
+    print(f"sweep: {args.out / 'sweep.html'} ({meta['seconds']:.0f} s)")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -68,8 +131,16 @@ def main() -> int:
     check = sub.add_parser("parity")
     check.add_argument("scenarios", nargs="+")
     check.add_argument("--learners", type=int, default=100)
+    sweep = sub.add_parser("sweep")
+    sweep.add_argument("designs")
+    sweep.add_argument("scenarios", nargs="+")
+    sweep.add_argument("--out", type=Path, required=True)
+    sweep.add_argument("--workers", type=int, default=4)
+    sweep.add_argument("--parity", type=int, default=50, help="engine-replayed learners per v1 row")
     sub.add_parser("list")
     args = parser.parse_args()
+    if args.command == "sweep":
+        return run_sweep(args, parser)
 
     if args.command == "list":
         for name in scenarios.available():

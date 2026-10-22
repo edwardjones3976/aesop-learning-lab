@@ -10,7 +10,7 @@ from pathlib import Path
 
 from aesop_lab.contrast import protocol
 from aesop_lab.sim import fastpath, learner, replay
-from aesop_lab.sim.scenario import scenario_hash
+from aesop_lab.sim.scenario import is_v1, scenario_hash
 
 Z95 = 1.6448536269514722
 CHUNK = 25
@@ -32,7 +32,8 @@ def verdict_class(result: dict, true_gap: float) -> str:
         return "neutral"
     if outcome == "no meaningful difference detected":
         return "wrong" if abs(true_gap) >= protocol.MARGIN else "correct"
-    favoured = result["winner"] if outcome == "repeated benefit" else protocol.VARIANT
+    # v1 "promising" carries no winner because it can only favour the variant.
+    favoured = result["winner"] or protocol.VARIANT
     if true_gap == 0:
         return "wrong"
     better = protocol.VARIANT if true_gap > 0 else protocol.BASELINE
@@ -44,12 +45,12 @@ def _chunk(job: tuple[dict, int, int, int]) -> list[dict]:
     rows = []
     for index in range(start, stop):
         trajectory = learner.simulate(scenario, seed, index)
-        result = fastpath.judge(trajectory)
+        result = fastpath.judge(trajectory, scenario["design"])
         last = result["looks"][-1] if result["looks"] else None
         rows.append(dict(
             seed=seed, index=index, true_gap=trajectory.true_gap, outcome=result["outcome"],
             winner=result["winner"], decision_day=result["decision_day"],
-            verdict=verdict_class(result, trajectory.true_gap),
+            verdict=verdict_class(result, trajectory.true_gap), abstained=result["abstained"],
             eligible=last and {r: sum(c) for r, c in last["counts"].items()},
             studied=len(trajectory.units), answered=len(trajectory.answers),
             dropout_day=trajectory.dropout_day))
@@ -90,7 +91,8 @@ def summarize(scenario: dict, rows: list[dict], parity: dict, seconds: float) ->
         id=scenario["id"], hash=scenario_hash(scenario), learners=n,
         outcome_shares={o: count(lambda r, o=o: r["outcome"] == o) / n for o in protocol.OUTCOMES},
         wrong=wrong, wrong_upper=wilson(wrong, n)[1], correct=correct, correct_lower=wilson(correct, n)[0],
-        wrong_ok=wilson(wrong, n)[1] < 0.05,
+        wrong_ok=wilson(wrong, n)[1] < 0.05, abstained=count(lambda r: r["abstained"]),
+        usable=correct / n,
         median_decision_day=statistics.median(decided) if decided else None,
         median_min_eligible=statistics.median(eligible) if eligible else None,
         true_gap_mean=statistics.fmean(gaps), true_gap_sd=statistics.pstdev(gaps),
@@ -108,7 +110,11 @@ def run_scenario(scenario: dict, pool=None, parity: int = 50) -> tuple[dict, lis
             for seed in scenario["learners"]["seeds"] for start in range(0, per_seed, CHUNK)]
     chunks = pool.map(_chunk, jobs) if pool else map(_chunk, jobs)
     rows = [r for chunk in chunks for r in chunk]
-    checked = parity_sample(scenario, parity, pool) if parity else dict(checked=0, mismatches=[])
+    if parity and is_v1(scenario):
+        checked = parity_sample(scenario, parity, pool)
+    else:
+        # Candidate designs exist only in the fast path; v1 rows carry the engine check.
+        checked = dict(checked=0, mismatches=[], skipped="design is not protocol v1")
     return summarize(scenario, rows, checked, time.monotonic() - started), rows
 
 
