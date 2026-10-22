@@ -38,6 +38,24 @@ class PoolingTests(unittest.TestCase):
         self.assertEqual(pooling.evaluate(scenario.normalize(biased), 28)["withheld_share"], 1.0)
         self.assertEqual(pooling.evaluate(scenario.normalize(clean), 28)["withheld_share"], 0.0)
 
+    def test_recency_weighting_tracks_a_shared_drift(self):
+        drift = [r for r in scenario.load("adversarial") if r["id"].endswith("drift-reversal")][0]
+        drift = copy.deepcopy(drift)
+        drift["learners"] = {"seeds": list(range(1, 11)), "per_seed": 30}  # tracking a shared drift needs ~300 learners
+        drift = scenario.normalize(drift)
+        stale = pooling.evaluate(drift, 28, None, truth="recent")["accuracy"]["pooled"]
+        fresh = pooling.evaluate(drift, 28, 20, truth="recent")["accuracy"]["pooled"]
+        self.assertLess(stale, 0.3)
+        self.assertGreater(fresh, 0.8)
+
+    def test_recency_weights_halve_every_half_life(self):
+        s = scenario.normalize(copy.deepcopy(BASE))
+        t = learner.simulate(s, 1, 0)
+        plain = pooling.counts_at(t, 28)
+        weighted = pooling.counts_at(t, 28, 5)
+        self.assertLess(sum(map(sum, weighted.values())), sum(map(sum, plain.values())))
+        self.assertGreater(sum(map(sum, weighted.values())), 0)
+
     def test_dispute_flag_needs_a_real_between_arm_difference(self):
         cohort = [{BASELINE: [0, 10], VARIANT: [5, 10]}] * 30
         self.assertTrue(pooling.dispute_flag(cohort))
