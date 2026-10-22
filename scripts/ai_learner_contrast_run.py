@@ -109,15 +109,18 @@ def matches(answer: str, accepted) -> bool:
     return " ".join(answer.split()).casefold() in {" ".join(a.split()).casefold() for a in accepted}
 
 
-def pretest(pack, ask, log) -> list[dict]:
+def pretest(pack, ask, log, forced: bool = False) -> list[dict]:
     rng = random.Random(SEED)
     units = list(pack.units)
     rng.shuffle(units)
     items = []
     for start in range(0, len(units), PRETEST_BATCH):
         batch = units[start:start + PRETEST_BATCH]
+        # The forced form allows no abstention, so 0% cannot be met by answering "unknown".
         prompt = ("Before any lessons: for each invented word below, give your best guess at its English "
-                  "meaning, or 'unknown'. Reply with exactly one line per word in the form word: meaning.\n\n"
+                  + ("meaning. You must guess a real English word or short phrase for every one; 'unknown' "
+                     "is not allowed. " if forced else "meaning, or 'unknown'. ")
+                  + "Reply with exactly one line per word in the form word: meaning.\n\n"
                   + "\n".join(u.target.word for u in batch))
         try:
             reply = ask(prompt)
@@ -233,7 +236,7 @@ table {{ border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0
 """
 
 
-def run(run_dir: Path, ask, pretest_only: bool = False) -> dict:
+def run(run_dir: Path, ask, pretest_only: bool = False, forced: bool = False) -> dict:
     run_dir.mkdir(parents=True, exist_ok=True)
     if any(run_dir.glob("*.sqlite3")) or (run_dir / "result.json").exists():
         raise SystemExit(f"{run_dir} holds an earlier run: use a fresh run directory")
@@ -246,7 +249,7 @@ def run(run_dir: Path, ask, pretest_only: bool = False) -> dict:
         return ask(prompt)
 
     started = time.monotonic()
-    result = dict(pretest=pretest(pack, counted, log), status=None)
+    result = dict(pretest=pretest(pack, counted, log, forced), pretest_forced=forced, status=None)
     if not pretest_only:
         result["status"] = course(pack, counted, log, run_dir / "learner.sqlite3")
     result.update(calls=calls[0], errors=sum("error" in e for e in log), seconds=time.monotonic() - started,
@@ -261,10 +264,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--pretest-only", action="store_true")
+    parser.add_argument("--forced-guess", action="store_true", help="the pretest forbids 'unknown' (Grok P1)")
     args = parser.parse_args()
     if ROOT in args.run_dir.resolve().parents:
         parser.error("--run-dir must be outside the repository")
-    result = run(args.run_dir, bridge_learner(args.run_dir), args.pretest_only)
+    result = run(args.run_dir, bridge_learner(args.run_dir), args.pretest_only, args.forced_guess)
     correct = sum(i["correct"] for i in result["pretest"])
     print(f"pretest {correct}/{len(result['pretest'])}; outcome "
           f"{result['status'] and result['status']['outcome']}; {result['calls']} calls")
