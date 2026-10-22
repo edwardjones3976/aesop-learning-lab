@@ -31,6 +31,8 @@ def memory_store() -> SQLiteStore:
 
 def engine_judge(trajectory, units_per_day: int) -> dict:
     """Study and answer in time order on the real engine, then read contrast_status at day 28 + 1 h."""
+    if not trajectory.units:
+        return dict(outcome=None, winner=None, decision_day=None, looks=[])
     pack = learner.neutral_pack(units_per_day * learner.STUDY_SPAN_DAYS)
     clock = [learner.START]
     store = memory_store()
@@ -79,6 +81,8 @@ def compare(fast: dict, slow: dict, tolerance: float = 1e-6) -> list[str]:
     for f, s in zip(fast["looks"], slow["looks"]):
         if f["counts"] != s["counts"]:
             problems.append(f"day {f['day']} counts: fast {f['counts']} vs engine {s['counts']}")
+        if f["excluded"] != s["excluded"]:
+            problems.append(f"day {f['day']} exclusions: fast {f['excluded']} vs engine {s['excluded']}")
         for name, value in f["probabilities"].items():
             if name != "error" and abs(value - s["probabilities"][name]) > tolerance:
                 problems.append(f"day {f['day']} {name}: {value} vs {s['probabilities'][name]}")

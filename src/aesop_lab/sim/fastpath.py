@@ -51,6 +51,10 @@ def judge(trajectory) -> dict:
         snapshots[day] = {role: tuple(c) for role, c in counts.items()}
         excluded[day] = dropped
     judged = protocol.judge(snapshots)
+    if judged["decision_day"] is not None:
+        # The engine assigns a unit started exactly at a terminal cutoff as post-decision.
+        cutoff = day_zero + timedelta(days=judged["decision_day"])
+        excluded[judged["decision_day"]]["unanswered"] -= sum(u.studied_at == cutoff for u in trajectory.units)
     for look in judged["looks"]:
         look["excluded"] = excluded[look["day"]]
     return judged

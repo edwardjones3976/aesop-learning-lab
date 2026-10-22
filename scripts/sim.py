@@ -109,7 +109,10 @@ def main() -> int:
         dict(meta=meta, summaries=summaries, learners=learners), indent=1, default=str), encoding="utf-8")
     (args.out / "report.html").write_text(report_html(summaries, meta), encoding="utf-8")
     print(f"report: {args.out / 'report.html'} ({meta['seconds']:.0f} s)")
-    return 0 if all(s["parity_ok"] for s in summaries) else 2
+    # 2: the fast path disagreed with the engine; 3: a row's wrong-call bound reached 5%.
+    if not all(s["parity_ok"] for s in summaries):
+        return 2
+    return 0 if all(s["wrong_ok"] for s in summaries) else 3
 
 
 if __name__ == "__main__":
