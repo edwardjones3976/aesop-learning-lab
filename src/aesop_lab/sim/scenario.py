@@ -20,11 +20,20 @@ DEFAULT_BEHAVIOUR = {
     "outside_declared_share": 1.0,   # declared outside study is excluded; undeclared silently helps
     "outside_boost_logit": 1.0,
     "false_negative_rate": {"baseline": 0.0, "variant": 0.0},  # correct answers the key rejects
+    "dispute_rate": 0.0,             # share of key-rejected correct answers the learner flags
+    "dispute_false_rate": 0.0,       # share of genuinely wrong answers the learner flags anyway
     "missed_day_rate": 0.0,
     "dropout_hazard": 0.0,           # per active day
     "frustration_hazard": 0.0,       # added per day × share of the last 3 checks failed
 }
-DEFAULT_DESIGN = {"units_per_day": 3, "contrast": "order-v1"}
+# Defaults are protocol v1 exactly (docs/contrast-protocol-v1.html section 5); a sweep overrides them.
+DEFAULT_DESIGN = {
+    "units_per_day": 3, "contrast": "order-v1",
+    "looks": [14, 21, 28], "superiority": [0.999, 0.999, 0.999], "equivalence": [0.97, 0.95, 0.90],
+    "margin": 0.05, "promising": 0.98, "promising_both_ways": False, "minimum_per_arm": 8,
+    # Data-quality abstention (decision section 3b): null, or limits on between-arm differences.
+    "abstain": None,
+}
 MODEL_KINDS = ("bernoulli", "half-life", "log-delay")
 LATENT_KEYS = {"kind", "intercept_logit", "ability_sd", "difficulty_sd", "concept_size", "concept_sd",
                "method_logit_mean", "method_logit_sd", "reversed_share", "drift_logit_per_unit",
@@ -78,8 +87,15 @@ def normalize(raw: dict) -> dict:
         "design": _merge(DEFAULT_DESIGN, raw.get("design", {})),
         "learners": {"seeds": [int(s) for s in learners["seeds"]], "per_seed": int(learners["per_seed"])},
     }
-    if scenario["design"]["units_per_day"] < 1:
+    design = scenario["design"]
+    if design["units_per_day"] < 1:
         raise ScenarioError("units_per_day must be positive")
+    looks = design["looks"]
+    if (not looks or looks != sorted(set(looks)) or looks[0] < 8
+            or not len(looks) == len(design["superiority"]) == len(design["equivalence"])):
+        raise ScenarioError("looks must be increasing days >= 8 with one threshold of each kind per look")
+    if design["abstain"] is not None and set(design["abstain"]) - {"missing_gap", "contamination_gap", "dispute_gap"}:
+        raise ScenarioError("abstain takes missing_gap, contamination_gap and dispute_gap")
     return scenario
 
 
@@ -107,6 +123,11 @@ def expand(raw: dict) -> list[dict]:
                 merged[section] = {**inherited, **row[section]}
         expanded.append(normalize(merged))
     return expanded
+
+
+def is_v1(scenario: dict) -> bool:
+    """True when the design is frozen protocol v1, so the real engine can judge it too."""
+    return all(scenario["design"][k] == v for k, v in DEFAULT_DESIGN.items() if k != "units_per_day")
 
 
 def scenario_hash(scenario: dict) -> str:

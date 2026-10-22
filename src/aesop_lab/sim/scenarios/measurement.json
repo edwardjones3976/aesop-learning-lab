@@ -1,0 +1,123 @@
+{
+  "schema": "sim-scenario/1",
+  "id": "measurement",
+  "description": "Measurement error between arms: correct answers that the key rejects, more often in one arm (for example, when one method produces wordier answers). The round-1 AI witness showed about 29% vs 9%. No design can detect this bias from outcomes, so these rows measure each design's tolerance. Variant-side errors make the baseline look better; rows with a true variant advantage check the opposite harm.",
+  "model": {
+    "kind": "half-life",
+    "intercept_logit": 1.4,
+    "ability_sd": 0.8,
+    "difficulty_sd": 0.8,
+    "concept_size": 4,
+    "concept_sd": 0.3,
+    "half_life_days": [
+      7,
+      21
+    ],
+    "method_logit_mean": 0.0,
+    "method_logit_sd": 0.3
+  },
+  "learners": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "per_seed": 50
+  },
+  "rows": [
+    {
+      "id": "fn-variant-05",
+      "behaviour": {
+        "false_negative_rate": {
+          "variant": 0.05
+        }
+      }
+    },
+    {
+      "id": "fn-variant-10",
+      "behaviour": {
+        "false_negative_rate": {
+          "variant": 0.1
+        }
+      }
+    },
+    {
+      "id": "fn-variant-20",
+      "behaviour": {
+        "false_negative_rate": {
+          "variant": 0.2
+        }
+      }
+    },
+    {
+      "id": "fn-variant-30",
+      "behaviour": {
+        "false_negative_rate": {
+          "variant": 0.3
+        }
+      }
+    },
+    {
+      "id": "fn-even-20",
+      "behaviour": {
+        "false_negative_rate": {
+          "baseline": 0.2,
+          "variant": 0.2
+        }
+      }
+    },
+    {
+      "id": "fn-baseline-20-variant-better",
+      "model": {
+        "method_logit_mean": 0.6
+      },
+      "behaviour": {
+        "false_negative_rate": {
+          "baseline": 0.2
+        }
+      }
+    },
+    {
+      "id": "fn-variant-20-variant-better",
+      "model": {
+        "method_logit_mean": 0.6
+      },
+      "behaviour": {
+        "false_negative_rate": {
+          "variant": 0.2
+        }
+      }
+    },
+    {
+      "id": "fn-baseline-10",
+      "behaviour": {
+        "false_negative_rate": {
+          "baseline": 0.1
+        }
+      }
+    },
+    {
+      "id": "fn-baseline-20",
+      "behaviour": {
+        "false_negative_rate": {
+          "baseline": 0.2
+        }
+      }
+    },
+    {
+      "id": "fn-baseline-30",
+      "behaviour": {
+        "false_negative_rate": {
+          "baseline": 0.3
+        }
+      }
+    }
+  ]
+}

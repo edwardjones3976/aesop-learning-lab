@@ -1,0 +1,15 @@
+{
+  "schema": "sim-designs/1",
+  "id": "round2-sweep",
+  "description": "Candidate designs for simulation round 2, wave 3 (decision section 3). v1 is the frozen protocol. Thresholds stay strict; the candidates vary dose, horizon, the symmetric promising rule and the data-quality abstention.",
+  "designs": [
+    {"id": "v1", "design": {}},
+    {"id": "v1-both-ways", "design": {"promising_both_ways": true}},
+    {"id": "v1-both-ways-abstain", "design": {"promising_both_ways": true, "abstain": {"missing_gap": 0.15, "contamination_gap": 0.10}}},
+    {"id": "6-a-day", "design": {"units_per_day": 6, "promising_both_ways": true, "abstain": {"missing_gap": 0.15, "contamination_gap": 0.10}}},
+    {"id": "60-days", "design": {"looks": [14, 28, 42, 60], "superiority": [0.999, 0.999, 0.999, 0.999], "equivalence": [0.97, 0.95, 0.92, 0.90], "promising_both_ways": true, "abstain": {"missing_gap": 0.15, "contamination_gap": 0.10}}},
+    {"id": "90-days", "design": {"looks": [14, 28, 42, 60, 90], "superiority": [0.999, 0.999, 0.999, 0.999, 0.999], "equivalence": [0.97, 0.95, 0.93, 0.91, 0.90], "promising_both_ways": true, "abstain": {"missing_gap": 0.15, "contamination_gap": 0.10}}},
+    {"id": "6-a-day-60-days", "design": {"units_per_day": 6, "looks": [14, 28, 42, 60], "superiority": [0.999, 0.999, 0.999, 0.999], "equivalence": [0.97, 0.95, 0.92, 0.90], "promising_both_ways": true, "abstain": {"missing_gap": 0.15, "contamination_gap": 0.10}}},
+    {"id": "margin-10", "design": {"margin": 0.10, "promising_both_ways": true, "abstain": {"missing_gap": 0.15, "contamination_gap": 0.10}}}
+  ]
+}

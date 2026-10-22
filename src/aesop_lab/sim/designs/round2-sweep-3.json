@@ -1,0 +1,91 @@
+{
+  "schema": "sim-designs/1",
+  "id": "round2-sweep-3",
+  "description": "Sweep 3: the measurement guard (abstain when marking disputes differ between arms) on v1, a 60-day horizon, and a strict symmetric promising rule.",
+  "designs": [
+    {
+      "id": "v1",
+      "design": {}
+    },
+    {
+      "id": "v1-guard-03",
+      "design": {
+        "abstain": {
+          "dispute_gap": 0.03
+        }
+      }
+    },
+    {
+      "id": "v1-guard-05",
+      "design": {
+        "abstain": {
+          "dispute_gap": 0.05
+        }
+      }
+    },
+    {
+      "id": "60-days-guard-03",
+      "design": {
+        "looks": [
+          14,
+          28,
+          42,
+          60
+        ],
+        "superiority": [
+          0.999,
+          0.999,
+          0.999,
+          0.999
+        ],
+        "equivalence": [
+          0.97,
+          0.95,
+          0.92,
+          0.9
+        ],
+        "abstain": {
+          "dispute_gap": 0.03
+        }
+      }
+    },
+    {
+      "id": "both-ways-0.995-guard-03",
+      "design": {
+        "promising_both_ways": true,
+        "promising": 0.995,
+        "abstain": {
+          "dispute_gap": 0.03
+        }
+      }
+    },
+    {
+      "id": "both-ways-0.995-60-days-guard-03",
+      "design": {
+        "looks": [
+          14,
+          28,
+          42,
+          60
+        ],
+        "superiority": [
+          0.999,
+          0.999,
+          0.999,
+          0.999
+        ],
+        "equivalence": [
+          0.97,
+          0.95,
+          0.92,
+          0.9
+        ],
+        "promising_both_ways": true,
+        "promising": 0.995,
+        "abstain": {
+          "dispute_gap": 0.03
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema": "sim-designs/1",
+  "id": "round2-sweep-2",
+  "description": "Sweep 2: how strict must a symmetric 'promising' rule be, and does keeping it variant-only (v1) while adding dose or horizon stay safe?",
+  "designs": [
+    {"id": "v1", "design": {}},
+    {"id": "both-ways-0.99", "design": {"promising_both_ways": true, "promising": 0.99}},
+    {"id": "both-ways-0.995", "design": {"promising_both_ways": true, "promising": 0.995}},
+    {"id": "v1-6-a-day", "design": {"units_per_day": 6}},
+    {"id": "v1-60-days", "design": {"looks": [14, 28, 42, 60], "superiority": [0.999, 0.999, 0.999, 0.999], "equivalence": [0.97, 0.95, 0.92, 0.90]}},
+    {"id": "both-ways-0.995-60-days", "design": {"promising_both_ways": true, "promising": 0.995, "looks": [14, 28, 42, 60], "superiority": [0.999, 0.999, 0.999, 0.999], "equivalence": [0.97, 0.95, 0.92, 0.90]}}
+  ]
+}

@@ -122,6 +122,45 @@ class ReviewFixTests(unittest.TestCase):
         self.assertIn("sim/scenarios/*.json", config["tool"]["setuptools"]["package-data"]["aesop_lab"])
 
 
+class DesignTests(unittest.TestCase):
+    def test_default_design_decides_exactly_like_protocol_v1(self):
+        import random
+        rng = random.Random(5)
+        for _ in range(2000):
+            counts = {protocol.BASELINE: (rng.randint(0, 40), rng.randint(0, 40)),
+                      protocol.VARIANT: (rng.randint(0, 40), rng.randint(0, 40))}
+            look = rng.randrange(3)
+            day = scenario.DEFAULT_DESIGN["looks"][look]
+            try:
+                expected = protocol.decide(day, counts)
+            except ArithmeticError:
+                continue
+            got = fastpath.decide(look, day, counts, scenario.DEFAULT_DESIGN)
+            self.assertEqual((got["status"], got["outcome"], got["winner"]),
+                             (expected["status"], expected["outcome"], expected["winner"]), counts)
+
+    def test_v1_detection_and_candidate_designs(self):
+        self.assertTrue(scenario.is_v1(make()))
+        self.assertFalse(scenario.is_v1(make(design={"promising_both_ways": True})))
+        with self.assertRaises(scenario.ScenarioError):
+            make(design={"looks": [14, 28], "superiority": [0.999]})
+        long = make(design={"looks": [14, 28, 42, 56], "superiority": [0.999] * 4, "equivalence": [0.9] * 4})
+        self.assertEqual(len(learner.simulate(long, 1, 0).units), 3 * 50)
+
+    def test_both_ways_promising_names_the_arm_and_abstention_blocks_unequal_data(self):
+        both = dict(scenario.DEFAULT_DESIGN, promising_both_ways=True)
+        counts = {protocol.BASELINE: (22, 6), protocol.VARIANT: (12, 16)}
+        self.assertEqual(fastpath.decide(2, 28, counts, scenario.DEFAULT_DESIGN)["outcome"], "insufficient evidence")
+        got = fastpath.decide(2, 28, counts, both)
+        self.assertEqual((got["outcome"], got["winner"]), ("promising", protocol.BASELINE))
+        skewed = make(model={"method_logit_mean": 3.0, "method_logit_sd": 0.0},
+                      behaviour={"arm_skip": {"baseline": 0.4, "variant": 0.0}},
+                      design={"abstain": {"missing_gap": 0.1}})
+        results = [fastpath.judge(learner.simulate(skewed, 1, i), skewed["design"]) for i in range(10)]
+        self.assertTrue(any(r["abstained"] for r in results))
+        self.assertTrue(all(r["outcome"] == "insufficient evidence" for r in results if r["abstained"]))
+
+
 class VerdictTests(unittest.TestCase):
     def test_wrong_is_judged_against_each_learners_own_sign(self):
         better_variant = dict(outcome="repeated benefit", winner=protocol.VARIANT)
