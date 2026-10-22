@@ -1,0 +1,17 @@
+{
+  "schema": "sim-scenario/1",
+  "id": "hard-learner",
+  "description": "Starter rows on the round-2 learner: half-life forgetting, ability and item difficulty, concept correlation, and personal method effects (SD 0.3 logit). The method effect mean is in logits, and the realised percentage-point gap is reported per row. The full adversarial suite arrives in wave 2.",
+  "model": {"kind": "half-life", "intercept_logit": 1.4, "ability_sd": 0.8, "difficulty_sd": 0.8,
+            "concept_size": 4, "concept_sd": 0.3, "half_life_days": [7, 21],
+            "method_logit_mean": 0.0, "method_logit_sd": 0.3},
+  "learners": {"seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "per_seed": 50},
+  "rows": [
+    {"id": "null-mean", "model": {"method_logit_mean": 0.0}},
+    {"id": "small-gap", "model": {"method_logit_mean": 0.2}},
+    {"id": "medium-gap", "model": {"method_logit_mean": 0.45}},
+    {"id": "reversal-30", "model": {"method_logit_mean": 0.45, "reversed_share": 0.3}},
+    {"id": "skip-when-failing", "model": {"method_logit_mean": 0.0}, "behaviour": {"mnar_slope": 0.4, "arm_skip": {"baseline": 0.1, "variant": 0.0}}},
+    {"id": "logdelay-mismatch", "model": {"kind": "log-delay", "method_logit_mean": 0.45, "decay": [0.2, 0.5]}}
+  ]
+}

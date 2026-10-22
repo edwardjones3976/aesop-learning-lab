@@ -5,6 +5,7 @@ arm difference by numerical integration (no Monte Carlo), and the scheduled-look
 decision. Nothing here reads the clock, the store or learner outcomes.
 """
 from dataclasses import dataclass
+from functools import lru_cache
 import hashlib
 import json
 import math
@@ -116,6 +117,7 @@ def _integrate(f, lo, hi):
         intervals, previous = intervals * 2, current
 
 
+@lru_cache(maxsize=1 << 20)  # pure in its integer inputs; simulations revisit the same counts
 def p_diff_greater(baseline, variant, c):
     """P(p_variant - p_baseline > c) for independent Beta posteriors given as (alpha, beta) integers.
 
