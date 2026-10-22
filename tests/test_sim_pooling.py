@@ -38,6 +38,45 @@ class PoolingTests(unittest.TestCase):
         self.assertEqual(pooling.evaluate(scenario.normalize(biased), 28)["withheld_share"], 1.0)
         self.assertEqual(pooling.evaluate(scenario.normalize(clean), 28)["withheld_share"], 0.0)
 
+    def test_recency_weighting_tracks_a_shared_drift(self):
+        drift = [r for r in scenario.load("adversarial") if r["id"].endswith("drift-reversal")][0]
+        drift = copy.deepcopy(drift)
+        drift["learners"] = {"seeds": list(range(1, 11)), "per_seed": 30}  # tracking a shared drift needs ~300 learners
+        drift = scenario.normalize(drift)
+        stale = pooling.evaluate(drift, 28, None, truth="recent")["accuracy"]["pooled"]
+        fresh = pooling.evaluate(drift, 28, 20, truth="recent")["accuracy"]["pooled"]
+        self.assertLess(stale, 0.3)
+        self.assertGreater(fresh, 0.8)
+
+    def test_recency_weights_halve_every_half_life(self):
+        s = scenario.normalize(copy.deepcopy(BASE))
+        t = learner.simulate(s, 1, 0)
+        plain = pooling.counts_at(t, 28)
+        weighted = pooling.counts_at(t, 28, 5)
+        self.assertLess(sum(map(sum, weighted.values())), sum(map(sum, plain.values())))
+        self.assertGreater(sum(map(sum, weighted.values())), 0)
+
+    def test_recent_truth_never_uses_units_after_the_look(self):
+        s = scenario.normalize(copy.deepcopy(BASE))
+        t = learner.simulate(s, 1, 0)
+        day_zero = min(u.studied_at for u in t.units)
+        from datetime import timedelta
+        early = [u for u in t.units if u.studied_at <= day_zero + timedelta(days=14)]
+        tail = sorted(early, key=lambda u: u.position)[-10:]
+        expected = sum(u.p_variant - u.p_baseline for u in tail) / len(tail)
+        self.assertAlmostEqual(pooling.recent_gap(t, 14), expected)
+        with self.assertRaises(ValueError):
+            pooling.evaluate(s, 28, truth="future")
+        with self.assertRaises(ValueError):
+            pooling.evaluate(s, 28, half_life_units=0)
+
+    def test_a_one_seed_cohort_falls_back_to_individual_data(self):
+        lone = copy.deepcopy(BASE)
+        lone["learners"] = {"seeds": [1], "per_seed": 10}
+        result = pooling.evaluate(scenario.normalize(lone), 28)
+        self.assertAlmostEqual(result["accuracy"]["pooled"], result["accuracy"]["individual"], delta=0.11)
+        self.assertGreater(result["median_personal_weight"], 0.9)
+
     def test_dispute_flag_needs_a_real_between_arm_difference(self):
         cohort = [{BASELINE: [0, 10], VARIANT: [5, 10]}] * 30
         self.assertTrue(pooling.dispute_flag(cohort))

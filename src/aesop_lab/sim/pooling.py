@@ -29,25 +29,34 @@ def personal_estimate(counts: dict) -> tuple[float, float]:
     return means[VARIANT] - means[BASELINE], variances[VARIANT] + variances[BASELINE]
 
 
-def counts_at(trajectory, day: int) -> dict:
-    """Eligible (successes, failures) per arm at a cutoff, with the engine's eligibility rules."""
+def counts_at(trajectory, day: int, half_life_units: float | None = None) -> dict:
+    """Eligible (successes, failures) per arm at a cutoff, with the engine's eligibility rules.
+
+    With half_life_units, each outcome is weighted 2^(-age/half_life) by how many units the
+    learner studied after it, so a changing best method (drift) shows up sooner."""
     counts = {BASELINE: [0, 0], VARIANT: [0, 0]}
     if not trajectory.units:
         return counts
     cutoff = min(u.studied_at for u in trajectory.units) + timedelta(days=day)
     answers = {a.unit_id: a for a in trajectory.answers}
-    for unit in trajectory.units:
+    studied = [u for u in trajectory.units if u.studied_at <= cutoff]
+    newest = max((u.position for u in studied), default=0)
+    for unit in studied:
         answer = answers.get(unit.unit_id)
-        if unit.studied_at > cutoff or answer is None or answer.at > cutoff:
+        if answer is None or answer.at > cutoff:
             continue
         if fastpath.classify(answer, unit.studied_at) == "eligible":
-            counts[unit.role][not answer.correct] += 1
+            weight = 1 if half_life_units is None else 2 ** (-(newest - unit.position) / half_life_units)
+            counts[unit.role][not answer.correct] += weight
     return counts
 
 
 def population(others: list[tuple[float, float]]) -> tuple[float, float]:
     """Method-of-moments mean and between-person variance tau^2 of the gap."""
     estimates = [d for d, _ in others]
+    if len(estimates) < 2:
+        # No other learners (for example a one-seed cohort): an uninformative prior centred on no gap.
+        return 0.0, 1.0
     mu = statistics.fmean(estimates)
     tau2 = max(1e-6, statistics.pvariance(estimates) - statistics.fmean(v for _, v in others))
     return mu, tau2
@@ -82,14 +91,29 @@ def disputes_at(trajectory, day: int) -> dict:
     return out
 
 
-def evaluate(scenario: dict, day: int = 28) -> dict:
+def recent_gap(trajectory, day: int, units: int = 10) -> float:
+    """The learner's current true gap at a look: mean over the last units studied by its cutoff."""
+    if not trajectory.units:
+        return 0.0
+    cutoff = min(u.studied_at for u in trajectory.units) + timedelta(days=day)
+    tail = sorted((u for u in trajectory.units if u.studied_at <= cutoff), key=lambda u: u.position)[-units:]
+    return math.fsum(u.p_variant - u.p_baseline for u in tail) / len(tail) if tail else 0.0
+
+
+def evaluate(scenario: dict, day: int = 28, half_life_units: float | None = None, truth: str = "course") -> dict:
+    """truth="course" scores against the whole-course gap; "recent" against the current gap."""
+    if truth not in ("course", "recent"):
+        raise ValueError("truth must be course or recent")
+    if half_life_units is not None and half_life_units <= 0:
+        raise ValueError("half_life_units must be positive")
     """Order accuracy for individual-only, population-only and pooled lists at one look day."""
     seeds, per_seed = scenario["learners"]["seeds"], scenario["learners"]["per_seed"]
     learners, disputes = {}, {}
     for seed in seeds:
         for index in range(per_seed):
             t = learner.simulate(scenario, seed, index)
-            learners[(seed, index)] = (t.true_gap, personal_estimate(counts_at(t, day)))
+            gap = t.true_gap if truth == "course" else recent_gap(t, day)
+            learners[(seed, index)] = (gap, personal_estimate(counts_at(t, day, half_life_units)))
             disputes[(seed, index)] = disputes_at(t, day)
     by_seed = {s: [v[1] for k, v in learners.items() if k[0] != s] for s in seeds}
     priors = {s: population(by_seed[s]) for s in seeds}
