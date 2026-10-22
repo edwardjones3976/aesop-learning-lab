@@ -67,8 +67,11 @@ def _parity_one(job: tuple[dict, int, int]) -> dict | None:
 def parity_sample(scenario: dict, count: int, pool=None) -> dict:
     """Replay a stratified sample (spread over seeds and indices) through the real engine."""
     seeds, per_seed = scenario["learners"]["seeds"], scenario["learners"]["per_seed"]
-    picks = [(scenario, seeds[i % len(seeds)], (i * 7) % per_seed)
-             for i in range(min(count, len(seeds) * per_seed))]
+    count = min(count, len(seeds) * per_seed)
+    # Round-robin over every seed; within a seed, indices spread evenly. Distinct by construction.
+    rounds = -(-count // len(seeds)) if count else 0
+    stride = max(1, per_seed // rounds) if rounds else 1
+    picks = [(scenario, seeds[k % len(seeds)], ((k // len(seeds)) * stride) % per_seed) for k in range(count)]
     results = (pool.map(_parity_one, picks) if pool else map(_parity_one, picks))
     return dict(checked=len(picks), mismatches=[r for r in results if r])
 

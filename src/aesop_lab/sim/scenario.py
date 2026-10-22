@@ -26,6 +26,14 @@ DEFAULT_BEHAVIOUR = {
 }
 DEFAULT_DESIGN = {"units_per_day": 3, "contrast": "order-v1"}
 MODEL_KINDS = ("bernoulli", "half-life", "log-delay")
+LATENT_KEYS = {"kind", "intercept_logit", "ability_sd", "difficulty_sd", "concept_size", "concept_sd",
+               "method_logit_mean", "method_logit_sd", "reversed_share", "drift_logit_per_unit",
+               "novelty_logit", "novelty_half_life_units", "arm_difficulty_shift"}
+MODEL_KEYS = {
+    "bernoulli": {"kind", "baseline", "gap_points"},
+    "half-life": LATENT_KEYS | {"half_life_days", "variant_half_life_ratio"},
+    "log-delay": LATENT_KEYS | {"decay"},
+}
 
 
 class ScenarioError(ValueError):
@@ -54,7 +62,13 @@ def normalize(raw: dict) -> dict:
     model = dict(raw["model"])
     if model.get("kind") not in MODEL_KINDS:
         raise ScenarioError(f"model.kind must be one of {MODEL_KINDS}")
+    unknown_model = set(model) - MODEL_KEYS[model["kind"]]
+    if unknown_model:
+        # A misspelt option would otherwise be hashed and silently ignored.
+        raise ScenarioError(f"unknown {model['kind']} model fields {sorted(unknown_model)}")
     learners = raw["learners"]
+    if set(learners) - {"seeds", "per_seed"}:
+        raise ScenarioError(f"unknown learners fields {sorted(set(learners) - {'seeds', 'per_seed'})}")
     if not learners.get("seeds") or int(learners.get("per_seed", 0)) < 1:
         raise ScenarioError("learners need seeds and per_seed >= 1")
     scenario = {
@@ -82,7 +96,15 @@ def expand(raw: dict) -> list[dict]:
         for section in ("model", "behaviour", "design"):
             if section in row:
                 # A row's per-arm dicts replace the suite's; normalize() refills missing arms from defaults.
-                merged[section] = {**merged.get(section, {}), **row[section]}
+                inherited = merged.get(section, {})
+                kind = row[section].get("kind")
+                old = inherited.get("kind")
+                if section == "model" and kind in MODEL_KEYS and old in MODEL_KEYS and kind != old:
+                    # Switching kind drops only valid fields of the old kind that the new kind does not use;
+                    # anything unknown to both survives the merge and fails validation.
+                    inherited = {k: v for k, v in inherited.items()
+                                 if k in MODEL_KEYS[kind] or k not in MODEL_KEYS[old]}
+                merged[section] = {**inherited, **row[section]}
         expanded.append(normalize(merged))
     return expanded
 

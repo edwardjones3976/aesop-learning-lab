@@ -75,6 +75,53 @@ class ParityTests(unittest.TestCase):
         self.assertEqual(run.parity_sample(row, 6)["mismatches"], [])
 
 
+class ReviewFixTests(unittest.TestCase):
+    def test_misspelt_model_fields_are_rejected(self):
+        with self.assertRaises(scenario.ScenarioError):
+            make(model={"method_logit_men": 0.4})
+        with self.assertRaises(scenario.ScenarioError):
+            scenario.normalize({**BASE, "model": {"kind": "bernoulli", "half_life_days": [7, 21]}})
+
+    def test_parity_sample_covers_every_seed_without_repeats(self):
+        from unittest.mock import patch
+        seen = []
+        with patch.object(run, "_parity_one", side_effect=lambda job: seen.append(job[1:]) or None):
+            run.parity_sample(make(learners={"seeds": list(range(1, 11)), "per_seed": 50}), 50)
+        self.assertEqual(len(seen), 50)
+        self.assertEqual(len(set(seen)), 50)
+        self.assertEqual({s for s, _ in seen}, set(range(1, 11)))
+        self.assertGreater(len({i for _, i in seen}), 1)
+
+    def test_unknown_fields_fail_even_when_a_row_switches_kind(self):
+        with self.assertRaises(scenario.ScenarioError):
+            scenario.expand({**BASE, "model": {"kind": "half-life", "method_logit_men": 0.4},
+                             "rows": [{"id": "x", "model": {"kind": "log-delay"}}]})
+        with self.assertRaises(scenario.ScenarioError):
+            make(learners={"seeds": [1], "per_seedd": 3})
+
+    def test_unit_started_at_a_terminal_cutoff_matches_the_engine(self):
+        row = [r for r in scenario.load("round1-gate") if r["id"].endswith("minus3")][0]
+        t = learner.simulate(row, 4, 3)
+        self.assertEqual(replay.compare(fastpath.judge(t), replay.engine_judge(t, 3)), [])
+
+    def test_novelty_fades_and_arm_difficulty_is_an_imbalance_not_an_effect(self):
+        novel = make(model={"method_logit_mean": 0.0, "method_logit_sd": 0.0,
+                            "novelty_logit": 1.5, "novelty_half_life_units": 5})
+        t = learner.simulate(novel, 1, 0)
+        early = [u.p_variant - u.p_baseline for u in t.units[:5]]
+        late = [u.p_variant - u.p_baseline for u in t.units[-5:]]
+        self.assertGreater(sum(early), sum(late) + 0.2)
+        shifted = make(model={"method_logit_mean": 0.0, "method_logit_sd": 0.0, "arm_difficulty_shift": 1.0})
+        gaps = [learner.simulate(shifted, 1, i).true_gap for i in range(5)]
+        self.assertTrue(all(abs(g) < 1e-12 for g in gaps))
+
+    def test_scenarios_ship_as_package_data(self):
+        import tomllib
+        from pathlib import Path
+        config = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertIn("sim/scenarios/*.json", config["tool"]["setuptools"]["package-data"]["aesop_lab"])
+
+
 class VerdictTests(unittest.TestCase):
     def test_wrong_is_judged_against_each_learners_own_sign(self):
         better_variant = dict(outcome="repeated benefit", winner=protocol.VARIANT)

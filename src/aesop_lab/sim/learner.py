@@ -124,15 +124,20 @@ class RecallModel:
         self.concepts: dict[int, float] = {}
         self.rng = rng
 
-    def item(self, position: int) -> tuple[float, float]:
-        """(difficulty, concept effect) for the unit at an engine position."""
+    def item(self, position: int, role: str) -> tuple[float, float]:
+        """(difficulty, concept effect) for the unit at an engine position.
+
+        arm_difficulty_shift makes the items that land in the variant arm harder: an item
+        imbalance, not a method effect, so it changes both arms' truth for that unit equally.
+        """
         if self.kind == "bernoulli":
             return 0.0, 0.0
         size = self.spec.get("concept_size", 4)
         concept = position // size
         if concept not in self.concepts:
             self.concepts[concept] = self.rng.gauss(0, self.spec.get("concept_sd", 0.3))
-        return self.rng.gauss(0, self.spec.get("difficulty_sd", 0.8)), self.concepts[concept]
+        shift = self.spec.get("arm_difficulty_shift", 0.0) if role == VARIANT else 0.0
+        return self.rng.gauss(0, self.spec.get("difficulty_sd", 0.8)) + shift, self.concepts[concept]
 
     def recall(self, role: str, delay_days: float, item: tuple[float, float], studied_rank: int,
                boost: float = 0.0) -> float:
@@ -142,7 +147,10 @@ class RecallModel:
         effect = 0.0
         if role == VARIANT:
             # Expertise drift: the gap moves as the learner studies more units.
-            effect = self.effect + self.spec.get("drift_logit_per_unit", 0.0) * studied_rank
+            # Novelty: an extra boost for the first units that fades with half-life in units.
+            novelty = self.spec.get("novelty_logit", 0.0) * 2 ** (
+                -studied_rank / self.spec.get("novelty_half_life_units", 15))
+            effect = self.effect + self.spec.get("drift_logit_per_unit", 0.0) * studied_rank + novelty
         strength = self.spec.get("intercept_logit", 1.0) + self.ability - difficulty - concept + effect + boost
         if self.kind == "half-life":
             ratio = self.spec.get("variant_half_life_ratio", 1.0) if role == VARIANT else 1.0
@@ -160,7 +168,8 @@ def simulate(scenario: dict, seed: int, index: int) -> Trajectory:
     order, roles = engine_order(identity, total), engine_roles(identity, total)
     trajectory = Trajectory(scenario["id"], seed, index, identity)
 
-    horizon = STUDY_SPAN_DAYS + 30
+    # Long enough that even a late first active day keeps its full study span and check window.
+    horizon = 4 * STUDY_SPAN_DAYS + 30
     active = [rng.random() >= behaviour["missed_day_rate"] for _ in range(horizon)]
     first = active.index(True) if True in active else horizon
     recent: list[bool] = []
@@ -197,8 +206,8 @@ def simulate(scenario: dict, seed: int, index: int) -> Trajectory:
             if studied >= total:
                 break
             at = day_start + timedelta(minutes=5 * slot)
-            item = model.item(studied)
             role = roles[studied]
+            item = model.item(studied, role)
             unit = Unit(order[studied], studied, role, at,
                         model.recall(BASELINE, CHECK_DAY, item, studied),
                         model.recall(VARIANT, CHECK_DAY, item, studied))
