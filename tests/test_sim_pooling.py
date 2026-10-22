@@ -56,6 +56,20 @@ class PoolingTests(unittest.TestCase):
         self.assertLess(sum(map(sum, weighted.values())), sum(map(sum, plain.values())))
         self.assertGreater(sum(map(sum, weighted.values())), 0)
 
+    def test_recent_truth_never_uses_units_after_the_look(self):
+        s = scenario.normalize(copy.deepcopy(BASE))
+        t = learner.simulate(s, 1, 0)
+        day_zero = min(u.studied_at for u in t.units)
+        from datetime import timedelta
+        early = [u for u in t.units if u.studied_at <= day_zero + timedelta(days=14)]
+        tail = sorted(early, key=lambda u: u.position)[-10:]
+        expected = sum(u.p_variant - u.p_baseline for u in tail) / len(tail)
+        self.assertAlmostEqual(pooling.recent_gap(t, 14), expected)
+        with self.assertRaises(ValueError):
+            pooling.evaluate(s, 28, truth="future")
+        with self.assertRaises(ValueError):
+            pooling.evaluate(s, 28, half_life_units=0)
+
     def test_a_one_seed_cohort_falls_back_to_individual_data(self):
         lone = copy.deepcopy(BASE)
         lone["learners"] = {"seeds": [1], "per_seed": 10}

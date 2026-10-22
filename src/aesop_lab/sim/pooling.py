@@ -91,21 +91,28 @@ def disputes_at(trajectory, day: int) -> dict:
     return out
 
 
-def recent_gap(trajectory, units: int = 10) -> float:
-    """The learner's current true gap: mean over the last units they studied."""
-    tail = sorted(trajectory.units, key=lambda u: u.position)[-units:]
+def recent_gap(trajectory, day: int, units: int = 10) -> float:
+    """The learner's current true gap at a look: mean over the last units studied by its cutoff."""
+    if not trajectory.units:
+        return 0.0
+    cutoff = min(u.studied_at for u in trajectory.units) + timedelta(days=day)
+    tail = sorted((u for u in trajectory.units if u.studied_at <= cutoff), key=lambda u: u.position)[-units:]
     return math.fsum(u.p_variant - u.p_baseline for u in tail) / len(tail) if tail else 0.0
 
 
 def evaluate(scenario: dict, day: int = 28, half_life_units: float | None = None, truth: str = "course") -> dict:
     """truth="course" scores against the whole-course gap; "recent" against the current gap."""
+    if truth not in ("course", "recent"):
+        raise ValueError("truth must be course or recent")
+    if half_life_units is not None and half_life_units <= 0:
+        raise ValueError("half_life_units must be positive")
     """Order accuracy for individual-only, population-only and pooled lists at one look day."""
     seeds, per_seed = scenario["learners"]["seeds"], scenario["learners"]["per_seed"]
     learners, disputes = {}, {}
     for seed in seeds:
         for index in range(per_seed):
             t = learner.simulate(scenario, seed, index)
-            gap = t.true_gap if truth == "course" else recent_gap(t)
+            gap = t.true_gap if truth == "course" else recent_gap(t, day)
             learners[(seed, index)] = (gap, personal_estimate(counts_at(t, day, half_life_units)))
             disputes[(seed, index)] = disputes_at(t, day)
     by_seed = {s: [v[1] for k, v in learners.items() if k[0] != s] for s in seeds}
