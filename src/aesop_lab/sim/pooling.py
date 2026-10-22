@@ -54,6 +54,9 @@ def counts_at(trajectory, day: int, half_life_units: float | None = None) -> dic
 def population(others: list[tuple[float, float]]) -> tuple[float, float]:
     """Method-of-moments mean and between-person variance tau^2 of the gap."""
     estimates = [d for d, _ in others]
+    if len(estimates) < 2:
+        # No other learners (for example a one-seed cohort): an uninformative prior centred on no gap.
+        return 0.0, 1.0
     mu = statistics.fmean(estimates)
     tau2 = max(1e-6, statistics.pvariance(estimates) - statistics.fmean(v for _, v in others))
     return mu, tau2

@@ -56,6 +56,13 @@ class PoolingTests(unittest.TestCase):
         self.assertLess(sum(map(sum, weighted.values())), sum(map(sum, plain.values())))
         self.assertGreater(sum(map(sum, weighted.values())), 0)
 
+    def test_a_one_seed_cohort_falls_back_to_individual_data(self):
+        lone = copy.deepcopy(BASE)
+        lone["learners"] = {"seeds": [1], "per_seed": 10}
+        result = pooling.evaluate(scenario.normalize(lone), 28)
+        self.assertAlmostEqual(result["accuracy"]["pooled"], result["accuracy"]["individual"], delta=0.11)
+        self.assertGreater(result["median_personal_weight"], 0.9)
+
     def test_dispute_flag_needs_a_real_between_arm_difference(self):
         cohort = [{BASELINE: [0, 10], VARIANT: [5, 10]}] * 30
         self.assertTrue(pooling.dispute_flag(cohort))
