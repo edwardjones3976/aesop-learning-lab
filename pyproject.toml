@@ -13,4 +13,4 @@ dependencies = []
 where = ["src"]
 
 [tool.setuptools.package-data]
-aesop_lab = ["sim/scenarios/*.json"]
+aesop_lab = ["sim/scenarios/*.json", "sim/designs/*.json"]

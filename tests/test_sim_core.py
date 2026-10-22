@@ -120,6 +120,7 @@ class ReviewFixTests(unittest.TestCase):
         from pathlib import Path
         config = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
         self.assertIn("sim/scenarios/*.json", config["tool"]["setuptools"]["package-data"]["aesop_lab"])
+        self.assertIn("sim/designs/*.json", config["tool"]["setuptools"]["package-data"]["aesop_lab"])
 
 
 class DesignTests(unittest.TestCase):
