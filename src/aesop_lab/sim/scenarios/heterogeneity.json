@@ -1,0 +1,103 @@
+{
+  "schema": "sim-scenario/1",
+  "id": "heterogeneity",
+  "description": "How much people differ: personal method effects with SD 0.3, 0.6 and 1.0 logit around population means of 0, 0.3 and 0.6 logit. Research digest section 3: real individual differences are modest, so SD 1.0 is a stress case. Used to test whether a population-informed order wrongs learners who differ from the crowd.",
+  "model": {
+    "kind": "half-life",
+    "intercept_logit": 1.4,
+    "ability_sd": 0.8,
+    "difficulty_sd": 0.8,
+    "concept_size": 4,
+    "concept_sd": 0.3,
+    "half_life_days": [
+      7,
+      21
+    ],
+    "method_logit_mean": 0.0,
+    "method_logit_sd": 0.3
+  },
+  "behaviour": {
+    "missed_day_rate": 0.1,
+    "mnar_slope": 0.1
+  },
+  "learners": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "per_seed": 50
+  },
+  "rows": [
+    {
+      "id": "sd03-mean00",
+      "model": {
+        "method_logit_mean": 0.0,
+        "method_logit_sd": 0.3
+      }
+    },
+    {
+      "id": "sd03-mean03",
+      "model": {
+        "method_logit_mean": 0.3,
+        "method_logit_sd": 0.3
+      }
+    },
+    {
+      "id": "sd03-mean06",
+      "model": {
+        "method_logit_mean": 0.6,
+        "method_logit_sd": 0.3
+      }
+    },
+    {
+      "id": "sd06-mean00",
+      "model": {
+        "method_logit_mean": 0.0,
+        "method_logit_sd": 0.6
+      }
+    },
+    {
+      "id": "sd06-mean03",
+      "model": {
+        "method_logit_mean": 0.3,
+        "method_logit_sd": 0.6
+      }
+    },
+    {
+      "id": "sd06-mean06",
+      "model": {
+        "method_logit_mean": 0.6,
+        "method_logit_sd": 0.6
+      }
+    },
+    {
+      "id": "sd10-mean00",
+      "model": {
+        "method_logit_mean": 0.0,
+        "method_logit_sd": 1.0
+      }
+    },
+    {
+      "id": "sd10-mean03",
+      "model": {
+        "method_logit_mean": 0.3,
+        "method_logit_sd": 1.0
+      }
+    },
+    {
+      "id": "sd10-mean06",
+      "model": {
+        "method_logit_mean": 0.6,
+        "method_logit_sd": 1.0
+      }
+    }
+  ]
+}
