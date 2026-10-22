@@ -67,6 +67,8 @@ def normalize(raw: dict) -> dict:
         # A misspelt option would otherwise be hashed and silently ignored.
         raise ScenarioError(f"unknown {model['kind']} model fields {sorted(unknown_model)}")
     learners = raw["learners"]
+    if set(learners) - {"seeds", "per_seed"}:
+        raise ScenarioError(f"unknown learners fields {sorted(set(learners) - {'seeds', 'per_seed'})}")
     if not learners.get("seeds") or int(learners.get("per_seed", 0)) < 1:
         raise ScenarioError("learners need seeds and per_seed >= 1")
     scenario = {
@@ -96,10 +98,12 @@ def expand(raw: dict) -> list[dict]:
                 # A row's per-arm dicts replace the suite's; normalize() refills missing arms from defaults.
                 inherited = merged.get(section, {})
                 kind = row[section].get("kind")
-                if section == "model" and kind in MODEL_KEYS and kind != inherited.get("kind"):
-                    # Switching kind drops suite fields that the new kind does not use;
-                    # misspellings still fail because only valid keys of the old kind are dropped.
-                    inherited = {k: v for k, v in inherited.items() if k in MODEL_KEYS[kind]}
+                old = inherited.get("kind")
+                if section == "model" and kind in MODEL_KEYS and old in MODEL_KEYS and kind != old:
+                    # Switching kind drops only valid fields of the old kind that the new kind does not use;
+                    # anything unknown to both survives the merge and fails validation.
+                    inherited = {k: v for k, v in inherited.items()
+                                 if k in MODEL_KEYS[kind] or k not in MODEL_KEYS[old]}
                 merged[section] = {**inherited, **row[section]}
         expanded.append(normalize(merged))
     return expanded

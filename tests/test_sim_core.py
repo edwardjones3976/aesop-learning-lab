@@ -82,14 +82,22 @@ class ReviewFixTests(unittest.TestCase):
         with self.assertRaises(scenario.ScenarioError):
             scenario.normalize({**BASE, "model": {"kind": "bernoulli", "half_life_days": [7, 21]}})
 
-    def test_parity_sample_never_repeats_a_learner(self):
-        row = make(learners={"seeds": [1, 2, 3], "per_seed": 20})
-        seeds, per_seed = row["learners"]["seeds"], row["learners"]["per_seed"]
-        pairs = [(s, i) for i in range(per_seed) for s in seeds]
-        step = max(1, len(pairs) // 25)
-        picks = [pairs[i] for i in range(0, len(pairs), step)][:25]
-        self.assertEqual(len(set(picks)), len(picks))
-        self.assertEqual(run.parity_sample(row, 25)["checked"], 25)
+    def test_parity_sample_covers_every_seed_without_repeats(self):
+        from unittest.mock import patch
+        seen = []
+        with patch.object(run, "_parity_one", side_effect=lambda job: seen.append(job[1:]) or None):
+            run.parity_sample(make(learners={"seeds": list(range(1, 11)), "per_seed": 50}), 50)
+        self.assertEqual(len(seen), 50)
+        self.assertEqual(len(set(seen)), 50)
+        self.assertEqual({s for s, _ in seen}, set(range(1, 11)))
+        self.assertGreater(len({i for _, i in seen}), 1)
+
+    def test_unknown_fields_fail_even_when_a_row_switches_kind(self):
+        with self.assertRaises(scenario.ScenarioError):
+            scenario.expand({**BASE, "model": {"kind": "half-life", "method_logit_men": 0.4},
+                             "rows": [{"id": "x", "model": {"kind": "log-delay"}}]})
+        with self.assertRaises(scenario.ScenarioError):
+            make(learners={"seeds": [1], "per_seedd": 3})
 
     def test_unit_started_at_a_terminal_cutoff_matches_the_engine(self):
         row = [r for r in scenario.load("round1-gate") if r["id"].endswith("minus3")][0]
