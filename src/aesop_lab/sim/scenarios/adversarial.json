@@ -1,0 +1,141 @@
+{
+  "schema": "sim-scenario/1",
+  "id": "adversarial",
+  "description": "Adversarial scenario suite for simulation round 2 testing estimator resilience against behavioural distortions, selection bias, and heterogeneous effects.",
+  "model": {
+    "kind": "half-life",
+    "intercept_logit": 1.4,
+    "ability_sd": 0.8,
+    "difficulty_sd": 0.8,
+    "concept_size": 4,
+    "concept_sd": 0.3,
+    "half_life_days": [7, 21],
+    "method_logit_sd": 0.3
+  },
+  "learners": {
+    "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "per_seed": 50
+  },
+  "rows": [
+    {
+      "id": "null-differential-skip-dropout",
+      "description": "Attacks null accuracy using differential arm skipping combined with general and frustration-induced dropout.",
+      "model": {"method_logit_mean": 0.0},
+      "behaviour": {
+        "mnar_slope": 0.3,
+        "arm_skip": {"variant": 0.15},
+        "dropout_hazard": 0.01,
+        "frustration_hazard": 0.05
+      }
+    },
+    {
+      "id": "skip-when-failing-40",
+      "description": "Attacks recall estimates via MNAR skipping when expected failure is high alongside baseline arm omission (research digest section 1).",
+      "model": {"method_logit_mean": 0.45},
+      "behaviour": {
+        "mnar_slope": 0.4,
+        "arm_skip": {"baseline": 0.2}
+      }
+    },
+    {
+      "id": "outside-study-one-arm-undeclared",
+      "description": "Attacks null validity through undeclared outside study in the baseline arm producing an unmodeled boost.",
+      "model": {"method_logit_mean": 0.0},
+      "behaviour": {
+        "outside_study_rate": {"baseline": 0.2},
+        "outside_declared_share": 0.0,
+        "outside_boost_logit": 1.0
+      }
+    },
+    {
+      "id": "outside-study-one-arm-declared",
+      "description": "Verifies that declared outside study in the baseline arm is properly excluded without inflating null error rates.",
+      "model": {"method_logit_mean": 0.0},
+      "behaviour": {
+        "outside_study_rate": {"baseline": 0.2},
+        "outside_declared_share": 1.0,
+        "outside_boost_logit": 1.0
+      }
+    },
+    {
+      "id": "frustration-dropout-one-arm",
+      "description": "Attacks retention estimates by compounding consecutive failure frustration hazard with baseline skipping.",
+      "model": {"method_logit_mean": 0.45},
+      "behaviour": {
+        "frustration_hazard": 0.15,
+        "arm_skip": {"baseline": 0.1}
+      }
+    },
+    {
+      "id": "day1-winner-loses-at-day7",
+      "description": "Attacks delayed recall inference when a short-term variant advantage decays rapidly via shorter half-life (research digest section 6).",
+      "model": {
+        "method_logit_mean": 0.45,
+        "variant_half_life_ratio": 0.4
+      }
+    },
+    {
+      "id": "contamination-shrinks-20pt",
+      "description": "Attacks detection of large true treatment effects through undeclared baseline contamination that shrinks observed gaps.",
+      "model": {"method_logit_mean": 1.0},
+      "behaviour": {
+        "outside_study_rate": {"baseline": 0.3, "variant": 0.0},
+        "outside_declared_share": 0.0
+      }
+    },
+    {
+      "id": "reversal-30",
+      "description": "Attacks population-level conclusions when 30 percent of learners experience a sign reversal in method efficacy (research digest section 3).",
+      "model": {
+        "method_logit_mean": 0.45,
+        "reversed_share": 0.3
+      }
+    },
+    {
+      "id": "preference-matches-worse",
+      "description": "Control for step 2b: preference has zero causal effect and current product does not read preference (research digest section 1).",
+      "model": {"method_logit_mean": 0.45}
+    },
+    {
+      "id": "novelty-fades",
+      "description": "Attacks stability of method estimates when an initial novelty boost decays exponentially across completed units.",
+      "model": {
+        "method_logit_mean": 0.0,
+        "novelty_logit": 0.8,
+        "novelty_half_life_units": 15
+      }
+    },
+    {
+      "id": "one-arm-false-negatives",
+      "description": "Attacks evaluation accuracy via answer key grading errors rejecting valid correct variant responses.",
+      "model": {"method_logit_mean": 0.0},
+      "behaviour": {
+        "false_negative_rate": {"variant": 0.3}
+      }
+    },
+    {
+      "id": "harder-items-in-one-arm",
+      "description": "Attacks arm comparability through systematic difficulty imbalances assigned to variant units.",
+      "model": {"method_logit_mean": 0.0},
+      "behaviour": {
+        "arm_difficulty_shift": 0.6
+      }
+    },
+    {
+      "id": "late-answers",
+      "description": "Attacks protocol window validity with delayed responses answered after the day 7-14 evaluation boundary.",
+      "model": {"method_logit_mean": 0.45},
+      "behaviour": {
+        "late_rate": 0.25
+      }
+    },
+    {
+      "id": "drift-reversal",
+      "description": "Attacks static treatment assumptions via expertise reversal where early advantages decay and flip with practice (research digest section 3).",
+      "model": {
+        "method_logit_mean": 0.6,
+        "drift_logit_per_unit": -0.02
+      }
+    }
+  ]
+}
