@@ -1,0 +1,17 @@
+{
+  "schema": "sim-scenario/1",
+  "id": "round1-gate",
+  "description": "Round 1's frozen gate model (protocol v1 section 4): Beta(12, 8) baseline, fixed per-learner recall, 90% of checks answered at U(7, 10) days. Kept so the round-1 result stays reproducible. Dropout is a daily hazard of 0.004 (about 10% by day 27), where round 1 dropped 10% of learners on a uniform day.",
+  "model": {"kind": "bernoulli", "baseline": [12, 8], "gap_points": 0.0},
+  "learners": {"seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "per_seed": 50},
+  "rows": [
+    {"id": "null", "model": {"gap_points": 0.0}},
+    {"id": "plus3", "model": {"gap_points": 0.03}},
+    {"id": "minus3", "model": {"gap_points": -0.03}},
+    {"id": "plus10", "model": {"gap_points": 0.10}},
+    {"id": "minus10", "model": {"gap_points": -0.10}},
+    {"id": "plus20", "model": {"gap_points": 0.20}},
+    {"id": "plus10-missed-days", "model": {"gap_points": 0.10}, "behaviour": {"missed_day_rate": 0.20}},
+    {"id": "plus10-dropout", "model": {"gap_points": 0.10}, "behaviour": {"dropout_hazard": 0.004}}
+  ]
+}

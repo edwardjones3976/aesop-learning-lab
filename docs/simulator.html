@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulator (round 2)</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1f; --muted:#5f5f66; --rule:#e2e2e6; --code:#f0f0f2; --accent:#2f5bd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16161a; --fg:#ececf1; --muted:#a3a3ad; --rule:#2c2c33; --code:#22222a; --accent:#8aa8ff; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:860px; margin:0 auto; }
+  nav { font-size:.9rem; margin-bottom:16px; } a { color:var(--accent); }
+  h1 { font-size:1.7rem; line-height:1.25; } h2 { font-size:1.25rem; margin-top:2rem; border-top:1px solid var(--rule); padding-top:1rem; } h3 { font-size:1.05rem; }
+  code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:12px 14px; border-radius:6px; overflow-x:auto; } pre code { background:none; padding:0; }
+  table { border-collapse:collapse; display:block; overflow-x:auto; margin:12px 0; } th, td { border:1px solid var(--rule); padding:6px 10px; text-align:left; vertical-align:top; }
+  blockquote { margin:8px 0; padding:4px 14px; border-left:3px solid var(--accent); color:var(--muted); }
+  li { margin:3px 0; }
+</style>
+</head>
+<body><main>
+<nav><a href="index.html">Docs index</a></nav>
+<h1>Simulator (round 2)</h1>
+<p>One scenario-driven simulator for the frozen contrast (<a href="contrast-protocol-v1.html">protocol v1</a>), built in wave 1 of the round-2 decision (<code>aesop-declutter-plan/simround2-decision.html</code>). <b>Simulation only:</b> synthetic learners come from a model that is independent of the estimator, and results test whether the product misleads, never how people learn.</p>
+<h2>Commands</h2>
+<pre><code>py scripts/sim.py list
+py scripts/sim.py run round1-gate hard-learner --out DIR --workers 6 --parity 50
+py scripts/sim.py parity hard-learner --learners 100
+py scripts/sim_break_checks.py</code></pre>
+<h2>Parts (<code>src/aesop_lab/sim/</code>)</h2>
+<ul>
+<li><b><code>scenario.py</code></b> holds versioned scenario files (<code>scenarios/*.json</code>, schema <code>sim-scenario/1</code>) with a learner model, behaviour, design and fixed seeds. A file may be a suite of <code>rows</code>. Unknown fields are rejected, and every row has a hash.</li>
+<li><b><code>learner.py</code></b> holds the learner models:
+  <ul>
+  <li><code>bernoulli</code>: round 1's model, a fixed recall per arm;</li>
+  <li><code>half-life</code>: P = 2^(−Δ/h) · invlogit(intercept + θ − b − concept + δ);</li>
+  <li><code>log-delay</code>: a mismatch check.</li>
+  </ul>
+  It adds personal method effects with optional sign reversal and expertise drift.</li>
+<li><b>Behaviour, in <code>learner.py</code></b>:
+  <ul>
+  <li>skipping when failure is expected, plus per-arm skipping;</li>
+  <li>outside study, declared or not, per arm;</li>
+  <li>key false negatives per arm;</li>
+  <li>late answers, missed days, dropout and frustration dropout.</li>
+  </ul>
+  Unit order and block roles are computed exactly as the engine computes them.</li>
+<li><b>Truth.</b> Each learner's own causal gap is the mean of p<sub>variant</sub> − p<sub>baseline</sub> at day 7 over the units they studied. Behaviour does not enter it.</li>
+<li><b><code>fastpath.py</code></b> judges a trajectory without SQLite, mirroring <code>MicroUnitEngine.contrast_status</code>: cutoffs on days 14, 21 and 28 from the first exposure, the 7–14 day window, contamination, and <code>protocol.judge</code>.</li>
+<li><b><code>replay.py</code></b> replays the same trajectory through the real engine (an in-memory SQLite copy of a migrated template) and compares the outcome, decision day, winner, per-look counts, and probabilities within 1e-6.</li>
+<li><b><code>run.py</code></b> runs rows over one shared process pool and replays at least 50 engine learners per row. A row passes only if the one-sided 95% Wilson upper bound for wrong calls is below 5%. A wrong call is judged against <i>each learner's own</i> sign: a directional call for the arm that is worse for them, or "no meaningful difference" when |gap| ≥ 5 points.</li>
+</ul>
+<h2>Wave 1 results</h2>
+<ul>
+<li><b>Engine parity:</b> 700 of 700 sampled learners across both suites, plus 100 of 100 on a 10,000-learner run.</li>
+<li><b><code>round1-gate</code></b> reproduces round 1 within its Wilson intervals (null: 12/500 wrong calls against round 1's 10).</li>
+<li><b>Speed:</b> 10,000 learners in one row with 100 parity replays took 65 s on 6 workers, against round 1's 4,000 learners in 22 minutes. <code>p_diff_greater</code> is now memoised; it is pure in its integer inputs.</li>
+<li><b>Planted bugs:</b> <code>scripts/sim_break_checks.py</code> catches 6 of 6: a leaked future outcome, a day-1 check counted as delayed, a swapped key, ignored outside study, broken block balance, and a wrong call judged by the population sign.</li>
+</ul>
+<h2>Not yet (later waves)</h2>
+<p>The adversarial suite (wave 2, Antigravity), calibration targets (Codex), the data-quality abstention rule, protocol v1.1 with a symmetric "promising" (wave 3), the dose and horizon sweep, the ladder, and the Python and step 2b product path.</p>
+</main></body>
+</html>
